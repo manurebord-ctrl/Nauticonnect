@@ -150,6 +150,7 @@ function setAuthMode(m) {
   Array.prototype.forEach.call($("auTabs").children, function (b) { b.classList.toggle("on", b.dataset.m === m); });
   var reset = m === "reset";
   $("auTabs").hidden = reset;
+  if ($("auSocial") && (CFG.oauth || []).length) $("auSocial").hidden = reset;
   $("auTitle").textContent = reset ? "Nouveau mot de passe" : m === "up" ? "Rejoindre l'équipage" : "Bon retour à bord";
   $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Un compte sert uniquement au Ponton, le chat des plaisanciers. Tout le reste de l'appli est libre d'accès." : "Connectez-vous avec votre e-mail.";
   $("auGo").textContent = reset ? "Enregistrer le mot de passe" : m === "up" ? "Créer mon compte" : "Me connecter";
@@ -161,6 +162,21 @@ function setAuthMode(m) {
   if (real() && !reset) { $("auMsg").className = "okm"; $("auMsg").textContent = "Vous êtes connecté."; }
 }
 Array.prototype.forEach.call($("auTabs").children, function (b) { b.onclick = function () { setAuthMode(b.dataset.m); }; });
+/* connexion via Google / Facebook (fournisseurs listés dans config.js : oauth: ["google", "facebook"]) */
+(function () {
+  var on = (CFG.oauth || []).filter(function (p) { return p === "google" || p === "facebook"; }), W = $("auSocial");
+  Array.prototype.forEach.call(W.querySelectorAll(".sbtn"), function (b) {
+    b.hidden = on.indexOf(b.dataset.p) < 0;
+    b.onclick = function () {
+      if (!sb) return; var m = $("auMsg"); m.className = "mu"; m.textContent = "Ouverture de " + (b.dataset.p === "google" ? "Google" : "Facebook") + "…";
+      try { sessionStorage.setItem("nc-ret", sessionStorage.getItem("nc-ret") || ""); } catch (e) {}
+      sb.auth.signInWithOAuth({ provider: b.dataset.p, options: { redirectTo: location.origin + location.pathname } }).then(function (r) {
+        if (r.error) { m.className = "err"; m.textContent = "Connexion impossible pour le moment. Utilisez votre e-mail."; }
+      });
+    };
+  });
+  W.hidden = !on.length;
+})();
 function authErr(e) {
   var m = (e && e.message) || "";
   if (/Invalid login/i.test(m)) return "E-mail ou mot de passe incorrect.";
