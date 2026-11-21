@@ -504,7 +504,7 @@ function unread() { if (!uid) return 0; var seen = +ls("nc-seen") || 0; return M
 function markRead() { ls("nc-seen", String(Date.now())); }
 function openThread(id, txt) {
   if (!id || id === uid) return; if (!requireProfile()) return;
-  openWith = id; ls("nc-open", id);
+  openWith = id; ls("nc-open", id); setClosed(id, false);
   if (cur() !== "ponton") location.hash = "ponton"; else renderPonton();
   setTimeout(function () { var t = $("th-" + id); if (t) t.scrollIntoView({ behavior: "smooth", block: "center" }); var i = $("in-" + id); if (i) { if (txt) i.value = txt; i.focus(); } }, 200);
 }
@@ -513,13 +513,20 @@ function sendMsg(to, txt) {
   txt = (txt || "").trim().slice(0, 200); if (!txt || sending || !uid) return; sending = true;
   sb.from("messages").insert({ a: to, txt: txt }).then(function (r) { if (r.error) rErr("Message non envoyé."); else { openWith = to; markRead(); load("messages"); } }).then(function () { sending = false; });
 }
+/* discussions fermées : masquées jusqu'au prochain message reçu ou envoyé */
+function closedMap() { try { return JSON.parse(ls("nc-closed-" + uid) || "{}"); } catch (e) { return {}; } }
+function setClosed(id, on) { var c = closedMap(); if (on) c[id] = Date.now(); else delete c[id]; ls("nc-closed-" + uid, JSON.stringify(c)); }
+function closeThread(id) { setClosed(id, true); if (openWith === id) { openWith = null; ls("nc-open", ""); } renderPonton(); toast("Discussion fermée. Elle reviendra au prochain message."); }
 function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
   if (openWith && !T[openWith] && openWith !== uid && P[openWith]) T[openWith] = [];
+  var C = closedMap(), nClosed = 0;
+  Object.keys(T).forEach(function (k) { var last = T[k].length ? ts(T[k][T[k].length - 1].t) : Date.now(); if (C[k] && last <= C[k] && k !== openWith) { delete T[k]; nClosed++; } else if (C[k] && last > C[k]) setClosed(k, false); });
+  if (nClosed) { var ro = el("button", "linkb", nClosed + " discussion" + (nClosed > 1 ? "s" : "") + " fermée" + (nClosed > 1 ? "s" : "") + " · tout rouvrir"); ro.onclick = function () { ls("nc-closed-" + uid, "{}"); renderPonton(); }; W.appendChild(ro); }
   var keys = Object.keys(T).sort(function (a, b) { var la = T[a].length ? ts(T[a][T[a].length - 1].t) : Date.now(), lb = T[b].length ? ts(T[b][T[b].length - 1].t) : Date.now(); return lb - la; });
-  if (!keys.length) { W.appendChild(el("p", "mu", "Pas encore de discussion. Cherchez un plaisancier juste en dessous et touchez « Écrire » pour lancer le chat.")); return; }
+  if (!keys.length) { if (nClosed) return; W.appendChild(el("p", "mu", "Pas encore de discussion. Cherchez un plaisancier juste en dessous et touchez « Écrire » pour lancer le chat.")); return; }
   keys.forEach(function (k) {
-    var th = el("div", "thread"); th.id = "th-" + k; th.appendChild(badge(k));
+    var th = el("div", "thread"); th.id = "th-" + k; var hd = el("div", "thd"); hd.appendChild(badge(k)); var x = el("button", "thx", "✕ Fermer"); x.setAttribute("aria-label", "Fermer la discussion"); x.onclick = function () { closeThread(k); }; hd.appendChild(x); th.appendChild(hd);
     T[k].slice(-10).forEach(function (m) { var b = el("div", "bub " + (m.de === uid ? "out" : "in"), m.txt); b.appendChild(el("small", 0, ago(m.t))); th.appendChild(b); });
     var pr = el("div"); PRESETS.forEach(function (t) { var b = el("button", "btn g sm", t); b.onclick = function () { sendMsg(k, t); }; pr.appendChild(b); }); th.appendChild(pr);
     var f = el("form", "send"), i = el("input", "f"); i.id = "in-" + k; i.maxLength = 200; i.placeholder = "Votre message…"; i.setAttribute("aria-label", "Message"); var s = el("button", "btn", "Envoyer");
