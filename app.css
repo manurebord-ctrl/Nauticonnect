@@ -257,3 +257,9 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:360px){.hero-t{font-size:36px}.grid.g3{grid-template-columns:1fr 1fr}}
+
+/* restos partenaires */
+.rcard.partner{border:2px solid #e0a82b;background:linear-gradient(180deg,rgba(224,168,43,.12),transparent 70%)}
+.pbadge{display:inline-block;font-size:12px;font-weight:800;color:#7a5600;background:#f5d07a;border-radius:20px;padding:3px 10px;margin-bottom:6px}
+.poffre{margin:6px 0;padding:8px 10px;border-radius:10px;background:rgba(224,168,43,.18);font-weight:700}
+.pin.star circle.pb{fill:#e0a82b}

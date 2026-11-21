@@ -24,7 +24,7 @@ var session = null, uid = null, isAdmin = false, guest = false;
 function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
-var P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
@@ -43,7 +43,8 @@ var Q = {
   annonces: function () { return sb.from("annonces").select("*").gte("maj", iso(90 * 864e5)).order("maj", { ascending: false }).limit(300); },
   photos: function () { return sb.from("photos").select("*").order("t", { ascending: false }).limit(400); },
   reglages: function () { return sb.from("reglages").select("*"); },
-  sauvetages: function () { return sb.from("sauvetages").select("*"); }
+  sauvetages: function () { return sb.from("sauvetages").select("*"); },
+  partenaires: function () { return sb.from("partenaires").select("*").order("t"); }
 };
 function store(t, rows) {
   rows = rows || [];
@@ -51,6 +52,7 @@ function store(t, rows) {
   else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows;
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows;
+  else if (t === "partenaires") PA = rows;
   else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
   else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); }
 }
@@ -70,7 +72,7 @@ function subscribeAll() {
   channel.subscribe();
 }
 function loadAll() { return Promise.all(Object.keys(Q).map(load)); }
-setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); if (uid) load("alertes"); } }, 120000);
+setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
 var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces"];
@@ -736,29 +738,74 @@ var RF = [["tous", "Tous"], ["bateau", "Accès en bateau"], ["CH", "Rive suisse"
 RF.forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { reFilt = f[0]; renderRestos(); }; $("reChips").appendChild(b); });
 var PLACES = [["geneve",46.21,6.16,"CH"],["versoix",46.283,6.17,"CH"],["coppet",46.316,6.192,"CH"],["nyon",46.382,6.24,"CH"],["rolle",46.458,6.337,"CH"],["prex",46.48,6.455,"CH"],["morges",46.506,6.497,"CH"],["lausanne",46.507,6.627,"CH"],["ouchy",46.505,6.627,"CH"],["pully",46.507,6.66,"CH"],["lutry",46.502,6.685,"CH"],["cully",46.488,6.73,"CH"],["vevey",46.461,6.842,"CH"],["peilz",46.453,6.858,"CH"],["montreux",46.432,6.91,"CH"],["clarens",46.44,6.893,"CH"],["villeneuve",46.4,6.925,"CH"],["bouveret",46.386,6.856,"CH"],["gingolph",46.392,6.805,"CH"],["evian",46.402,6.59,"FR"],["thonon",46.376,6.48,"FR"],["yvoire",46.372,6.327,"FR"],["sciez",46.35,6.39,"FR"],["excenevex",46.347,6.358,"FR"],["hermance",46.302,6.243,"CH"],["meillerie",46.408,6.722,"FR"]];
 function placeOf(l) { var s = norm(l); for (var i = 0; i < PLACES.length; i++) if (s.indexOf(PLACES[i][0]) >= 0) return PLACES[i]; return null; }
+function today() { return new Date().toISOString().slice(0, 10); }
+function paActive(x) { return x.jusqu >= today(); }
 function allRestos() {
-  return RESTOS.concat(RU.map(function (x) { var p = placeOf(x.lieu), j = (x.id % 7) - 3; return { id: "u" + x.id, dbid: x.id, u: x.auteur, n: x.nom, l: x.lieu, a: x.acces, d: x.descr, r: p ? p[3] : "", la: p ? p[1] + j * .0015 : null, lo: p ? p[2] + j * .002 : null }; }));
+  var on = PA.filter(function (x) { return paActive(x) || isAdmin; });
+  var taken = {}; on.forEach(function (x) { if (paActive(x)) taken[norm(x.nom)] = 1; });
+  var pa = on.map(function (x) { var p = placeOf(x.lieu), j = (x.id % 7) - 3; return { id: "p" + x.id, pa: x, n: x.nom, l: x.lieu, a: x.acces, d: x.descr, r: p ? p[3] : "", la: p ? p[1] + j * .0012 : null, lo: p ? p[2] - j * .0018 : null }; });
+  return pa.concat(RESTOS.concat(RU.map(function (x) { var p = placeOf(x.lieu), j = (x.id % 7) - 3; return { id: "u" + x.id, dbid: x.id, u: x.auteur, n: x.nom, l: x.lieu, a: x.acces, d: x.descr, r: p ? p[3] : "", la: p ? p[1] + j * .0015 : null, lo: p ? p[2] + j * .002 : null }; })).filter(function (x) { return !taken[norm(x.n)]; }));
 }
 function renderRestos() {
   Array.prototype.forEach.call($("reChips").children, function (b) { b.classList.toggle("on", b.dataset.k === reFilt); });
   var S = allRestos().filter(function (x) { return reFilt === "tous" || (reFilt === "bateau" ? (x.a === "ponton" || x.a === "port") : reFilt === "user" ? !!x.u : x.r === reFilt); });
   var g = detailedLake($("reMap"));
-  S.forEach(function (x) { if (x.la == null) return; var n = svgEl("g", { class: "pin" + (x.u ? " user" : "") + (x.id === reCur ? " on" : ""), transform: "translate(" + X2(x.lo).toFixed(1) + "," + Y2(x.la).toFixed(1) + ")" }, g);
+  S.forEach(function (x) { if (x.la == null) return; var n = svgEl("g", { class: "pin" + (x.u ? " user" : "") + (x.pa ? " star" : "") + (x.id === reCur ? " on" : ""), transform: "translate(" + X2(x.lo).toFixed(1) + "," + Y2(x.la).toFixed(1) + ")" }, g);
     svgEl("circle", { r: 18, style: "fill:transparent" }, n); svgEl("circle", { class: "pb", r: x.id === reCur ? 10 : 8 }, n);
     n.onclick = function () { reCur = x.id; renderRestos(); var c = $("r-" + x.id); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }; });
   var L = $("reList"); L.textContent = "";
   if (!S.length) L.appendChild(el("p", "mu", reFilt === "user" ? "Aucune adresse ajoutée pour l'instant. Soyez le premier !" : "Aucune adresse."));
   S.forEach(function (x) {
-    var c = el("div", "card rcard" + (x.id === reCur ? " on" : "")); c.id = "r-" + x.id;
+    var c = el("div", "card rcard" + (x.pa ? " partner" : "") + (x.id === reCur ? " on" : "")); c.id = "r-" + x.id;
+    if (x.pa) c.appendChild(el("div", "pbadge", paActive(x.pa) ? "⭐ Partenaire Nauticonnect" : "⏸ Partenariat expiré (visible par l'admin seulement)"));
     c.appendChild(el("h3", 0, x.n)); c.appendChild(el("div", "where", x.l + (x.r ? " · " + (x.r === "CH" ? "Suisse" : "France") : "")));
     var T = el("div", "tags"), ac = ACC[x.a]; if (ac) T.appendChild(el("span", "tag " + ac[1], ac[0])); if (x.u) T.appendChild(el("span", "tag us", "Ajouté par " + ((P[x.u] && P[x.u].pseudo) || "un membre"))); c.appendChild(T);
+    if (x.pa && x.pa.offre) c.appendChild(el("div", "poffre", "🎁 " + x.pa.offre));
     if (x.d) c.appendChild(el("div", 0, x.d));
     c.appendChild(thumb("resto-" + x.id, x.n, "Escale : " + x.n + " (plats, terrasse, ponton…)"));
     var A2 = el("div", "acts"), go = el("a", "p", "Y aller"); go.href = mapsSearch(x.n + " " + x.l); go.target = "_blank"; go.rel = "noopener"; A2.appendChild(go);
+    if (x.pa && x.pa.tel) { var tl = el("a", 0, "📞 Appeler"); tl.href = "tel:" + x.pa.tel.replace(/[^0-9+]/g, ""); A2.appendChild(tl); }
+    if (x.pa && /^https?:\/\//.test(x.pa.site)) { var st = el("a", 0, "🌐 Site"); st.href = x.pa.site; st.target = "_blank"; st.rel = "noopener"; A2.appendChild(st); }
+    if (x.pa && isAdmin) { var ed = el("button", 0, "Modifier"); ed.onclick = function () { paFill(x.pa); }; A2.appendChild(ed); }
     if (x.u && (x.u === uid || isAdmin)) { var rm = el("button", 0, "Retirer"); rm.onclick = function () { sb.from("restos").delete().eq("id", x.dbid).then(function () { load("restos"); }); }; A2.appendChild(rm); }
+    if (x.pa && isAdmin) c.appendChild(el("div", "mu", "Partenaire jusqu'au " + x.pa.jusqu.split("-").reverse().join(".")));
     c.appendChild(A2); c.onclick = function (e) { if (e.target.closest("a,button,.ph-thumb")) return; reCur = x.id; renderRestos(); }; L.appendChild(c);
   });
+  $("paAdmin").hidden = !isAdmin;
 }
+/* ---- restos partenaires : gestion par l'admin ---- */
+var paEdit = null;
+function paMsg(t, ok) { $("paMsg").className = ok ? "okm" : "err"; $("paMsg").textContent = t || ""; }
+function paFill(x) {
+  paEdit = x ? x.id : null;
+  $("paN").value = x ? x.nom : ""; $("paL").value = x ? x.lieu : ""; $("paA").value = x ? x.acces : "port";
+  $("paO").value = x ? x.offre : ""; $("paD").value = x ? x.descr : ""; $("paT").value = x ? x.tel : ""; $("paS").value = x ? x.site : "";
+  var d = new Date(); d.setFullYear(d.getFullYear() + 1); $("paJ").value = x ? x.jusqu : d.toISOString().slice(0, 10);
+  $("paSave").textContent = x ? "Enregistrer les modifications" : "Ajouter le partenaire"; $("paDel").hidden = !x; $("paNew").hidden = !x; paMsg();
+  if (x) $("paAdmin").scrollIntoView({ behavior: "smooth" });
+}
+$("paNew").onclick = function () { paFill(null); };
+$("paSave").onclick = function () {
+  if (!isAdmin) return;
+  var n = $("paN").value.trim(), l = $("paL").value.trim(), t = $("paT").value.trim(), si = $("paS").value.trim();
+  if (n.length < 2 || l.length < 2) { paMsg("Nom et lieu obligatoires."); return; }
+  if (t && !/^[+0-9 ().\/-]{7,20}$/.test(t)) { paMsg("Numéro de téléphone invalide."); return; }
+  if (si && !/^https?:\/\//.test(si)) si = "https://" + si;
+  if (!$("paJ").value) { paMsg("Choisissez une date de fin."); return; }
+  var d = { nom: n, lieu: l, acces: $("paA").value, offre: $("paO").value.trim(), descr: $("paD").value.trim(), tel: t, site: si, jusqu: $("paJ").value };
+  $("paSave").disabled = true;
+  (paEdit ? sb.from("partenaires").update(d).eq("id", paEdit) : sb.from("partenaires").insert(d)).then(function (r) {
+    if (r.error) { paMsg("Enregistrement impossible : " + r.error.message); return; }
+    var ok = paEdit ? "Partenaire mis à jour." : "Partenaire ajouté ! Il apparaît en tête de liste."; paFill(null); paMsg(ok, true); load("partenaires");
+  }).then(function () { $("paSave").disabled = false; });
+};
+$("paDel").onclick = function () {
+  if (!paEdit || !isAdmin) return;
+  if ($("paDel").dataset.ok !== "1") { $("paDel").dataset.ok = "1"; $("paDel").textContent = "Confirmer la suppression"; return; }
+  $("paDel").dataset.ok = ""; $("paDel").textContent = "Supprimer ce partenaire";
+  sb.from("partenaires").delete().eq("id", paEdit).then(function () { paFill(null); paMsg("Partenaire supprimé.", true); load("partenaires"); });
+};
+paFill(null);
 $("reAdd").onclick = function () {
   var m = $("reMsg"); m.className = "err"; m.textContent = ""; if (!guestOk(function () { $("reAdd").onclick(); }, m)) return;
   var n = $("reN").value.trim(), l = $("reL").value.trim(); if (n.length < 2 || l.length < 2) { m.textContent = "Indiquez au moins le nom et le lieu."; return; }

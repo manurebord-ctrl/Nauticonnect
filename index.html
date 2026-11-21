@@ -244,6 +244,24 @@
 <div class="chips" id="reChips"></div>
 <div class="mapbox"><svg id="reMap" class="map" viewBox="0 0 600 360" role="img" aria-label="Carte des restaurants" style="margin:0"></svg></div>
 <div id="reList" style="margin-top:10px"></div>
+<div id="paAdmin" hidden>
+<h2>⭐ Restos partenaires <small class="mu">(admin)</small></h2>
+<div class="card">
+<div class="mu" style="margin-bottom:8px">Les partenaires apparaissent en tête de liste, mis en valeur, avec leur offre, un bouton « Appeler » et leur site. Ils disparaissent automatiquement après la date de fin.</div>
+<input class="f" id="paN" maxlength="60" placeholder="Nom du restaurant" aria-label="Nom du partenaire">
+<input class="f" id="paL" maxlength="50" placeholder="Lieu (ex. Le Bouveret)" aria-label="Lieu du partenaire">
+<select class="f" id="paA" aria-label="Accès en bateau"><option value="ponton">Accès en bateau : ponton du restaurant</option><option value="port">Au port, à pied depuis les places visiteurs</option><option value="non">Pas d'accès en bateau</option></select>
+<input class="f" id="paO" maxlength="160" placeholder="Offre membres (ex. apéro offert sur présentation de l'appli)" aria-label="Offre">
+<input class="f" id="paD" maxlength="200" placeholder="Description (spécialités, vue, ambiance…)" aria-label="Description du partenaire">
+<input class="f" id="paT" maxlength="20" type="tel" placeholder="Téléphone (réservations)" aria-label="Téléphone">
+<input class="f" id="paS" maxlength="200" type="url" placeholder="Site web (facultatif)" aria-label="Site web">
+<label class="mu" for="paJ">Partenaire jusqu'au</label>
+<input class="f" id="paJ" type="date" aria-label="Date de fin du partenariat">
+<button class="btn" id="paSave">Ajouter le partenaire</button>
+<div class="row" style="margin-top:8px"><button class="btn g sm" id="paNew" hidden>+ Nouveau partenaire</button><button class="btn g sm" id="paDel" hidden>Supprimer ce partenaire</button></div>
+<div class="err" id="paMsg"></div>
+</div>
+</div>
 <h2>Ajouter une adresse</h2>
 <div class="card">
 <input class="f" id="reN" maxlength="50" placeholder="Nom du restaurant" aria-label="Nom du restaurant">
