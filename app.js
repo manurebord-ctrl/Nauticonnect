@@ -371,6 +371,7 @@ function renderPanne() {
       if (!m) { var w = el("div"); w.style.margin = "6px 0"; w.appendChild(badge(a.auteur, a.par)); c.appendChild(w); }
       c.appendChild(el("div", "mu", a.zone + " · à " + o.d.toFixed(1) + " km · " + ago(a.maj)));
       if (a.detail) c.appendChild(el("div", 0, a.detail));
+      if (a.faux && (isAdmin || m)) c.appendChild(el("div", "err", "⚠ Signalée comme fausse alerte par " + a.faux + " membre" + (a.faux > 1 ? "s" : "")));
       if (a.tel && !m) { var t = el("div"); t.appendChild(document.createTextNode("📞 ")); var tl = el("a", 0, a.tel); tl.href = "tel:" + a.tel.replace(/[^0-9+]/g, ""); tl.style.cssText = "color:var(--ac);font-weight:700"; t.appendChild(tl); c.appendChild(t); }
       var ai = a.aides || [];
       if (ai.length) c.appendChild(el("div", "okm", "🤝 Viennent aider : " + ai.map(function (x) { return nameOf(x); }).join(", ")));
@@ -381,6 +382,13 @@ function renderPanne() {
         b.onclick = function () { if (!guestOk(function () { b.onclick(); })) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
         row.appendChild(b);
         if (P[a.auteur]) { var w2 = el("button", "btn g", "💬 Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2); }
+        var fk = "nc-faux-" + a.id, b4 = el("button", "linkb", ls(fk) ? "Signalée comme fausse alerte" : "⚠ Signaler une fausse alerte"); b4.disabled = !!ls(fk);
+        b4.onclick = function () {
+          if (!real()) { toast("Connectez-vous pour signaler une alerte."); goAuth(); return; }
+          if (!confirm("Signaler une fausse alerte ? À 2 signalements de membres différents, elle est fermée.")) return;
+          sb.from("signalements").insert({ quoi: "alerte", ref: String(a.id) }).then(function (r) { if (r.error) { toast("Signalement impossible."); return; } ls(fk, "1"); load("alertes"); toast("Merci, signalement envoyé."); });
+        };
+        c.appendChild(row); row = el("div"); row.style.marginTop = "6px"; row.appendChild(b4);
         if (isAdmin) { var b3 = el("button", "btn g", "🔒 Clôturer (admin)"); b3.onclick = function () { if (!confirm("Clôturer cette alerte ? Elle disparaîtra pour tout le monde.")) return; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) toast("Clôture impossible."); else { load("alertes"); toast("Alerte clôturée"); } }); }; c.appendChild(row); row = el("div", "row"); row.style.marginTop = "8px"; row.appendChild(b3); }
       } else {
         var b2 = el("button", "btn", "✅ Problème résolu · désactiver l'alerte"); b2.onclick = function () { b2.disabled = true; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) { b2.disabled = false; toast("Impossible de désactiver. Réessayez."); return; } load("alertes"); toast("Alerte désactivée. Bon retour au port !"); }); }; row.appendChild(b2);
