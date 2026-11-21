@@ -4,7 +4,7 @@
    Project Settings > API
    ========================================================= */
 window.NC_CONFIG = {
-  url: "COLLE_ICI_LE_PROJECT_URL",        // ex. https://abcdefgh.supabase.co
+  url: "sb_publishable_xLngHmcFRmeCmujWqe0W9w_P6vw3V5B",        // ex. https://abcdefgh.supabase.co
   key: "COLLE_ICI_LA_CLE_PUBLISHABLE",     // commence par sb_publishable_… (ou eyJ… pour l’ancienne clé « anon »)
-  contact: "ton.email@exemple.ch"          // e-mail affiché dans la page de confidentialité
+  contact: "manu.rebord@gmail.com"          // e-mail affiché dans la page de confidentialité
 };
