@@ -24,7 +24,7 @@ var session = null, uid = null, isAdmin = false, guest = false;
 function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
-var PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
@@ -44,6 +44,7 @@ var Q = {
   photos: function () { return sb.from("photos").select("*").order("t", { ascending: false }).limit(400); },
   reglages: function () { return sb.from("reglages").select("*"); },
   sauvetages: function () { return sb.from("sauvetages").select("*"); },
+  amities: function () { return real() ? sb.from("amities").select("*") : null; },
   partenaires: function () { return sb.from("partenaires").select("*").order("t"); }
 };
 function store(t, rows) {
@@ -53,6 +54,7 @@ function store(t, rows) {
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows;
   else if (t === "partenaires") PA = rows;
+  else if (t === "amities") FS = rows;
   else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
   else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); }
 }
@@ -271,7 +273,7 @@ function renderHome() {
   var c = $("ctaMain"), p = me();
   c.textContent = p ? "Hisser le pavillon" : "Rejoindre l'équipage"; c.href = p ? "#ponton" : real() ? "#profil" : "#compte";
   var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = "⚠ " + n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
-  var u = unread(); $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
+  var u = unread() + pendingIn().length; $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
   $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
   $("phBtn").hidden = !isAdmin;
 }
@@ -413,13 +415,16 @@ $("rnCode").value = ls("nc-code"); $("rnMsgTxt").value = ls("nc-msg");
 $("rnOpen").checked = ls("nc-isopen") === "1"; $("rnFr").checked = ls("nc-isfr") === "1";
 function openOthers() { return openNow().filter(function (x) { return x.id !== uid; }); }
 function stat() { var o = $("rnOpen").checked, f = $("rnFr").checked, b = $("rnStt"); b.className = "stt" + (o || f ? " on" : ""); b.textContent = o && f ? "Pavillon hissé · amis et membres" : o ? "Pavillon hissé · visible par les membres (position arrondie)" : f ? "Position partagée avec mes amis uniquement" : "Pavillon baissé : votre position n'est pas partagée"; }
-function code() { return $("rnCode").value.trim().toLowerCase(); }
+function code() { return "amitie"; }
+function rel(id) { for (var i = 0; i < FS.length; i++) { var f = FS[i]; if ((f.de === uid && f.a === id) || (f.a === uid && f.de === id)) return f.statut === "ok" ? "ami" : f.de === uid ? "envoye" : "recu"; } return ""; }
+function friendIds() { return FS.filter(function (f) { return f.statut === "ok"; }).map(function (f) { return f.de === uid ? f.a : f.de; }); }
+function pendingIn() { return FS.filter(function (f) { return f.statut === "attente" && f.a === uid; }).map(function (f) { return f.de; }); }
 function push() {
   var p = rPos(); if (!p || !uid || !me()) return;
   if ($("rnOpen").checked) sb.from("ouverts").upsert({ id: uid, msg: $("rnMsgTxt").value.trim().slice(0, 60), lat: Math.round(p.lat * 100) / 100, lon: Math.round(p.lon * 100) / 100, maj: nowIso() }).then(function (r) { if (r.error) rErr("Partage refusé."); else load("ouverts"); });
-  var c = code(); if ($("rnFr").checked && c.length >= 4) sb.from("amis").upsert({ code: c, auteur: uid, lat: p.lat, lon: p.lon, maj: nowIso() }, { onConflict: "code,auteur" }).then(function () { loadFriends(); });
+  var c = code(); if ($("rnFr").checked) sb.from("amis").upsert({ code: c, auteur: uid, lat: p.lat, lon: p.lon, maj: nowIso() }, { onConflict: "code,auteur" }).then(function () { loadFriends(); });
 }
-function loadFriends() { var c = code(); if (!uid || c.length < 4) { FR = []; return; } sb.rpc("amis_du_groupe", { c: c }).then(function (r) { FR = (r.data || []).filter(function (x) { return x.auteur !== uid; }); if (cur() === "ponton") renderPonton(); }); }
+function loadFriends() { if (!real()) { FR = []; return; } sb.rpc("positions_amis").then(function (r) { FR = (r.data || []).filter(function (x) { return x.auteur !== uid; }); if (cur() === "ponton") renderPonton(); }); }
 setInterval(function () { if (cur() === "ponton" && !document.hidden) { loadFriends(); if (Date.now() - lastPush > 5 * 60000) { lastPush = Date.now(); push(); } } }, 30000);
 $("rnOpen").onchange = function () {
   rErr(); if (!requireProfile()) { this.checked = false; return; }
@@ -430,11 +435,40 @@ $("rnOpen").onchange = function () {
 $("rnFr").onchange = function () {
   rErr(); if (!requireProfile()) { this.checked = false; return; }
   var c = code(); ls("nc-code", c);
-  if (this.checked) { if (c.length < 4) { rErr("Code de groupe : 4 caractères minimum."); this.checked = false; return; } push(); }
+  if (this.checked) { if (!friendIds().length) rErr("Ajoutez d'abord des amis (recherche ci-dessus)."); if (!rPos()) rErr("Localisez-vous (GPS) ou touchez la carte."); push(); }
   else sb.from("amis").delete().eq("auteur", uid).then(function () { FR = []; renderPonton(); });
   ls("nc-isfr", this.checked ? "1" : "0"); stat();
 };
-$("rnCode").onchange = function () { ls("nc-code", code()); loadFriends(); };
+/* ---- trouver des plaisanciers & amis ---- */
+function befriend(id) {
+  var r = rel(id);
+  var q = r === "recu" ? sb.from("amities").update({ statut: "ok" }).eq("de", id).eq("a", uid)
+    : r ? sb.from("amities").delete().or("and(de.eq." + uid + ",a.eq." + id + "),and(de.eq." + id + ",a.eq." + uid + ")")
+    : sb.from("amities").insert({ a: id });
+  q.then(function (x) { if (x.error) { toast("Action impossible. Réessayez."); return; } toast(r === "recu" ? "Vous êtes maintenant amis ⚓" : r ? "Retiré" : "Demande d'ami envoyée"); load("amities").then(loadFriends); });
+}
+function memberCard(id, extra) {
+  var pr = P[id] || {}, c = el("div", "card mcard"), r = rel(id); c.appendChild(badge(id));
+  var info = [pr.type, pr.port ? "⚓ " + pr.port : ""].filter(Boolean).join(" · "); if (info) c.appendChild(el("div", "mu", info));
+  if (extra) c.appendChild(extra);
+  var row = el("div", "row"); row.style.marginTop = "8px";
+  var w = el("button", "btn sm", "💬 Écrire"); w.onclick = function () { openThread(id); }; row.appendChild(w);
+  if (r === "recu") { var ok = el("button", "btn sm", "✅ Accepter"); ok.onclick = function () { befriend(id); }; row.appendChild(ok); var no = el("button", "btn g sm", "Refuser"); no.onclick = function () { sb.from("amities").delete().eq("de", id).eq("a", uid).then(function () { load("amities"); }); }; row.appendChild(no); }
+  else { var f = el("button", "btn g sm", r === "ami" ? "✓ Ami · retirer" : r === "envoye" ? "⏳ Demande envoyée · annuler" : "➕ Ajouter en ami"); f.onclick = function () { befriend(id); }; row.appendChild(f); }
+  c.appendChild(row); return c;
+}
+var mbQ = "";
+$("mbSearch").oninput = function () { mbQ = this.value; renderMembers(); };
+function renderMembers() {
+  var L = $("mbList"); L.textContent = ""; var q = norm(mbQ.trim()), my = me() || {};
+  var ids = Object.keys(P).filter(function (id) { return id !== uid; });
+  var res = q.length ? ids.filter(function (id) { var p = P[id]; return [p.pseudo, p.bateau, p.port, p.immat].some(function (v) { return norm(v).indexOf(q) >= 0; }); })
+    : ids.filter(function (id) { return my.port && P[id].port === my.port && !rel(id); });
+  $("mbHint").textContent = q.length ? (res.length ? "" : "Aucun plaisancier trouvé.") : res.length ? "Au même port d'attache que vous (" + my.port + ") :" : "Tapez un prénom, un nom de bateau ou un port.";
+  res.slice(0, 12).forEach(function (id) { L.appendChild(memberCard(id)); });
+  var R = $("mbReq"); R.textContent = ""; pendingIn().forEach(function (id) { if (P[id]) R.appendChild(memberCard(id, el("div", "okm", "veut devenir votre ami"))); });
+  $("mbReqH").hidden = !R.firstChild;
+}
 $("rnMsgTxt").onchange = function () { ls("nc-msg", this.value.trim()); push(); };
 $("rnGps").onclick = function () {
   rErr(); if (!navigator.geolocation) { rErr("GPS indisponible : touchez la carte pour vous placer."); return; }
@@ -478,7 +512,7 @@ function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
   if (openWith && !T[openWith] && openWith !== uid && P[openWith]) T[openWith] = [];
   var keys = Object.keys(T).sort(function (a, b) { var la = T[a].length ? ts(T[a][T[a].length - 1].t) : Date.now(), lb = T[b].length ? ts(T[b][T[b].length - 1].t) : Date.now(); return lb - la; });
-  if (!keys.length) { W.appendChild(el("p", "mu", "Aucune conversation. Touchez un plaisancier sur la carte, une annonce ou une alerte pour lui écrire.")); return; }
+  if (!keys.length) { W.appendChild(el("p", "mu", "Aucune conversation. Cherchez un plaisancier ci-dessous et touchez « Écrire ».")); return; }
   keys.forEach(function (k) {
     var th = el("div", "thread"); th.id = "th-" + k; th.appendChild(badge(k));
     T[k].slice(-10).forEach(function (m) { var b = el("div", "bub " + (m.de === uid ? "out" : "in"), m.txt); b.appendChild(el("small", 0, ago(m.t))); th.appendChild(b); });
@@ -492,13 +526,16 @@ function renderPonton() {
   stat(); drawRnMap();
   var ae = document.activeElement, aid = ae && ae.id && ae.id.indexOf("in-") === 0 ? ae.id : null, val = aid ? ae.value : "";
   renderThreads(); if (aid && $(aid)) { $(aid).value = val; $(aid).focus(); }
-  var u = unread(); $("unreadRn").hidden = !u; $("unreadRn").textContent = u;
+  var u = unread() + pendingIn().length; $("unreadRn").hidden = !u; $("unreadRn").textContent = u;
   var D = $("rnDet"); D.textContent = ""; openOthers().forEach(function (x) { if (x.id === sel) D.appendChild(personCard(x.id, x)); });
+  renderMembers();
   var Fr = $("rnFriends"); Fr.textContent = ""; var p = rPos();
-  FR.forEach(function (x) { var d = el("div", "card"); d.appendChild(badge(x.auteur)); d.appendChild(el("div", "mu", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + ago(x.maj)));
-    var a = el("a", "btn g sm", "🧭 Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; d.appendChild(a);
-    var w = el("button", "btn sm", "💬 Écrire"); w.onclick = function () { openThread(x.auteur); }; d.appendChild(w); Fr.appendChild(d); });
-  if (!Fr.firstChild) Fr.appendChild(el("p", "mu", code().length >= 4 ? "Aucun ami en ligne dans ce groupe." : "Choisissez un code de groupe et donnez-le à vos amis."));
+  friendIds().filter(function (id) { return P[id]; }).forEach(function (id) {
+    var x = FR.filter(function (f) { return f.auteur === id; })[0], ex = null;
+    if (x) { ex = el("div"); ex.appendChild(el("div", "okm", "📍 " + (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position partagée " + ago(x.maj)));
+      var a = el("a", "btn g sm", "🧭 Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a); }
+    Fr.appendChild(memberCard(id, ex)); });
+  if (!Fr.firstChild) Fr.appendChild(el("p", "mu", "Pas encore d'amis. Cherchez un plaisancier ci-dessus et touchez « Ajouter en ami »."));
   var L = $("rnOpenList"); L.textContent = ""; openOthers().sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).forEach(function (x) { L.appendChild(personCard(x.id, x)); });
   if (!L.firstChild) L.appendChild(el("p", "mu", "Personne n'a hissé le pavillon pour l'instant."));
 }

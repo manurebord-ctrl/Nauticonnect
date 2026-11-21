@@ -149,14 +149,18 @@
 <h1 class="ph1">Le Ponton</h1><p class="lead">Le réseau social des plaisanciers du Léman.</p>
 <div id="rnGate" class="card gate" hidden><b>Montez à bord du Ponton</b><div class="mu" style="margin:4px 0 12px">Créez votre compte et votre fiche bateau pour discuter avec les autres plaisanciers.</div><a class="btn" href="#compte">Rejoindre l'équipage</a></div>
 <div id="rnBody" hidden>
-<h2 style="margin-top:0">Messages<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
+<h2 style="margin-top:0" id="mbReqH" hidden>Demandes d'amis</h2><div id="mbReq"></div>
+<h2 style="margin-top:0">Trouver un plaisancier</h2>
+<div class="card"><input class="f" id="mbSearch" type="search" maxlength="40" placeholder="🔎 Prénom, bateau ou port…" aria-label="Rechercher un plaisancier"><div class="mu" id="mbHint" style="margin-top:6px"></div></div>
+<div id="mbList"></div>
+<h2>Messages<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
 <div class="stt" id="rnStt"></div>
 <div class="card warn"><b>Rencontres en sécurité.</b> Pour tous les membres, votre position est arrondie (environ 1 km). Ne donnez ni adresse ni numéro dans les messages. Retrouvez-vous dans un port ou un lieu public.</div>
 <div class="card">
 <label class="l" for="rnMsgTxt">Mon message sur la carte (60 car.)</label><input class="f" id="rnMsgTxt" maxlength="60" placeholder="Apéro à Ouchy ?">
 <label class="sw"><input type="checkbox" id="rnOpen"><span><b>Hisser le pavillon : ouvert à la rencontre</b><br><span class="mu">Visible de tous les membres pendant 2 h, position arrondie.</span></span></label>
-<label class="sw"><input type="checkbox" id="rnFr"><span><b>Partager avec mes amis</b><br><span class="mu">Position exacte, seulement avec ceux qui ont le même code de groupe.</span></span></label>
-<input class="f" id="rnCode" maxlength="20" placeholder="Code de groupe amis (4 caractères min.)">
+<label class="sw"><input type="checkbox" id="rnFr"><span><b>Partager avec mes amis</b><br><span class="mu">Position exacte, visible seulement par vos amis Nauticonnect.</span></span></label>
+<input id="rnCode" type="hidden">
 <button class="btn g" id="rnGps">📍 Me localiser (GPS)</button></div>
 <div class="card"><div class="lgd"><span><i style="background:#2d7ff9"></i>Moi</span><span><i style="background:var(--or)"></i>Pavillon hissé</span><span><i style="background:var(--ok)"></i>Amis</span></div>
 <svg id="rnMap" class="map" viewBox="0 0 680 410"></svg>
