@@ -24,7 +24,7 @@ var session = null, uid = null, isAdmin = false, guest = false;
 function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
-var FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
@@ -44,6 +44,7 @@ var Q = {
   photos: function () { return sb.from("photos").select("*").order("t", { ascending: false }).limit(400); },
   reglages: function () { return sb.from("reglages").select("*"); },
   sauvetages: function () { return sb.from("sauvetages").select("*"); },
+  evenements: function () { return sb.from("evenements").select("*").order("debut").limit(300); },
   amities: function () { return real() ? sb.from("amities").select("*") : null; },
   partenaires: function () { return sb.from("partenaires").select("*").order("t"); }
 };
@@ -55,6 +56,7 @@ function store(t, rows) {
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows;
   else if (t === "partenaires") PA = rows;
   else if (t === "amities") FS = rows;
+  else if (t === "evenements") EV = rows;
   else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
   else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); }
 }
@@ -77,7 +79,7 @@ function loadAll() { return Promise.all(Object.keys(Q).map(load)); }
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces"];
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "evenements"];
 var NEEDS_AUTH = { profil: 1 };
 function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "accueil" : h; }
 function goAuth(ret) { try { sessionStorage.setItem("nc-ret", ret || cur()); } catch (e) {} location.hash = "compte"; }
@@ -971,7 +973,7 @@ function renderAll() {
   if (v === "panne") renderPanne(); else if (v === "ponton") { renderPonton(); if (unread()) markRead(); }
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") renderMeteoFeed();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
-  else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces();
+  else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "evenements") renderEvents();
 }
 if (!configured || !sb) {
   var warn = el("div", "card warn"); warn.style.margin = "16px";
@@ -984,3 +986,92 @@ if (sb) {
   sb.auth.getSession().then(function (r) { onSession(r.data.session, "INITIAL"); if (!r.data.session) { subscribeAll(); loadAll(); } });
   sb.auth.onAuthStateChange(function (ev, s) { if (ev === "INITIAL_SESSION") return; if (ev === "TOKEN_REFRESHED") { session = s; return; } onSession(s, ev); });
 }
+
+/* ================= ÉVÉNEMENTS (publication payante) ================= */
+var MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."], JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+function dFr(d) { var x = new Date(d + "T12:00:00"); return JOURS[x.getDay()] + " " + x.getDate() + " " + MOIS[x.getMonth()]; }
+function evDates(e) { return e.debut === e.fin ? dFr(e.debut) : "du " + dFr(e.debut) + " au " + dFr(e.fin); }
+function evPrice() { return REG.ev_prix || "30"; }
+var STE = { attente: "⏳ En attente de paiement / validation", publie: "✅ Publié", refuse: "❌ Refusé" };
+function evCard(e, adm) {
+  var c = el("div", "card evcard"), x = new Date(e.debut + "T12:00:00");
+  var dt = el("div", "evdate"); dt.appendChild(el("b", 0, String(x.getDate()))); dt.appendChild(el("span", 0, MOIS[x.getMonth()])); c.appendChild(dt);
+  var b = el("div", "evbody"); b.appendChild(el("h3", 0, e.titre));
+  b.appendChild(el("div", "mu", "📅 " + evDates(e) + (e.heure ? " · " + e.heure : "") + " · 📍 " + e.lieu));
+  if (e.descr) b.appendChild(el("div", 0, e.descr));
+  if (e.statut !== "publie" || adm) b.appendChild(el("div", e.statut === "publie" ? "okm" : "err", STE[e.statut]));
+  var A = el("div", "acts");
+  if (/^https?:\/\//.test(e.site)) { var a = el("a", "p", "🌐 Infos"); a.href = e.site; a.target = "_blank"; a.rel = "noopener"; A.appendChild(a); }
+  var go = el("a", 0, "🧭 Y aller"); go.href = mapsSearch(e.lieu); go.target = "_blank"; go.rel = "noopener"; A.appendChild(go);
+  if (e.contact) { var ct = el("a", 0, "✉️ Contact"); ct.href = /@/.test(e.contact) ? "mailto:" + e.contact : "tel:" + e.contact.replace(/[^0-9+]/g, ""); A.appendChild(ct); }
+  b.appendChild(A);
+  if (adm && isAdmin) {
+    var R = el("div", "row"); R.style.marginTop = "8px";
+    if (e.statut !== "publie") { var ok = el("button", "btn sm", "✅ Publier (payé)"); ok.onclick = function () { evSet(e.id, "publie"); }; R.appendChild(ok); }
+    if (e.statut !== "refuse") { var no = el("button", "btn g sm", "Refuser"); no.onclick = function () { evSet(e.id, "refuse"); }; R.appendChild(no); }
+    var del = el("button", "btn g sm", "Supprimer"); del.onclick = function () { if (del.dataset.ok !== "1") { del.dataset.ok = "1"; del.textContent = "Confirmer"; return; } sb.from("evenements").delete().eq("id", e.id).then(function () { load("evenements"); }); }; R.appendChild(del);
+    if (e.contact) R.appendChild(el("div", "mu", "Contact : " + e.contact));
+    b.appendChild(R);
+  } else if (e.auteur === uid && e.statut === "attente") {
+    var cx = el("button", "btn g sm", "Annuler ma demande"); cx.onclick = function () { sb.from("evenements").delete().eq("id", e.id).then(function () { load("evenements"); }); }; b.appendChild(cx);
+  }
+  c.appendChild(b); return c;
+}
+function evSet(id, st) { sb.from("evenements").update({ statut: st }).eq("id", id).then(function (r) { if (r.error) toast("Action impossible."); else { toast(st === "publie" ? "Événement publié" : "Événement refusé"); load("evenements"); } }); }
+function payBox() {
+  var w = $("evPay"); w.textContent = "";
+  w.appendChild(el("div", 0, "Publication : " + evPrice() + " CHF par événement."));
+  var pay = REG.ev_paiement || "";
+  if (/^https?:\/\//.test(pay)) { var a = el("a", "btn", "💳 Payer " + evPrice() + " CHF"); a.href = pay; a.target = "_blank"; a.rel = "noopener"; a.style.marginTop = "8px"; w.appendChild(a); }
+  else if (pay) w.appendChild(el("div", "okm", pay));
+  else w.appendChild(el("div", "mu", "Les infos de paiement vous seront envoyées par l'équipe Nauticonnect au contact indiqué."));
+  w.appendChild(el("div", "mu", "Votre événement est publié dès réception du paiement."));
+}
+function renderEvents() {
+  var d = today(), L = $("evList"); L.textContent = "";
+  var pub = EV.filter(function (e) { return e.statut === "publie" && e.fin >= d; });
+  pub.forEach(function (e) { L.appendChild(evCard(e)); });
+  if (!pub.length) L.appendChild(el("p", "mu", "Aucun événement à venir pour l'instant."));
+  var M = $("evMine"); M.textContent = "";
+  EV.filter(function (e) { return uid && e.auteur === uid && e.statut !== "publie"; }).forEach(function (e) { M.appendChild(evCard(e)); });
+  $("evMineH").hidden = !M.firstChild; $("evPay").style.display = EV.some(function (e) { return uid && e.auteur === uid && e.statut === "attente"; }) ? "" : "none"; payBox();
+  $("evPrice").textContent = evPrice();
+  $("evAdmin").hidden = !isAdmin;
+  if (isAdmin) {
+    var Q2 = $("evQueue"); Q2.textContent = "";
+    EV.filter(function (e) { return e.statut === "attente"; }).forEach(function (e) { Q2.appendChild(evCard(e, true)); });
+    if (!Q2.firstChild) Q2.appendChild(el("p", "mu", "Aucune demande en attente."));
+    var O2 = $("evAll"); O2.textContent = "";
+    EV.filter(function (e) { return e.statut !== "attente"; }).forEach(function (e) { O2.appendChild(evCard(e, true)); });
+    if (document.activeElement !== $("evSetP")) $("evSetP").value = evPrice();
+    if (document.activeElement !== $("evSetL")) $("evSetL").value = REG.ev_paiement || "";
+  }
+}
+function evMsg(t, ok) { $("evMsg").className = ok ? "okm" : "err"; $("evMsg").textContent = t || ""; }
+$("evAdd").onclick = function () { $("evForm").hidden = !$("evForm").hidden; evMsg(); if (!$("evForm").hidden) $("evForm").scrollIntoView({ behavior: "smooth" }); };
+$("evCx").onclick = function () { $("evForm").hidden = true; };
+$("evSv").onclick = function () {
+  evMsg(); if (!guestOk(function () { $("evSv").onclick(); }, $("evMsg"))) return;
+  var d = { titre: $("evTi").value.trim(), lieu: $("evLi").value.trim(), debut: $("evD1").value, fin: $("evD2").value || $("evD1").value, heure: $("evHe").value.trim(), descr: $("evDs").value.trim(), site: $("evSi").value.trim(), contact: $("evCt").value.trim() };
+  if (d.titre.length < 3 || d.lieu.length < 2) { evMsg("Indiquez le nom de l'événement et le lieu."); return; }
+  if (!d.debut) { evMsg("Choisissez la date."); return; }
+  if (d.debut < today()) { evMsg("La date est déjà passée."); return; }
+  if (d.fin < d.debut) { evMsg("La date de fin est avant la date de début."); return; }
+  if (!/@/.test(d.contact) && !/^[+0-9 ().\/-]{7,20}$/.test(d.contact)) { evMsg("Indiquez un e-mail ou un téléphone de contact."); return; }
+  if (d.site && !/^https?:\/\//.test(d.site)) d.site = "https://" + d.site;
+  if (isAdmin) d.statut = "publie";
+  $("evSv").disabled = true;
+  sb.from("evenements").insert(d).then(function (r) {
+    if (r.error) { evMsg("Envoi impossible : " + r.error.message); return; }
+    ["evTi", "evLi", "evD1", "evD2", "evHe", "evDs", "evSi", "evCt"].forEach(function (k) { $(k).value = ""; });
+    $("evForm").hidden = true; load("evenements");
+    toast(isAdmin ? "Événement publié" : "Demande envoyée ! Réglez la publication ci-dessous.");
+    setTimeout(function () { var h = $("evMineH"); if (h && !h.hidden) h.scrollIntoView({ behavior: "smooth" }); }, 600);
+  }).then(function () { $("evSv").disabled = false; });
+};
+$("evSetSv").onclick = function () {
+  if (!isAdmin) return;
+  var pr = $("evSetP").value.trim(), lk = $("evSetL").value.trim();
+  if (!/^\d{1,4}$/.test(pr)) { toast("Prix invalide"); return; }
+  sb.from("reglages").upsert([{ k: "ev_prix", v: pr }, { k: "ev_paiement", v: lk }]).then(function (r) { toast(r.error ? "Enregistrement impossible" : "Réglages enregistrés"); load("reglages"); });
+};
