@@ -198,7 +198,7 @@ function onSession(s, ev) {
   if (ev === "PASSWORD_RECOVERY") { location.hash = "compte"; setAuthMode("reset"); }
   if (uid !== was) {
     isAdmin = false;
-    if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { isAdmin = !!(r.data && r.data.length); renderAll(); });
+    if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { isAdmin = !!(r.data && r.data.length); if (isAdmin) load("photos"); renderAll(); });
     subscribeAll(); loadAll().then(function () {
       if (real() && cur() === "compte" && authMode !== "reset") {
         var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
@@ -278,6 +278,8 @@ function renderHome() {
   var u = unread() + pendingIn().length; $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
   $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
   $("phBtn").hidden = !isAdmin;
+  var pq = isAdmin ? PH.filter(function (p) { return !pub(p); }).length : 0, hm = $("homeMod");
+  hm.hidden = !pq; hm.textContent = "📷 " + pq + " photo" + (pq > 1 ? "s" : "") + " à vérifier ›";
 }
 /* bannière animée */
 var heroRunning = false;
@@ -591,7 +593,8 @@ function shrink(file, max) {
     return new Promise(function (r) { c.toBlob(r, "image/jpeg", .82); });
   });
 }
-function photosOf(k) { return PH.filter(function (p) { return p.k === k; }).sort(function (a, b) { return ts(b.t) - ts(a.t); }); }
+function pub(p) { return !p.statut || p.statut === "publie"; }
+function photosOf(k) { return PH.filter(function (p) { return p.k === k && pub(p); }).sort(function (a, b) { return ts(b.t) - ts(a.t); }); }
 function modal(title) {
   var ov = el("div", "ph-ov"), bx = el("div", "ph-box"); ov.appendChild(bx);
   var hd = el("div", "ph-hd"); hd.appendChild(el("b", 0, title)); var x = el("button", "ph-x", "✕"); x.setAttribute("aria-label", "Fermer"); hd.appendChild(x); bx.appendChild(hd);
@@ -600,7 +603,8 @@ function modal(title) {
   return { bx: bx, close: close };
 }
 function pickPhoto(k, label) {
-  if (!guestOk(function () { pickPhoto(k, label); })) return;
+  if (!sb) return;
+  if (!real()) { toast("Créez un compte (gratuit) pour partager des photos."); try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "compte"; return; }
   var md = modal("Ajouter une photo"), bx = md.bx;
   bx.appendChild(el("div", "mu", label));
   var fi = el("input", "f"); fi.type = "file"; fi.accept = "image/*"; fi.style.marginTop = "8px"; bx.appendChild(fi);
@@ -608,16 +612,40 @@ function pickPhoto(k, label) {
   var cap = el("input", "f"); cap.maxLength = 120; cap.placeholder = "Légende (ex. ponton visiteurs plein, lac calme…)"; cap.style.marginTop = "8px"; bx.appendChild(cap);
   var go = el("button", "btn", "Publier la photo"); go.disabled = true; bx.appendChild(go);
   var msg = el("div", "err"); bx.appendChild(msg);
-  bx.appendChild(el("div", "mu", "Visible par tous. Évitez de photographier des personnes reconnaissables sans leur accord."));
+  var rl = el("div", "card wxal"); rl.style.margin = "10px 0 0"; rl.appendChild(el("b", 0, "Règles des photos")); rl.appendChild(el("div", "mu", "Photos du lac, des ports et de la météo uniquement. Aucune personne reconnaissable sans son accord. " + (isAdmin ? "" : "Chaque photo est vérifiée avant d'être visible par les autres membres.") + " Les abus entraînent la suppression du compte.")); bx.appendChild(rl);
   fi.onchange = function () { var f = fi.files && fi.files[0]; go.disabled = !f; if (f) { im.src = URL.createObjectURL(f); im.hidden = false; } };
   go.onclick = function () {
     var f = fi.files && fi.files[0]; if (!f) return; go.disabled = true; msg.className = "mu"; msg.textContent = "Envoi en cours…";
     var path = uid + "/" + Date.now() + ".jpg";
     shrink(f, 1600).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
       .then(function (r) { if (r.error) throw r.error; return sb.from("photos").insert({ k: k, chemin: path, c: cap.value.trim().slice(0, 120) }); })
-      .then(function (r) { if (r.error) throw r.error; md.close(); toast("Photo publiée, merci !"); load("photos"); })
+      .then(function (r) { if (r.error) throw r.error; md.close(); toast(isAdmin ? "Photo publiée, merci !" : "Merci ! Votre photo sera visible après vérification."); load("photos"); })
       .catch(function () { msg.className = "err"; msg.textContent = "L'envoi a échoué. Vérifiez la connexion et réessayez (photo JPEG ou PNG)."; go.disabled = false; });
   };
+}
+function photoReport(p, done) {
+  if (!confirm("Signaler cette photo ? Elle sera masquée tout de suite, puis vérifiée.")) return;
+  if (!guestOk(function () { photoReport(p, done); })) return;
+  sb.from("signalements").insert({ quoi: "photo", ref: String(p.id) }).then(function (r) {
+    if (r.error) { toast("Signalement impossible. Réessayez."); return; }
+    PH = PH.filter(function (x) { return x.id !== p.id; }); toast("Photo signalée et masquée. Merci !"); renderAll(); if (done) done();
+  });
+}
+function photoDel(p) { return sb.from("photos").delete().eq("id", p.id).then(function () { sb.storage.from("photos").remove([p.chemin]); PH = PH.filter(function (x) { return x.id !== p.id; }); renderAll(); }); }
+function renderPhotoMod() {
+  var B = $("phMod"); B.textContent = ""; var q = PH.filter(function (p) { return !pub(p); });
+  var mine = q.filter(function (p) { return p.auteur === uid; });
+  if (!isAdmin) { B.hidden = !mine.length; if (mine.length) B.appendChild(el("div", "note", "Vous avez " + mine.length + " photo" + (mine.length > 1 ? "s" : "") + " en attente de vérification.")); return; }
+  B.hidden = false; B.appendChild(el("h2", 0, "Photos à vérifier (" + q.length + ")"));
+  if (!q.length) { B.appendChild(el("p", "mu", "Rien à vérifier.")); return; }
+  q.forEach(function (p) {
+    var it = el("div", "card ph-item"), img = el("img"); img.loading = "lazy"; img.alt = p.c || "Photo"; img.src = photoUrl(p.chemin); it.appendChild(img);
+    it.appendChild(el("div", 0, (p.c ? p.c + " · " : "") + nameOf(p.auteur) + " · " + ago(p.t)));
+    var r = el("div", "row"); r.style.marginTop = "8px";
+    var ok = el("button", "btn sm", "✓ Publier"); ok.onclick = function () { ok.disabled = true; sb.from("photos").update({ statut: "publie" }).eq("id", p.id).then(function (x) { if (x.error) { toast("Erreur"); ok.disabled = false; return; } p.statut = "publie"; toast("Photo publiée"); renderAll(); }); };
+    var no = el("button", "btn g sm", "✕ Supprimer"); no.onclick = function () { if (confirm("Supprimer définitivement cette photo ?")) photoDel(p).then(function () { toast("Photo supprimée"); }); };
+    r.appendChild(ok); r.appendChild(no); it.appendChild(r); B.appendChild(it);
+  });
 }
 function gallery(title, k, label) {
   var md = modal(title), bx = md.bx;
@@ -630,6 +658,7 @@ function gallery(title, k, label) {
       var it = el("div", "ph-item"), img = el("img"); img.loading = "lazy"; img.alt = p.c || "Photo"; img.src = photoUrl(p.chemin); it.appendChild(img);
       if (p.c) it.appendChild(el("div", 0, p.c));
       var m = el("div", "ph-meta"); m.appendChild(el("span", 0, nameOf(p.auteur) + " · " + ago(p.t)));
+      if (p.auteur !== uid && !isAdmin) { var sg = el("button", "del", "Signaler"); sg.onclick = function () { photoReport(p, function () { draw(); }); }; m.appendChild(sg); }
       if (p.auteur === uid || isAdmin) { var d = el("button", "del", "Supprimer"); d.onclick = function () { sb.from("photos").delete().eq("id", p.id).then(function () { sb.storage.from("photos").remove([p.chemin]); PH = PH.filter(function (x) { return x.id !== p.id; }); draw(); renderAll(); }); }; m.appendChild(d); }
       it.appendChild(m); wrap.appendChild(it);
     });
@@ -685,7 +714,7 @@ $("mZone").onchange = function () { ls("nc-mzone", this.value); };
 $("mAdd").onclick = function () { pickPhoto("meteo-" + $("mZone").value, "Zone : " + $("mZone").options[$("mZone").selectedIndex].text); };
 function renderMeteoFeed() {
   var F = $("mFeed"); F.textContent = ""; var lim = Date.now() - 48 * 36e5;
-  var ps = PH.filter(function (p) { return p.k.indexOf("meteo-") === 0 && ts(p.t) > lim; }).slice(0, 15);
+  var ps = PH.filter(function (p) { return p.k.indexOf("meteo-") === 0 && pub(p) && ts(p.t) > lim; }).slice(0, 15);
   if (!ps.length) { F.appendChild(el("p", "mu", "Pas encore de photo récente. Partagez la première !")); return; }
   ps.forEach(function (p) {
     var zi = +p.k.slice(8), zn = MZ[zi] || "Léman", c = el("div", "feed"), im = el("img"); im.loading = "lazy"; im.alt = p.c || "État du lac"; im.src = photoUrl(p.chemin); c.appendChild(im);
@@ -1081,7 +1110,7 @@ function renderAll() {
   renderHome();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") { renderPonton(); if (unread()) markRead(); }
-  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); loadWind(); wxRender(); }
+  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); }
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "evenements") renderEvents();
 }
