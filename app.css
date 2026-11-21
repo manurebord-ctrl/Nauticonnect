@@ -296,8 +296,3 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .thd{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .thx{margin-left:auto;font-size:13px;font-weight:700;color:var(--mu);background:none;border:1px solid var(--bd);border-radius:20px;padding:5px 11px}
 .linkb{background:none;border:0;color:var(--ac);font-weight:600;font-size:14px;padding:4px 0 10px}
-
-/* connexion Google / Facebook */
-.sbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 14px;margin-bottom:8px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-weight:700;font-size:15px}
-.sbtn.fb{background:#1877f2;border-color:#1877f2;color:#fff}
-.ordiv{display:flex;align-items:center;gap:10px;color:var(--mu);font-size:13px;margin:10px 0 12px}.ordiv:before,.ordiv:after{content:"";flex:1;border-top:1px solid var(--bd)}
