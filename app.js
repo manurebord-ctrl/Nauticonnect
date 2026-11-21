@@ -19,18 +19,20 @@ var CFG = window.NC_CONFIG || {};
 var configured = /^https:\/\/.+/.test(CFG.url || "") && (CFG.key || "").length > 30;
 var sb = null;
 if (configured && window.supabase) sb = window.supabase.createClient(CFG.url, CFG.key);
-var session = null, uid = null, isAdmin = false;
+var session = null, uid = null, isAdmin = false, guest = false;
+/* guest = visiteur sans compte (connexion anonyme Supabase, invisible pour lui) */
+function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
 var P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
-function me() { return uid && P[uid] ? P[uid] : null; }
+function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
 function badge(id, fb) { var b = el("span", "badge"); b.appendChild(el("span", "av", initial(id))); b.appendChild(document.createTextNode(nameOf(id, fb))); return b; }
 
 var Q = {
   profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat").limit(5000); },
-  alertes: function () { return uid ? sb.from("alertes").select("*").gte("maj", iso(12 * 36e5)) : null; },
+  alertes: function () { return sb.from("alertes").select("*").gte("maj", iso(12 * 36e5)); },
   ouverts: function () { return sb.from("ouverts").select("*").gte("maj", iso(2 * 36e5)); },
   messages: function () { return uid ? sb.from("messages").select("*").gte("t", iso(7 * 864e5)).order("t").limit(800) : null; },
   avis: function () { return sb.from("avis").select("*").order("t", { ascending: false }).limit(300); },
@@ -77,13 +79,26 @@ function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "
 function goAuth(ret) { try { sessionStorage.setItem("nc-ret", ret || cur()); } catch (e) {} location.hash = "compte"; }
 function requireProfile(msgEl) {
   if (!sb) { if (msgEl) msgEl.textContent = "L'appli n'est pas encore configurée."; return false; }
-  if (!uid) { goAuth(); return false; }
+  if (!real()) { goAuth(); return false; }
   if (!me()) { try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "profil"; toast("Créez d'abord votre fiche bateau"); return false; }
   return true;
 }
+/* Fonctions ouvertes à tous : sans compte, on crée en silence une session invité */
+var guestBusy = false;
+function guestOk(retry, msgEl) {
+  if (!sb) { if (msgEl) msgEl.textContent = "L'appli n'est pas encore configurée."; return false; }
+  if (uid) return true;
+  if (guestBusy) return false; guestBusy = true;
+  sb.auth.signInAnonymously().then(function (r) {
+    guestBusy = false;
+    if (r.error || !r.data || !r.data.session) { var t = "Action impossible pour le moment. Réessayez dans un instant."; if (msgEl) { msgEl.className = "err"; msgEl.textContent = t; } else toast(t); return; }
+    onSession(r.data.session, "SIGNED_IN"); retry();
+  }).catch(function () { guestBusy = false; toast("Pas de connexion internet ?"); });
+  return false;
+}
 function route() {
   var h = cur();
-  if (NEEDS_AUTH[h] && !uid && sb) { goAuth(h); return; }
+  if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h); return; }
   VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
   Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
   if (h === "profil") fillProfile();
@@ -129,14 +144,14 @@ function setAuthMode(m) {
   var reset = m === "reset";
   $("auTabs").hidden = reset;
   $("auTitle").textContent = reset ? "Nouveau mot de passe" : m === "up" ? "Rejoindre l'équipage" : "Bon retour à bord";
-  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Créez votre compte en 30 secondes pour discuter, alerter et partager." : "Connectez-vous avec votre e-mail.";
+  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Un compte sert uniquement au chat du Ponton. Tout le reste de l'appli est libre d'accès." : "Connectez-vous avec votre e-mail.";
   $("auGo").textContent = reset ? "Enregistrer le mot de passe" : m === "up" ? "Créer mon compte" : "Me connecter";
   $("auPassL").textContent = m === "in" ? "Mot de passe" : "Mot de passe (8 caractères min.)";
   $("auPass").autocomplete = m === "in" ? "current-password" : "new-password";
   $("auEmail").parentNode.querySelector('label[for="auEmail"]').hidden = reset; $("auEmail").hidden = reset;
   $("auForgot").hidden = m !== "in";
   $("auMsg").textContent = ""; $("auMsg").className = "err";
-  if (uid && !reset) { $("auMsg").className = "okm"; $("auMsg").textContent = "Vous êtes connecté."; }
+  if (real() && !reset) { $("auMsg").className = "okm"; $("auMsg").textContent = "Vous êtes connecté."; }
 }
 Array.prototype.forEach.call($("auTabs").children, function (b) { b.onclick = function () { setAuthMode(b.dataset.m); }; });
 function authErr(e) {
@@ -173,13 +188,13 @@ $("auForgot").onclick = function () {
   });
 };
 function onSession(s, ev) {
-  var was = uid; session = s; uid = s ? s.user.id : null;
+  var was = uid; session = s; uid = s ? s.user.id : null; guest = !!(s && s.user && s.user.is_anonymous);
   if (ev === "PASSWORD_RECOVERY") { location.hash = "compte"; setAuthMode("reset"); }
   if (uid !== was) {
     isAdmin = false;
     if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { isAdmin = !!(r.data && r.data.length); renderAll(); });
     subscribeAll(); loadAll().then(function () {
-      if (uid && cur() === "compte" && authMode !== "reset") {
+      if (real() && cur() === "compte" && authMode !== "reset") {
         var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
         location.hash = me() ? (ret && ret !== "compte" ? ret : "") : "profil";
       }
@@ -200,7 +215,7 @@ function fillProfile() {
 }
 $("pSave").onclick = function () {
   var m = $("pMsg"); m.className = "err"; m.textContent = "";
-  if (!uid) { goAuth("profil"); return; }
+  if (!real()) { goAuth("profil"); return; }
   var ps = $("pPseudo").value.trim(), bt = $("pBoat").value.trim();
   if (ps.length < 2) { m.textContent = "Indiquez un prénom ou un pseudo (2 caractères min.)."; return; }
   var taken = Object.keys(P).some(function (k) { return k !== uid && norm(P[k].pseudo) === norm(ps) && norm(P[k].bateau) === norm(bt); });
@@ -236,7 +251,7 @@ $("pDelete").onclick = function () {
 function renderChip() {
   var c = $("meChip"), p = me(); c.textContent = "";
   if (p) { c.className = "me"; c.href = "#profil"; c.appendChild(el("span", "av", initial(uid))); c.appendChild(el("span", 0, p.pseudo)); }
-  else if (uid) { c.className = "me new"; c.href = "#profil"; c.textContent = "Ma fiche bateau"; }
+  else if (real()) { c.className = "me new"; c.href = "#profil"; c.textContent = "Ma fiche bateau"; }
   else { c.className = "me new"; c.href = "#compte"; c.textContent = "Se connecter"; }
 }
 var AVC = ["#f29a5b", "#9fe3c4", "#a9c8f5", "#f5d07a", "#e9a8d0", "#c7b8f5"];
@@ -252,7 +267,7 @@ function renderHome() {
     N.appendChild(el("p", 0, t + (op.length > 2 ? " et " + (op.length - 2) + " autre" + (op.length > 3 ? "s" : "") : "") + (op.length > 1 ? " ont" : " a") + " hissé le pavillon."));
   } else N.appendChild(el("p", 0, "Personne n'a encore hissé le pavillon. Lancez la première sortie !"));
   var c = $("ctaMain"), p = me();
-  c.textContent = p ? "Hisser le pavillon" : "Rejoindre l'équipage"; c.href = p ? "#ponton" : uid ? "#profil" : "#compte";
+  c.textContent = p ? "Hisser le pavillon" : "Rejoindre l'équipage"; c.href = p ? "#ponton" : real() ? "#profil" : "#compte";
   var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = "⚠ " + n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
   var u = unread(); $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
   $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
@@ -318,13 +333,14 @@ $("pnGps").onclick = function () {
   navigator.geolocation.getCurrentPosition(function (p) { gp = { nom: "Position GPS", lat: p.coords.latitude, lon: p.coords.longitude }; $("pnGps").textContent = "📍 Position GPS utilisée"; renderPanne(); },
     function () { $("pnGps").textContent = "📍 Utiliser ma position GPS"; pnMsg("Position GPS refusée ou indisponible : choisissez une zone ou touchez la carte."); }, { timeout: 10000, enableHighAccuracy: true });
 };
-$("pnSos").onclick = function () { pnMsg(); if (!requireProfile($("pnMsg"))) return; var f = $("pnForm"); f.hidden = !f.hidden; if (!f.hidden) f.scrollIntoView({ behavior: "smooth" }); };
+$("pnSos").onclick = function () { pnMsg(); var f = $("pnForm"); f.hidden = !f.hidden; if (!f.hidden) f.scrollIntoView({ behavior: "smooth" }); };
 $("pnGo").onclick = function () {
-  pnMsg(); if (!requireProfile($("pnMsg"))) return;
+  pnMsg();
   if (!pbv) { pnMsg("Étape 2 : choisissez le problème."); return; }
   var tel = $("pnTel").value.trim(); if (tel && !/^[+0-9 ().\/-]{7,20}$/.test(tel)) { pnMsg("Numéro de téléphone invalide."); return; }
+  if (!guestOk(function () { $("pnGo").onclick(); }, $("pnMsg"))) return;
   var p = me(), pos = pnPos(); $("pnGo").disabled = true;
-  sb.from("alertes").insert({ par: p.pseudo, bateau: p.bateau || "", zone: pos.nom, lat: pos.lat, lon: pos.lon, probleme: pbv, detail: $("pnDet").value.trim().slice(0, 140), tel: tel })
+  sb.from("alertes").insert({ par: p ? p.pseudo : "Plaisancier", bateau: p ? p.bateau || "" : "", zone: pos.nom, lat: pos.lat, lon: pos.lon, probleme: pbv, detail: $("pnDet").value.trim().slice(0, 140), tel: tel })
     .then(function (r) {
       if (r.error) { pnMsg("Envoi impossible. En cas de danger, appelez le 117."); return; }
       $("pnForm").hidden = true; $("pnDet").value = ""; pbv = ""; Array.prototype.forEach.call($("pnPbs").children, function (x) { x.className = ""; });
@@ -335,10 +351,9 @@ function activeAlerts() { var lim = Date.now() - 12 * 36e5; return A.filter(func
 function renderPanne() {
   var p = me(), W = $("pnWho"); W.textContent = "";
   if (p) { W.appendChild(document.createTextNode("Alerte envoyée au nom de ")); W.appendChild(el("b", 0, nameOf(uid))); }
-  else W.textContent = uid ? "Créez votre fiche bateau pour pouvoir alerter (30 secondes)." : "Connectez-vous pour alerter les plaisanciers. En cas de danger : 117.";
+  else W.textContent = "Pas besoin de compte pour alerter. En cas de danger : 117.";
   var L = $("pnList"); L.textContent = ""; var pos = pnPos();
-  if (!uid) { L.appendChild(el("p", "mu", "Connectez-vous pour voir les alertes des plaisanciers.")); }
-  else {
+  {
     var r = activeAlerts().map(function (a) { return { a: a, d: km(pos.lat, pos.lon, a.lat, a.lon) }; }).sort(function (x, y) { return (x.a.auteur === uid ? 0 : 1) - (y.a.auteur === uid ? 0 : 1) || x.d - y.d; });
     if (!r.length) L.appendChild(el("p", "mu", "Aucune alerte active. Bonne navigation !"));
     r.forEach(function (o) {
@@ -354,9 +369,9 @@ function renderPanne() {
       var row = el("div", "row"); row.style.marginTop = "8px";
       if (!m) {
         var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? "Je ne peux plus venir" : "🤝 Je peux aider");
-        b.onclick = function () { if (!requireProfile()) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
+        b.onclick = function () { if (!guestOk(function () { b.onclick(); })) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
         row.appendChild(b);
-        var w2 = el("button", "btn g", "💬 Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2);
+        if (P[a.auteur]) { var w2 = el("button", "btn g", "💬 Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2); }
       } else {
         var b2 = el("button", "btn g", "✅ Problème résolu"); b2.onclick = function () { sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function () { load("alertes"); toast("Bon retour au port !"); }); }; row.appendChild(b2);
       }
@@ -381,7 +396,7 @@ function renderSc() {
   if (!L.firstChild) L.appendChild(el("div", "mu", "Aucun numéro enregistré pour l’instant."));
 }
 $("scSave").onclick = function () {
-  pnMsg(); if (!requireProfile($("pnMsg"))) return;
+  pnMsg(); if (!guestOk(function () { $("scSave").onclick(); }, $("pnMsg"))) return;
   var n = $("scName").value.trim(), t = $("scTel").value.trim();
   if (!n || !/^[+0-9 ().\/-]{7,20}$/.test(t)) { pnMsg("Section et numéro valide requis."); return; }
   sb.from("sauvetages").upsert({ nom: n.slice(0, 40), tel: t, maj: nowIso() }).then(function (r) { if (r.error) pnMsg("Enregistrement refusé."); else { $("scTel").value = ""; load("sauvetages"); } });
@@ -499,7 +514,7 @@ function drawAvChips() {
 }
 drawAvChips();
 $("avSend").onclick = function () {
-  var m = $("avMsg"); m.className = "err"; m.textContent = ""; if (!requireProfile(m)) return;
+  var m = $("avMsg"); m.className = "err"; m.textContent = ""; if (!guestOk(function () { $("avSend").onclick(); }, m)) return;
   var t = $("avTxt").value.trim(); if (t.length < 5) { m.textContent = "Écrivez au moins quelques mots."; return; } if (avBusy) return;
   avBusy = true; $("avSend").disabled = true;
   sb.from("avis").insert({ ty: avType, module: $("avMod").value, txt: t.slice(0, 300) }).then(function (r) {
@@ -514,7 +529,7 @@ function renderAvis() {
   if (!items.length) { L.appendChild(el("p", "mu", AV.length ? "Rien dans cette catégorie pour l'instant." : "Aucun avis pour l'instant. Le premier avis est le plus utile !")); return; }
   items.forEach(function (x) {
     var d = el("div", "avi"), on = !!mine[x.id], vb = el("button", "vote" + (on ? " on" : ""), String(c[x.id] || 0)); vb.appendChild(el("small", 0, on ? "voté" : "+1")); vb.setAttribute("aria-label", "Voter pour cet avis");
-    vb.onclick = function () { if (!requireProfile()) return; vb.disabled = true; (on ? sb.from("votes").delete().eq("avis_id", x.id).eq("auteur", uid) : sb.from("votes").insert({ avis_id: x.id })).then(function () { load("votes"); }); };
+    vb.onclick = function () { if (!guestOk(function () { vb.onclick(); })) return; vb.disabled = true; (on ? sb.from("votes").delete().eq("avis_id", x.id).eq("auteur", uid) : sb.from("votes").insert({ avis_id: x.id })).then(function () { load("votes"); }); };
     d.appendChild(vb);
     var bd = el("div", "body"), h = el("div"); h.appendChild(el("span", "pl " + x.ty, AVT[x.ty])); if (x.statut) h.appendChild(el("span", "pl st", STL[x.statut])); h.appendChild(el("span", "mu", x.module)); bd.appendChild(h);
     bd.appendChild(el("div", "txt", x.txt)); var f = el("div", "mu"); f.appendChild(document.createTextNode(nameOf(x.auteur) + " · " + ago(x.t)));
@@ -544,7 +559,7 @@ function modal(title) {
   return { bx: bx, close: close };
 }
 function pickPhoto(k, label) {
-  if (!requireProfile()) return;
+  if (!guestOk(function () { pickPhoto(k, label); })) return;
   var md = modal("Ajouter une photo"), bx = md.bx;
   bx.appendChild(el("div", "mu", label));
   var fi = el("input", "f"); fi.type = "file"; fi.accept = "image/*"; fi.style.marginTop = "8px"; bx.appendChild(fi);
@@ -612,7 +627,7 @@ function renderPorts() {
     c.appendChild(thumb("port-" + p.id, p.n, "Port : " + p.n + " (ponton visiteurs, capitainerie, état du port…)"));
     var a = el("div", "act"), mine = PL.filter(function (r) { return r.port === p.id && r.auteur === uid && ts(r.t) > Date.now() - 12 * 36e5; })[0];
     ["libre", "peu", "complet"].forEach(function (k) { var b = el("button", k + (mine && mine.s === k ? " mine" : ""), k === "libre" ? "Libre" : k === "peu" ? "Peu" : "Complet");
-      b.onclick = function () { if (!requireProfile()) return; b.disabled = true; (mine && mine.s === k ? sb.from("places").delete().eq("port", p.id).eq("auteur", uid) : sb.from("places").upsert({ port: p.id, auteur: uid, s: k, t: nowIso() }, { onConflict: "port,auteur" })).then(function () { load("places"); toast("Merci pour le signalement !"); }); };
+      b.onclick = function () { if (!guestOk(function () { b.onclick(); })) return; b.disabled = true; (mine && mine.s === k ? sb.from("places").delete().eq("port", p.id).eq("auteur", uid) : sb.from("places").upsert({ port: p.id, auteur: uid, s: k, t: nowIso() }, { onConflict: "port,auteur" })).then(function () { load("places"); toast("Merci pour le signalement !"); }); };
       a.appendChild(b); });
     var m = el("a", 0, "Carte"); m.href = mapsSearch("port " + p.n.replace(" – ", " ")); m.target = "_blank"; m.rel = "noopener"; a.appendChild(m);
     var wc = el("a", 0, "Webcam"); wc.href = "#webcams"; wc.onclick = function () { wcPort = p.id; }; a.appendChild(wc);
@@ -745,7 +760,7 @@ function renderRestos() {
   });
 }
 $("reAdd").onclick = function () {
-  var m = $("reMsg"); m.className = "err"; m.textContent = ""; if (!requireProfile(m)) return;
+  var m = $("reMsg"); m.className = "err"; m.textContent = ""; if (!guestOk(function () { $("reAdd").onclick(); }, m)) return;
   var n = $("reN").value.trim(), l = $("reL").value.trim(); if (n.length < 2 || l.length < 2) { m.textContent = "Indiquez au moins le nom et le lieu."; return; }
   $("reAdd").disabled = true;
   sb.from("restos").insert({ nom: n, lieu: l, acces: $("reA").value, descr: $("reD").value.trim().slice(0, 140) }).then(function (r) {
@@ -769,7 +784,7 @@ function renderEpaves() {
 }
 $("epMap").onclick = function (e) { if ($("epForm").hidden) return; epPend = svgPoint(this, e); $("epPs").textContent = "📍 Position choisie : " + epPend.lat.toFixed(4) + ", " + epPend.lon.toFixed(4); renderEpaves(); };
 function epOpen(w) { epEd = w ? w.id : null; $("epN").value = w ? w.nom : ""; $("epA").value = w ? w.annee || "" : ""; $("epP").value = w ? w.pm || "" : ""; $("epT").value = w ? w.note || "" : ""; $("epAp").checked = w ? !!w.approx : true; epPend = w ? { lat: w.lat, lon: w.lon } : null; $("epPs").textContent = w ? "📍 Touchez la carte pour déplacer l’épave." : "📍 Touchez la carte pour placer l’épave."; $("epForm").hidden = false; renderEpaves(); $("epMap").scrollIntoView({ behavior: "smooth" }); }
-$("epAdd").onclick = function () { if (!requireProfile($("epMsg"))) return; epOpen(null); };
+$("epAdd").onclick = function () { if (!guestOk(function () { epOpen(null); }, $("epMsg"))) return; epOpen(null); };
 $("epCx").onclick = function () { $("epForm").hidden = true; epPend = null; renderEpaves(); };
 $("epSv").onclick = function () {
   var m = $("epMsg"); m.textContent = ""; var n = $("epN").value.trim(); if (!n) { m.textContent = "Nom requis."; return; } if (!epPend) { m.textContent = "Touchez la carte pour placer l’épave."; return; }
@@ -849,14 +864,14 @@ function renderAnnonces() {
       var d = el("button", "btn g sm", "Retirer (vendu / donné)"); d.onclick = function () { sb.from("annonces").delete().eq("id", a.id).then(function () { load("annonces"); }); }; c.appendChild(d);
     } else {
       var k = el("button", "btn sm", "💬 Contacter"); k.onclick = function () { openThread(a.auteur, "Bonjour, votre annonce « " + a.titre + " » m'intéresse. "); }; c.appendChild(k);
-      var r = el("button", "btn g sm", "Signaler"); r.onclick = function () { if (!requireProfile()) return; sb.from("signalements").insert({ quoi: "annonce", ref: String(a.id) }).then(function () { r.textContent = "Signalée"; r.disabled = true; }); }; c.appendChild(r);
+      var r = el("button", "btn g sm", "Signaler"); r.onclick = function () { if (!guestOk(function () { r.onclick(); })) return; sb.from("signalements").insert({ quoi: "annonce", ref: String(a.id) }).then(function () { r.textContent = "Signalée"; r.disabled = true; }); }; c.appendChild(r);
     }
     L.appendChild(c);
   });
   if (!L.firstChild) L.appendChild(el("p", "mu", "Aucune annonce pour l’instant. Publiez la première !"));
 }
 function anOpen(a) { anEd = a ? a.id : null; $("anTi").value = a ? a.titre : ""; $("anTy").value = a ? a.type : "Vente"; $("anPr").value = a ? a.prix || "" : ""; $("anCt").value = a ? a.cat : CATS[0]; $("anEt").value = a ? a.etat : "Bon"; $("anLo").value = a ? a.lieu || "" : ""; $("anDs").value = a ? a.descr || "" : ""; $("anForm").hidden = false; $("anForm").scrollIntoView({ behavior: "smooth" }); }
-$("anAdd").onclick = function () { anMsg(); if (!requireProfile($("anMsg"))) return; anOpen(null); };
+$("anAdd").onclick = function () { anMsg(); if (!guestOk(function () { anOpen(null); }, $("anMsg"))) return; anOpen(null); };
 $("anCx").onclick = function () { $("anForm").hidden = true; anEd = null; };
 $("anSv").onclick = function () {
   anMsg(); var t = $("anTi").value.trim(); if (t.length < 2) { anMsg("Titre requis."); return; }
