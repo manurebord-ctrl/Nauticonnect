@@ -356,7 +356,7 @@ $("pnGo").onclick = function () {
       toast("Alerte envoyée. Restez à bord, gilets mis."); load("alertes"); window.scrollTo({ top: 0, behavior: "smooth" });
     }).then(function () { $("pnGo").disabled = false; });
 };
-function activeAlerts() { var lim = Date.now() - 12 * 36e5; return A.filter(function (a) { return a.etat === "ouverte" && ts(a.maj) > lim; }); }
+function activeAlerts() { var lim = Date.now() - 6 * 36e5; return A.filter(function (a) { return a.etat === "ouverte" && ts(a.maj) > lim; }); }
 function renderPanne() {
   var p = me(), W = $("pnWho"); W.textContent = "";
   if (p) { W.appendChild(document.createTextNode("Alerte envoyée au nom de ")); W.appendChild(el("b", 0, nameOf(uid))); }
@@ -374,15 +374,16 @@ function renderPanne() {
       if (a.tel && !m) { var t = el("div"); t.appendChild(document.createTextNode("📞 ")); var tl = el("a", 0, a.tel); tl.href = "tel:" + a.tel.replace(/[^0-9+]/g, ""); tl.style.cssText = "color:var(--ac);font-weight:700"; t.appendChild(tl); c.appendChild(t); }
       var ai = a.aides || [];
       if (ai.length) c.appendChild(el("div", "okm", "🤝 Viennent aider : " + ai.map(function (x) { return nameOf(x); }).join(", ")));
-      else if (m) c.appendChild(el("div", "mu", "En attente d’un plaisancier… Si personne ne répond, appelez le 117."));
+      else if (m) c.appendChild(el("div", "mu", "En attente d’un plaisancier… Si personne ne répond, appelez le 117. L’alerte se désactive seule après 6 heures."));
       var row = el("div", "row"); row.style.marginTop = "8px";
       if (!m) {
         var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? "Je ne peux plus venir" : "🤝 Je peux aider");
         b.onclick = function () { if (!guestOk(function () { b.onclick(); })) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
         row.appendChild(b);
         if (P[a.auteur]) { var w2 = el("button", "btn g", "💬 Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2); }
+        if (isAdmin) { var b3 = el("button", "btn g", "🔒 Clôturer (admin)"); b3.onclick = function () { if (!confirm("Clôturer cette alerte ? Elle disparaîtra pour tout le monde.")) return; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) toast("Clôture impossible."); else { load("alertes"); toast("Alerte clôturée"); } }); }; c.appendChild(row); row = el("div", "row"); row.style.marginTop = "8px"; row.appendChild(b3); }
       } else {
-        var b2 = el("button", "btn g", "✅ Problème résolu"); b2.onclick = function () { sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function () { load("alertes"); toast("Bon retour au port !"); }); }; row.appendChild(b2);
+        var b2 = el("button", "btn", "✅ Problème résolu · désactiver l'alerte"); b2.onclick = function () { b2.disabled = true; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) { b2.disabled = false; toast("Impossible de désactiver. Réessayez."); return; } load("alertes"); toast("Alerte désactivée. Bon retour au port !"); }); }; row.appendChild(b2);
       }
       c.appendChild(row); L.appendChild(c);
     });
