@@ -719,6 +719,116 @@ function conv() {
 }
 $("mV").oninput = conv; $("mU").onchange = conv; conv();
 
+/* ================= BALISES VENT & ALERTES ================= */
+var BAL = [
+  { id: "gen", n: "Genève – rade", la: 46.212, lo: 6.165, z: "petit" },
+  { id: "ver", n: "Versoix – Coppet", la: 46.300, lo: 6.185, z: "petit" },
+  { id: "nyo", n: "Nyon", la: 46.380, lo: 6.245, z: "nord" },
+  { id: "yvo", n: "Yvoire", la: 46.375, lo: 6.330, z: "sud" },
+  { id: "rol", n: "Rolle", la: 46.455, lo: 6.345, z: "nord" },
+  { id: "mor", n: "Morges", la: 46.500, lo: 6.500, z: "nord" },
+  { id: "tho", n: "Thonon", la: 46.382, lo: 6.478, z: "sud" },
+  { id: "lrg", n: "Grand-Lac (large)", la: 46.445, lo: 6.600, z: "large" },
+  { id: "ouc", n: "Lausanne – Ouchy", la: 46.502, lo: 6.630, z: "nord" },
+  { id: "evi", n: "Évian", la: 46.405, lo: 6.590, z: "sud" },
+  { id: "cul", n: "Lutry – Cully", la: 46.488, lo: 6.715, z: "nord" },
+  { id: "vev", n: "Vevey", la: 46.455, lo: 6.842, z: "haut" },
+  { id: "sgi", n: "Saint-Gingolph", la: 46.398, lo: 6.785, z: "haut" },
+  { id: "mon", n: "Montreux", la: 46.438, lo: 6.895, z: "haut" },
+  { id: "bou", n: "Le Bouveret", la: 46.388, lo: 6.858, z: "haut" },
+  { id: "vil", n: "Villeneuve", la: 46.398, lo: 6.918, z: "haut", hide: 1 }];
+var WX = null, wxLoading = false, wxH = 0, wxSel = null;
+function dirTxt(d) { return ["N", "NE", "E", "SE", "S", "SO", "O", "NO"][Math.round(((d % 360) + 360) % 360 / 45) % 8]; }
+function inDir(d, a, b) { return a <= b ? d >= a && d <= b : d >= a || d <= b; }
+function knCol(k) { return k < 8 ? "var(--ok)" : k < 15 ? "var(--ac)" : k < 22 ? "var(--or)" : "var(--red)"; }
+function hourTxt(t) { return new Date(t).getHours() + "h00"; }
+function loadWind(force) {
+  if (wxLoading) return; if (!force && WX && Date.now() - WX.at < 10 * 6e4) return;
+  if (!WX) { try { var c = JSON.parse(ls("nc-wx") || "null"); if (c && Date.now() - c.at < 60 * 6e4) { WX = c; wxRender(); } } catch (e) {} }
+  wxLoading = true;
+  var u = "https://api.open-meteo.com/v1/forecast?latitude=" + BAL.map(function (b) { return b.la; }).join(",") + "&longitude=" + BAL.map(function (b) { return b.lo; }).join(",") +
+    "&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&forecast_hours=13&wind_speed_unit=kn&timezone=Europe%2FZurich";
+  fetch(u).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
+    if (!Array.isArray(j)) j = [j];
+    var st = j.map(function (d, i) {
+      var h = d.hourly || {}, H = [];
+      (h.time || []).forEach(function (t, k) { H.push({ t: t, s: h.wind_speed_10m[k], d: h.wind_direction_10m[k], g: h.wind_gusts_10m[k] }); });
+      var c = d.current || {};
+      return { now: { t: c.time, s: c.wind_speed_10m, d: c.wind_direction_10m, g: c.wind_gusts_10m }, H: H };
+    });
+    WX = { at: Date.now(), st: st }; ls("nc-wx", JSON.stringify(WX));
+  }).catch(function () { if (!WX) WX = { err: 1, at: Date.now() - 9 * 6e4 }; }).then(function () { wxLoading = false; wxRender(); });
+}
+/* valeur d'une balise à l'échéance h (0 = maintenant, sinon +h heures) */
+function wxAt(i, h) { var s = WX.st[i]; if (!h) return s.now; var nowT = new Date(s.now.t || Date.now()).getTime(); for (var k = 0; k < s.H.length; k++) if (new Date(s.H[k].t).getTime() >= nowT + h * 36e5 - 18e5) return s.H[k]; return s.now; }
+function wxAlertsCalc() {
+  var A = []; if (!WX || !WX.st) return A;
+  function scan(test) { /* première échéance (0..12 h) où la règle se déclenche */
+    for (var h = 0; h <= 12; h++) { var hit = []; BAL.forEach(function (b, i) { var v = wxAt(i, h); if (v && v.s != null && test(b, v)) hit.push([b, v]); }); if (hit.length) return { h: h, hit: hit, t: wxAt(0, h).t }; } return null;
+  }
+  function maxG(r) { return Math.round(Math.max.apply(null, r.hit.map(function (x) { return x[1].g; }))); }
+  function when(r) { return r.h === 0 ? "en ce moment" : "vers " + hourTxt(r.t); }
+  function where(r) { var n = r.hit.map(function (x) { return x[0].n; }); return n.slice(0, 3).join(", ") + (n.length > 3 ? "…" : ""); }
+  var v = scan(function (b, x) { return b.z === "haut" && inDir(x.d, 100, 210) && (x.g >= 18 || x.s >= 12); });
+  if (v) { var g = maxG(v); A.push({ k: "vaudaire", lv: g >= 30 ? 2 : 1, t: "Alerte vaudaire " + when(v), d: "Foehn du sud-est sur le Haut-Lac (" + where(v) + "), rafales jusqu'à " + g + " nœuds. Vent chaud qui arrive brutalement par rafales : attention aux amarres et au retour au port." }); }
+  var bi = scan(function (b, x) { return inDir(x.d, 20, 95) && x.s >= 12; });
+  if (bi && bi.hit.length >= 3) { var g2 = maxG(bi); A.push({ k: "bise", lv: g2 >= 30 ? 2 : 1, t: "Bise " + when(bi), d: "Vent du nord-est (" + where(bi) + "), rafales jusqu'à " + g2 + " nœuds. Vagues courtes et creuses, surtout vers Genève." }); }
+  var jo = scan(function (b, x) { return (b.z === "nord" || b.z === "petit" || b.z === "large") && inDir(x.d, 280, 350) && x.g >= 20; });
+  if (jo) { var g3 = maxG(jo); A.push({ k: "joran", lv: g3 >= 30 ? 2 : 1, t: "Joran possible " + when(jo), d: "Vent du nord-ouest qui descend du Jura (" + where(jo) + "), rafales jusqu'à " + g3 + " nœuds. Il peut se lever en quelques minutes." }); }
+  var so = scan(function (b, x) { return inDir(x.d, 200, 265) && x.s >= 15; });
+  if (so && so.hit.length >= 2) { var g4 = maxG(so); A.push({ k: "vent", lv: g4 >= 30 ? 2 : 1, t: "Vent du sud-ouest " + when(so), d: "Le « vent » souffle fort sur le Grand-Lac (" + where(so) + "), rafales jusqu'à " + g4 + " nœuds, souvent avec la pluie." }); }
+  var cov = {}; [v, bi, jo, so].forEach(function (r) { if (r) r.hit.forEach(function (x) { cov[x[0].id] = 1; }); });
+  var cv = scan(function (b, x) { return x.g >= 25 && !cov[b.id]; });
+  if (cv) { var g5 = maxG(cv); A.push({ k: "fort", lv: g5 >= 34 ? 2 : 1, t: (g5 >= 34 ? "Tempête " : "Coup de vent ") + when(cv), d: "Rafales jusqu'à " + g5 + " nœuds (" + where(cv) + "). Petites embarcations : restez au port ou près de la rive." }); }
+  return A.sort(function (a, b) { return b.lv - a.lv; });
+}
+function arrow(g, d, k, sz) { /* flèche dans le sens où va le vent */
+  var a = svgEl("g", { transform: "rotate(" + ((d + 180) % 360) + ")" }, g);
+  svgEl("path", { d: "M0,-" + sz + " L" + (sz * .55) + "," + (sz * .5) + " L0," + (sz * .2) + " L-" + (sz * .55) + "," + (sz * .5) + "Z", style: "fill:" + knCol(k) + ";stroke:var(--card);stroke-width:1" }, a);
+}
+function wxRender() {
+  var AL = $("wxAlerts"), hb = $("homeWind");
+  if (!WX || WX.err || !WX.st) {
+    if (AL) { AL.textContent = ""; AL.appendChild(el("p", "mu", WX && WX.err ? "Données de vent indisponibles (pas de connexion ?). Consultez MétéoSuisse ci-dessous." : "Chargement des données de vent…")); }
+    hb.hidden = true; return;
+  }
+  var A = wxAlertsCalc();
+  /* bandeau accueil */
+  hb.textContent = "";
+  if (A.length) { hb.hidden = false; hb.className = "card windbar" + (A[0].lv === 2 ? " red" : ""); hb.appendChild(el("span", "ic", "💨")); var d = el("div"); d.appendChild(el("b", 0, A[0].t)); d.appendChild(el("span", "mu", A.length > 1 ? "+ " + (A.length - 1) + " autre" + (A.length > 2 ? "s" : "") + " alerte" + (A.length > 2 ? "s" : "") + " · voir les balises ›" : "Voir les balises vent ›")); hb.appendChild(d); }
+  else hb.hidden = true;
+  if (!AL) return;
+  AL.textContent = "";
+  if (!A.length) { var c0 = el("div", "card wxal ok"); c0.appendChild(el("b", 0, "Pas d'alerte vent")); c0.appendChild(el("div", "mu", "Aucun vent fort prévu sur le lac dans les 12 prochaines heures.")); AL.appendChild(c0); }
+  A.forEach(function (a) { var c = el("div", "card wxal" + (a.lv === 2 ? " red" : "")); c.appendChild(el("b", 0, (a.lv === 2 ? "⛔ " : "⚠ ") + a.t)); c.appendChild(el("div", "mu", a.d)); AL.appendChild(c); });
+  /* échéances */
+  var W = $("wxWhen"); W.textContent = "";
+  [0, 3, 6, 9, 12].forEach(function (h) { var b = el("button", h === wxH ? "on" : "", h ? "+" + h + " h · " + hourTxt(wxAt(0, h).t) : "Maintenant"); b.onclick = function () { wxH = h; wxRender(); }; W.appendChild(b); });
+  /* carte */
+  var g = detailedLake($("wxMap"));
+  BAL.forEach(function (b, i) {
+    var v = wxAt(i, wxH); if (!v || v.s == null || b.hide) return;
+    var n = svgEl("g", { class: "bal" + (b.id === wxSel ? " on" : ""), tabindex: 0, role: "button", "aria-label": b.n + " : " + Math.round(v.s) + " nœuds du " + dirTxt(v.d), transform: "translate(" + X2(b.lo).toFixed(1) + "," + Y2(b.la).toFixed(1) + ")" }, g);
+    svgEl("circle", { class: "b", r: 13, style: "fill:var(--card);fill-opacity:.85" }, n);
+    arrow(n, v.d, v.s, 9);
+    var t = svgEl("text", { "text-anchor": "middle", y: 24 }, n); t.textContent = Math.round(v.s) + (v.g >= v.s + 5 ? "/" + Math.round(v.g) : "");
+    n.onclick = function () { wxSel = b.id; wxRender(); var r = $("bl-" + b.id); if (r) r.scrollIntoView({ behavior: "smooth", block: "center" }); };
+  });
+  /* liste */
+  var L = $("wxList"); L.textContent = "";
+  BAL.forEach(function (b, i) {
+    var v = wxAt(i, wxH); if (!v || v.s == null) return;
+    var c = el("div", "card wxrow" + (b.id === wxSel ? " on" : "")); c.id = "bl-" + b.id;
+    var s = document.createElementNS(NS, "svg"); s.setAttribute("viewBox", "-14 -14 28 28"); s.setAttribute("width", 34); s.setAttribute("height", 34); arrow(s, v.d, v.s, 12); c.appendChild(s);
+    var d = el("div"); d.appendChild(el("b", 0, b.n)); d.appendChild(el("span", "mu", "Du " + dirTxt(v.d) + " (" + Math.round(v.d) + "°)")); c.appendChild(d);
+    var k = el("div", "kn", Math.round(v.s) + " nd"); k.style.color = knCol(v.s); k.appendChild(el("small", 0, "rafales " + Math.round(v.g) + " nd")); c.appendChild(k);
+    L.appendChild(c);
+  });
+  var mn = Math.round((Date.now() - WX.at) / 6e4);
+  $("wxSrc").textContent = "Valeurs du modèle météo (Open-Meteo, modèle MétéoSuisse), mises à jour il y a " + (mn < 1 ? "moins d'une minute" : mn + " min") + ". Les rafales locales peuvent être plus fortes : fiez-vous toujours aux feux d'avis de tempête.";
+}
+loadWind(); setInterval(function () { if (!document.hidden) loadWind(); }, 15 * 6e4);
+
 /* ================= WEBCAMS ================= */
 var CAMS = [
   { id: "cologny", n: "Genève – Cologny", d: "Vue sur la rade et le jet d'eau.", la: 46.218, lo: 6.180, u: "https://windy.com/webcams/1697037687", s: "Windy", k: "Vue directe" },
@@ -971,7 +1081,7 @@ function renderAll() {
   renderHome();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") { renderPonton(); if (unread()) markRead(); }
-  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") renderMeteoFeed();
+  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); loadWind(); wxRender(); }
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "evenements") renderEvents();
 }

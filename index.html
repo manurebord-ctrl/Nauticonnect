@@ -49,6 +49,8 @@
 <a class="p-go" href="#ponton">Ouvrir Le Ponton</a>
 </section>
 
+<a class="card windbar" id="homeWind" href="#meteo" hidden></a>
+
 <a class="sosbar" href="#panne"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.8"/><path d="M5.6 5.6l3.7 3.7M14.7 14.7l3.7 3.7M18.4 5.6l-3.7 3.7M9.3 14.7l-3.7 3.7"/></svg></span><span><b>Je suis en panne</b><span class="s">Alerter les plaisanciers proches · aider quelqu'un</span></span><span class="arr" aria-hidden="true">›</span></a>
 
 <div class="install" id="installBox" hidden><img src="icon-192.png" alt=""><div><b>Installer Nauticonnect</b>Ajoutez l'appli à votre écran d'accueil.</div><button class="btn sm" id="installBtn" style="margin:0">Installer</button></div>
@@ -56,7 +58,7 @@
 <h2 class="sec">Votre boîte à outils</h2>
 <h3 class="sub">Avant de partir</h3>
 <div class="grid">
-<a class="tile t-sky" href="#meteo"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h8"/></svg></span><span class="tt">Météo</span><span class="ts">Vents et photos du lac</span></a>
+<a class="tile t-sky" href="#meteo"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h8"/></svg></span><span class="tt">Météo</span><span class="ts">Balises vent, alertes, photos</span></a>
 <a class="tile t-sky" href="#webcams"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg></span><span class="tt">Webcams</span><span class="ts">14 caméras sur la carte</span></a>
 <a class="tile t-lake" href="#ports"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><path d="M9.5 10.5h5M12 7.5v6"/></svg></span><span class="tt">Ports</span><span class="ts">Places visiteurs en direct</span></a>
 <a class="tile t-sun" href="#restos"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 21V3c-2 1-3 4-3 7h3"/></svg></span><span class="tt">Escales</span><span class="ts">Restos avec ponton</span></a>
@@ -204,7 +206,15 @@
 <section id="v-meteo" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
 <h1 class="ph1">Météo Léman</h1>
-<p class="lead">L'état du lac en photos, les vents, les feux de tempête et les bonnes sources avant de partir.</p>
+<p class="lead">Les balises vent en direct, les alertes, l'état du lac en photos, les vents, les feux de tempête et les bonnes sources avant de partir.</p>
+<h2>Alertes vent</h2>
+<div id="wxAlerts"><p class="mu">Chargement des données de vent…</p></div>
+<h2>Balises vent en direct</h2>
+<div class="chips" id="wxWhen"></div>
+<div class="mapbox"><svg id="wxMap" class="map" viewBox="0 0 600 360" role="img" aria-label="Carte du Léman avec les balises vent" style="margin:0"></svg></div>
+<div class="leg wxleg"><span><i style="background:var(--ok)"></i>&lt; 8 nd</span><span><i style="background:var(--ac)"></i>8–15</span><span><i style="background:var(--or)"></i>15–22</span><span><i style="background:var(--red)"></i>&gt; 22 nd</span></div>
+<div id="wxList"></div>
+<p class="note" id="wxSrc">Valeurs du modèle météo MétéoSuisse (via Open-Meteo), mises à jour chaque heure. Les rafales locales peuvent être plus fortes : fiez-vous toujours aux feux d'avis de tempête.</p>
 <h2>État du lac en photos</h2>
 <div class="card">
 <div class="mu" style="margin-bottom:8px">Partagez à quoi ressemble le lac là où vous êtes. Les photos des dernières 48 heures s'affichent ici.</div>

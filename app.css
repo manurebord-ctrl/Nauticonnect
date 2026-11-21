@@ -270,3 +270,16 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .evdate{flex:0 0 54px;text-align:center;border-radius:12px;background:var(--ac);color:var(--acx);padding:6px 0;line-height:1.1}
 .evdate b{display:block;font-size:22px;font-family:var(--fd)}.evdate span{font-size:12px;font-weight:700;text-transform:uppercase}
 .evbody{flex:1;min-width:0}.evbody h3{margin:0 0 4px;font-size:18px;font-family:var(--fd)}
+
+/* balises vent */
+.windbar{display:flex;gap:12px;align-items:center;border-left:5px solid var(--or);margin:12px 16px;text-decoration:none;color:inherit}
+.windbar.red{border-left-color:var(--red)}.windbar b{display:block}.windbar .ic{font-size:26px}
+.wxal{border-left:5px solid var(--or)}.wxal.red{border-left-color:var(--red)}.wxal.ok{border-left-color:var(--ok)}
+.wxal b{display:block;font-size:16px;margin-bottom:2px}
+.wxleg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mu);margin:8px 2px}
+.wxleg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.bal{cursor:pointer}.bal text{font-size:9px;font-weight:700;fill:var(--tx);paint-order:stroke;stroke:var(--card);stroke-width:2.5px}
+.bal.on circle.b{stroke:var(--tx);stroke-width:2}
+.wxrow{display:flex;gap:12px;align-items:center}.wxrow .kn{margin-left:auto;text-align:right;font-weight:700;font-size:18px;white-space:nowrap}
+.wxrow .kn small{display:block;font-size:12px;font-weight:600;color:var(--mu)}
+.wxrow svg{flex:none}.wxrow.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac) inset}
