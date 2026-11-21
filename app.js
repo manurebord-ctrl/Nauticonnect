@@ -151,7 +151,7 @@ function setAuthMode(m) {
   var reset = m === "reset";
   $("auTabs").hidden = reset;
   $("auTitle").textContent = reset ? "Nouveau mot de passe" : m === "up" ? "Rejoindre l'équipage" : "Bon retour à bord";
-  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Un compte sert uniquement au chat du Ponton. Tout le reste de l'appli est libre d'accès." : "Connectez-vous avec votre e-mail.";
+  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Un compte sert uniquement au Ponton, le chat des plaisanciers. Tout le reste de l'appli est libre d'accès." : "Connectez-vous avec votre e-mail.";
   $("auGo").textContent = reset ? "Enregistrer le mot de passe" : m === "up" ? "Créer mon compte" : "Me connecter";
   $("auPassL").textContent = m === "in" ? "Mot de passe" : "Mot de passe (8 caractères min.)";
   $("auPass").autocomplete = m === "in" ? "current-password" : "new-password";
@@ -517,7 +517,7 @@ function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
   if (openWith && !T[openWith] && openWith !== uid && P[openWith]) T[openWith] = [];
   var keys = Object.keys(T).sort(function (a, b) { var la = T[a].length ? ts(T[a][T[a].length - 1].t) : Date.now(), lb = T[b].length ? ts(T[b][T[b].length - 1].t) : Date.now(); return lb - la; });
-  if (!keys.length) { W.appendChild(el("p", "mu", "Aucune conversation. Cherchez un plaisancier ci-dessous et touchez « Écrire ».")); return; }
+  if (!keys.length) { W.appendChild(el("p", "mu", "Pas encore de discussion. Cherchez un plaisancier juste en dessous et touchez « Écrire » pour lancer le chat.")); return; }
   keys.forEach(function (k) {
     var th = el("div", "thread"); th.id = "th-" + k; th.appendChild(badge(k));
     T[k].slice(-10).forEach(function (m) { var b = el("div", "bub " + (m.de === uid ? "out" : "in"), m.txt); b.appendChild(el("small", 0, ago(m.t))); th.appendChild(b); });
@@ -548,7 +548,7 @@ function renderPonton() {
 /* ================= BOÎTE À IDÉES ================= */
 var avType = "fix", avFilt = "tout", avBusy = false;
 var AVT = { like: "👍 J'aime", fix: "🔧 À améliorer", idea: "💡 Idée" }, STL = { prevu: "Prévu", encours: "En cours", fait: "Fait ✓", non: "Pas retenu" };
-var MODS = ["Général", "Le Ponton", "Panne / SOS", "Météo", "Webcams", "Ports", "Escales gourmandes", "À vendre · Troc", "Location", "Vitesse", "Nœuds", "Épaves"];
+var MODS = ["Général", "Le Ponton (chat)", "Panne / SOS", "Météo", "Webcams", "Ports", "Escales gourmandes", "À vendre · Troc", "Location", "Vitesse", "Nœuds", "Épaves"];
 MODS.forEach(function (m) { $("avMod").appendChild(el("option", 0, m)); });
 Object.keys(AVT).forEach(function (k) { var b = el("button", 0, AVT[k]); b.dataset.k = k; b.onclick = function () { avType = k; drawAvChips(); }; $("avType").appendChild(b); });
 [["tout", "Tout"], ["like", "👍 J'aime"], ["fix", "🔧 À améliorer"], ["idea", "💡 Idées"]].forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { avFilt = f[0]; renderAvis(); }; $("avFilt").appendChild(b); });

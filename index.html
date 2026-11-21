@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=9">
+<link rel="stylesheet" href="app.css?v=10">
 </head>
 <body>
 
@@ -38,15 +38,16 @@
 </header>
 
 <section class="ponton">
-<div class="p-hd"><b>Le Ponton</b><span class="live"><i></i>En direct</span></div>
+<div class="p-hd"><b>Le Ponton</b><span class="live"><i></i>Chat en direct</span></div>
+<p class="p-sub">Le chat des plaisanciers du Léman : on s'y retrouve comme sur le ponton, pour papoter, s'entraider et se donner rendez-vous sur l'eau.</p>
 <div class="p-now" id="pNow"></div>
 <div class="p-stats"><div><b id="stMembers">–</b><span>membres</span></div><div><b id="stOpen">–</b><span>sur l'eau</span></div><div><b>31</b><span>ports du lac</span></div></div>
 <ol class="p-how">
 <li><b>Créez votre fiche bateau</b><span>Pseudo, bateau, port d'attache.</span></li>
 <li><b>Hissez le pavillon</b><span>Montrez que vous êtes ouvert à la rencontre.</span></li>
-<li><b>Saluez, discutez, amarrez-vous</b><span>Un message, et on se retrouve au port.</span></li>
+<li><b>Chattez, amarrez-vous</b><span>Écrivez aux membres en privé, et on se retrouve au port.</span></li>
 </ol>
-<a class="p-go" href="#ponton">Ouvrir Le Ponton</a>
+<a class="p-go" href="#ponton">💬 Ouvrir le chat du Ponton</a>
 </section>
 
 <a class="card windbar" id="homeMod" href="#meteo" hidden></a>
@@ -66,7 +67,7 @@
 </div>
 <h3 class="sub">Entre plaisanciers</h3>
 <div class="grid">
-<a class="tile t-lake" href="#ponton"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></span><span class="tt">Le Ponton</span><span class="ts">Le réseau des plaisanciers</span></a>
+<a class="tile t-lake" href="#ponton"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></span><span class="tt">Le Ponton</span><span class="ts">Le chat des plaisanciers</span></a>
 <a class="tile t-lake" href="#location"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l2 4h14l2-4z"/><path d="M12 3v11M12 4l6 8h-6"/><path d="M9 9l-3 5h6"/></svg></span><span class="tt">Location</span><span class="ts">Louer le bateau d'un membre</span></a>
 <a class="tile t-sun" href="#annonces"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg></span><span class="tt">À vendre · Troc</span><span class="ts">Matériel nautique</span></a>
 <a class="tile t-sky evtile" href="#evenements"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg></span><span class="tt">Événements</span><span class="ts">Fêtes et rendez-vous au bord du lac</span></a>
@@ -87,7 +88,7 @@
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
 <div class="auth">
 <h1 class="ph1" id="auTitle">Rejoindre l'équipage</h1>
-<p class="lead" id="auLead">Un compte sert uniquement au chat du Ponton. Tout le reste de l'appli est libre d'accès.</p>
+<p class="lead" id="auLead">Un compte sert uniquement au Ponton, le chat des plaisanciers. Tout le reste de l'appli est libre d'accès.</p>
 <div class="tabs" id="auTabs"><button data-m="up" class="on">Créer un compte</button><button data-m="in">J'ai déjà un compte</button></div>
 <div class="card">
 <label class="l" for="auEmail">E-mail</label><input class="f" id="auEmail" type="email" autocomplete="email" inputmode="email">
@@ -151,18 +152,18 @@
 <!-- ===================== LE PONTON ===================== -->
 <section id="v-ponton" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
-<h1 class="ph1">Le Ponton</h1><p class="lead">Le réseau social des plaisanciers du Léman.</p>
-<div id="rnGate" class="card gate" hidden><b>Montez à bord du Ponton</b><div class="mu" style="margin:4px 0 12px">Créez votre compte et votre fiche bateau pour discuter avec les autres plaisanciers.</div><a class="btn" href="#compte">Rejoindre l'équipage</a></div>
+<h1 class="ph1">Le Ponton <span class="chatpill">💬 Chat</span></h1><p class="lead">Le chat des plaisanciers du Léman. Comme sur un vrai ponton : on se salue, on discute bateau, on se file un coup de main et on se donne rendez-vous sur l'eau.</p>
+<div id="rnGate" class="card gate" hidden><b>Montez à bord du Ponton</b><div class="mu" style="margin:4px 0 12px">Pour chatter avec les autres plaisanciers, créez votre compte et votre fiche bateau. C'est gratuit et ça prend une minute.</div><a class="btn" href="#compte">Rejoindre l'équipage</a></div>
 <div id="rnBody" hidden>
-<h2 style="margin-top:0" id="mbReqH" hidden>Demandes d'amis</h2><div id="mbReq"></div>
-<h2 style="margin-top:0">Trouver un plaisancier</h2>
-<div class="card"><input class="f" id="mbSearch" type="search" maxlength="40" placeholder="🔎 Prénom, bateau ou port…" aria-label="Rechercher un plaisancier"><div class="mu" id="mbHint" style="margin-top:6px"></div></div>
-<div id="mbList"></div>
-<h2>Messages<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
+<h2 style="margin-top:0">💬 Mes discussions<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
 <div class="stt" id="rnStt"></div>
+<h2 id="mbReqH" hidden>Demandes d'amis</h2><div id="mbReq"></div>
+<h2>Nouvelle discussion</h2>
+<div class="card"><input class="f" id="mbSearch" type="search" maxlength="40" placeholder="🔎 À qui écrire ? Prénom, bateau ou port…" aria-label="Rechercher un plaisancier"><div class="mu" id="mbHint" style="margin-top:6px"></div></div>
+<div id="mbList"></div>
 <div class="card warn"><b>Rencontres en sécurité.</b> Pour tous les membres, votre position est arrondie (environ 1 km). Ne donnez ni adresse ni numéro dans les messages. Retrouvez-vous dans un port ou un lieu public.</div>
 <div class="card">
-<label class="l" for="rnMsgTxt">Mon message sur la carte (60 car.)</label><input class="f" id="rnMsgTxt" maxlength="60" placeholder="Apéro à Ouchy ?">
+<h2 style="margin:0 0 8px">Sur l'eau en ce moment</h2><label class="l" for="rnMsgTxt">Mon message sur la carte (60 car.)</label><input class="f" id="rnMsgTxt" maxlength="60" placeholder="Apéro à Ouchy ?">
 <label class="sw"><input type="checkbox" id="rnOpen"><span><b>Hisser le pavillon : ouvert à la rencontre</b><br><span class="mu">Visible de tous les membres pendant 2 h, position arrondie.</span></span></label>
 <label class="sw"><input type="checkbox" id="rnFr"><span><b>Partager avec mes amis</b><br><span class="mu">Position exacte, visible seulement par vos amis Nauticonnect.</span></span></label>
 <input id="rnCode" type="hidden">
@@ -417,15 +418,15 @@
 <!-- ===================== NAVIGATION ===================== -->
 <nav id="nav">
 <a data-v="accueil" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>Accueil</a>
-<a data-v="ponton" href="#ponton"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Ponton<span class="dot" id="unreadNav" hidden></span></a>
+<a data-v="ponton" href="#ponton"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Chat<span class="dot" id="unreadNav" hidden></span></a>
 <a data-v="panne" href="#panne" class="navsos"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.8"/><path d="M5.6 5.6l3.7 3.7M14.7 14.7l3.7 3.7M18.4 5.6l-3.7 3.7M9.3 14.7l-3.7 3.7"/></svg></span>SOS</a>
 <a data-v="meteo" href="#meteo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h8"/></svg>Météo</a>
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=9"></script>
+<script src="config.js?v=10"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>
