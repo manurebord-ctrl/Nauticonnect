@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nauticonnect</title>
+<meta name="description" content="Le réseau social des plaisanciers du Léman : rencontres, entraide en cas de panne, météo, ports et escales.">
+<meta name="theme-color" content="#0a2740">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-180.png">
+<meta property="og:title" content="Nauticonnect – Le réseau des plaisanciers du Léman">
+<meta property="og:description" content="On se retrouve sur l'eau ? Rencontres, entraide, météo, ports et escales.">
+<meta property="og:image" content="icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ===================== ACCUEIL ===================== -->
+<section id="v-accueil">
+<header class="hero">
+<canvas id="heroCv" aria-hidden="true"></canvas><div class="hero-ph" id="heroPh"></div>
+<label class="phbtn" id="phBtn" hidden>📷 Photo de la bannière<input type="file" id="phIn" accept="image/*" hidden></label>
+<div class="hero-in">
+<div class="hero-top"><span class="brand">Nauti<b>connect</b></span><a id="meChip" class="me new" href="#compte">Se connecter</a></div>
+<h1 class="hero-t">On se retrouve sur l'eau&nbsp;?</h1>
+<p class="hero-s">Nauticonnect, le réseau social des plaisanciers du Léman.</p>
+<div class="bubbles" aria-hidden="true">
+<div class="bb"><i style="background:#f29a5b">J</i><span>Apéro au port de Lutry ce soir&nbsp;? 🍻</span></div>
+<div class="bb r"><span>Partant&nbsp;! J'arrive dans 20 min ⛵</span><i style="background:#9fe3c4">M</i></div>
+<div class="bb"><i style="background:#a9c8f5">S</i><span>Je garde une place au ponton&nbsp;!</span></div>
+</div>
+<div class="cta"><a class="cta1" id="ctaMain" href="#compte">Rejoindre l'équipage</a><a class="cta2" href="#ponton">Qui est sur l'eau&nbsp;?</a></div>
+<div class="hero-chips"><a class="hchip al" id="alertPill" href="#panne" hidden></a><a class="hchip" href="#ponton" id="msgChip" hidden>Messages<span class="dot" id="unreadHome"></span></a></div>
+</div>
+</header>
+
+<section class="ponton">
+<div class="p-hd"><b>Le Ponton</b><span class="live"><i></i>En direct</span></div>
+<div class="p-now" id="pNow"></div>
+<div class="p-stats"><div><b id="stMembers">–</b><span>membres</span></div><div><b id="stOpen">–</b><span>sur l'eau</span></div><div><b>31</b><span>ports du lac</span></div></div>
+<ol class="p-how">
+<li><b>Créez votre fiche bateau</b><span>Pseudo, bateau, port d'attache.</span></li>
+<li><b>Hissez le pavillon</b><span>Montrez que vous êtes ouvert à la rencontre.</span></li>
+<li><b>Saluez, discutez, amarrez-vous</b><span>Un message, et on se retrouve au port.</span></li>
+</ol>
+<a class="p-go" href="#ponton">Ouvrir Le Ponton</a>
+</section>
+
+<a class="sosbar" href="#panne"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.8"/><path d="M5.6 5.6l3.7 3.7M14.7 14.7l3.7 3.7M18.4 5.6l-3.7 3.7M9.3 14.7l-3.7 3.7"/></svg></span><span><b>Je suis en panne</b><span class="s">Alerter les plaisanciers proches · aider quelqu'un</span></span><span class="arr" aria-hidden="true">›</span></a>
+
+<div class="install" id="installBox" hidden><img src="icon-192.png" alt=""><div><b>Installer Nauticonnect</b>Ajoutez l'appli à votre écran d'accueil.</div><button class="btn sm" id="installBtn" style="margin:0">Installer</button></div>
+
+<h2 class="sec">Votre boîte à outils</h2>
+<h3 class="sub">Avant de partir</h3>
+<div class="grid">
+<a class="tile t-sky" href="#meteo"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h8"/></svg></span><span class="tt">Météo</span><span class="ts">Vents et photos du lac</span></a>
+<a class="tile t-sky" href="#webcams"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg></span><span class="tt">Webcams</span><span class="ts">14 caméras sur la carte</span></a>
+<a class="tile t-lake" href="#ports"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><path d="M9.5 10.5h5M12 7.5v6"/></svg></span><span class="tt">Ports</span><span class="ts">Places visiteurs en direct</span></a>
+<a class="tile t-sun" href="#restos"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 21V3c-2 1-3 4-3 7h3"/></svg></span><span class="tt">Escales</span><span class="ts">Restos avec ponton</span></a>
+</div>
+<h3 class="sub">Entre plaisanciers</h3>
+<div class="grid">
+<a class="tile t-lake" href="#ponton"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></span><span class="tt">Le Ponton</span><span class="ts">Le réseau des plaisanciers</span></a>
+<a class="tile t-sun" href="#annonces"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg></span><span class="tt">À vendre · Troc</span><span class="ts">Matériel nautique</span></a>
+</div>
+<h3 class="sub">À bord</h3>
+<div class="grid g3">
+<a class="tile t-deep" href="#vitesse"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 18a8.5 8.5 0 1 1 15 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1"/></svg></span><span class="tt">Vitesse</span><span class="ts">Nœuds, cap, milles</span></a>
+<a class="tile t-deep" href="#noeuds"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8c4-4 8 0 8 4s4 8 8 4"/><path d="M4 16c4 4 8 0 8-4s4-8 8-4"/></svg></span><span class="tt">Nœuds</span><span class="ts">12 nœuds marins</span></a>
+<a class="tile t-deep" href="#epaves"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M8.5 11h7M5 14c.4 3.8 3.3 7 7 7s6.6-3.2 7-7"/></svg></span><span class="tt">Épaves</span><span class="ts">Carte et histoire</span></a>
+</div>
+<a class="idea" href="#avis"><b>Votre avis compte</b><span>Ce qui vous plaît, ce qui manque, vos idées. Proposez et votez.</span><em id="avCount">Donner mon avis ›</em></a>
+<div class="urgbox"><span>Danger pour des personnes ? Appelez d'abord</span><div class="urg"><a href="tel:117">117 Police</a><a href="tel:144">144 Ambulance</a><a href="tel:112">112 Europe</a></div><span>Radio VHF : canal 16</span></div>
+<p class="foot"><a href="confidentialite.html">Confidentialité</a> · Nauticonnect</p>
+</section>
+
+<!-- ===================== COMPTE ===================== -->
+<section id="v-compte" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<div class="auth">
+<h1 class="ph1" id="auTitle">Rejoindre l'équipage</h1>
+<p class="lead" id="auLead">Créez votre compte en 30 secondes pour discuter, alerter et partager.</p>
+<div class="tabs" id="auTabs"><button data-m="up" class="on">Créer un compte</button><button data-m="in">J'ai déjà un compte</button></div>
+<div class="card">
+<label class="l" for="auEmail">E-mail</label><input class="f" id="auEmail" type="email" autocomplete="email" inputmode="email">
+<label class="l" for="auPass" id="auPassL">Mot de passe (8 caractères min.)</label><input class="f" id="auPass" type="password" autocomplete="new-password" minlength="8">
+<button class="btn" id="auGo">Créer mon compte</button>
+<div class="err" id="auMsg"></div>
+<button class="linkbtn" id="auForgot" hidden>Mot de passe oublié ?</button>
+</div>
+<p class="mu">En créant un compte, vous acceptez notre <a href="confidentialite.html" style="text-decoration:underline">politique de confidentialité</a>.</p>
+</div>
+</section>
+
+<!-- ===================== PROFIL ===================== -->
+<section id="v-profil" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1" id="pfTitle">Ma fiche bateau</h1>
+<p class="lead">Elle vous identifie dans Le Ponton et dans les alertes de panne. Elle est visible par les membres.</p>
+<div class="card">
+<label class="l" for="pPseudo">Prénom ou pseudo *</label><input class="f" id="pPseudo" maxlength="24" placeholder="ex. Manu">
+<label class="l" for="pBoat">Nom du bateau</label><input class="f" id="pBoat" maxlength="30" placeholder="ex. Mistral">
+<div class="row"><div><label class="l" for="pType">Type</label><select class="f" id="pType"><option>Voilier</option><option>Bateau à moteur</option><option>Jet / semi-rigide</option><option>Planche / paddle</option><option>Autre</option></select></div>
+<div><label class="l" for="pPort">Port d'attache</label><select class="f" id="pPort"></select></div></div>
+<label class="l" for="pImm">Immatriculation (facultatif)</label><input class="f" id="pImm" maxlength="16" placeholder="ex. VS 1234">
+<button class="btn" id="pSave">Enregistrer</button>
+<div class="err" id="pMsg"></div>
+</div>
+<p class="mu">N'indiquez ni adresse ni numéro de téléphone dans votre fiche.</p>
+<div class="card"><b>Mon compte</b><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
+<button class="btn g" id="pLogout">Se déconnecter</button>
+<button class="btn g" id="pDelete" style="margin-top:8px;color:var(--red)">Supprimer mon compte</button>
+<div class="err" id="pDelMsg"></div></div>
+</section>
+
+<!-- ===================== PANNE ===================== -->
+<section id="v-panne" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<div class="sosbox"><div class="t">Un problème sur le lac ?</div>
+<div class="d">Votre alerte est envoyée aux plaisanciers de l'appli, qui peuvent venir vous aider.</div>
+<div class="who" id="pnWho"></div>
+<button class="sosbtn" id="pnSos">JE SUIS EN PANNE</button></div>
+<div id="pnForm" class="card" hidden>
+<div class="step">1. Où êtes-vous ?</div>
+<select class="f" id="pnZone"></select>
+<button class="btn g" id="pnGps">📍 Utiliser ma position GPS</button>
+<div class="mu" style="margin-top:4px">Ou touchez la carte plus bas pour choisir le port le plus proche.</div>
+<div class="step">2. Quel est le problème ?</div><div class="pbs" id="pnPbs"></div>
+<div class="step">3. Détails (facultatif)</div>
+<input class="f" id="pnDet" maxlength="140" placeholder="Nombre de personnes, besoin de remorquage…">
+<input class="f" id="pnTel" type="tel" maxlength="20" placeholder="Téléphone pour être rappelé (facultatif)">
+<div class="mu" style="margin:-2px 0 8px">Le numéro est visible par les membres connectés tant que l'alerte est active.</div>
+<button class="btn r" id="pnGo" style="font-size:18px;padding:14px">Envoyer l’alerte</button>
+</div>
+<div class="err" id="pnMsg"></div>
+<div class="card warn"><b>Danger pour des personnes ?</b> Appelez d’abord le <a href="tel:117"><b>117</b></a> (police) ou le <a href="tel:144"><b>144</b></a>, ou lancez un appel de détresse radio VHF canal 16. Cette appli est un complément, pas un service de secours.</div>
+<h2>Alertes actives</h2><div id="pnList"></div>
+<div class="card"><b>🗺️ Carte</b><div class="mu">Touchez un port pour le choisir. Rouge = alerte active.</div><svg id="pnMap" class="map" viewBox="0 0 680 410"></svg><a class="btn g" id="pnRoute" target="_blank" rel="noopener">🧭 Itinéraire</a></div>
+<div class="card"><b>🛟 Sociétés de sauvetage du lac (SISL)</b><div class="mu">Bénévoles. Numéros ajoutés par les membres : vérifiez-les sur sisl.ch.</div><div id="scList" style="margin:6px 0"></div>
+<input class="f" id="scName" list="scDl" placeholder="Section (ex. Le Bouveret)"><datalist id="scDl"></datalist><input class="f" id="scTel" type="tel" placeholder="Numéro de téléphone"><button class="btn g" id="scSave">Enregistrer le numéro</button></div>
+</section>
+
+<!-- ===================== LE PONTON ===================== -->
+<section id="v-ponton" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Le Ponton</h1><p class="lead">Le réseau social des plaisanciers du Léman.</p>
+<div id="rnGate" class="card gate" hidden><b>Montez à bord du Ponton</b><div class="mu" style="margin:4px 0 12px">Créez votre compte et votre fiche bateau pour discuter avec les autres plaisanciers.</div><a class="btn" href="#compte">Rejoindre l'équipage</a></div>
+<div id="rnBody" hidden>
+<h2 style="margin-top:0">Messages<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
+<div class="stt" id="rnStt"></div>
+<div class="card warn"><b>Rencontres en sécurité.</b> Pour tous les membres, votre position est arrondie (environ 1 km). Ne donnez ni adresse ni numéro dans les messages. Retrouvez-vous dans un port ou un lieu public.</div>
+<div class="card">
+<label class="l" for="rnMsgTxt">Mon message sur la carte (60 car.)</label><input class="f" id="rnMsgTxt" maxlength="60" placeholder="Apéro à Ouchy ?">
+<label class="sw"><input type="checkbox" id="rnOpen"><span><b>Hisser le pavillon : ouvert à la rencontre</b><br><span class="mu">Visible de tous les membres pendant 2 h, position arrondie.</span></span></label>
+<label class="sw"><input type="checkbox" id="rnFr"><span><b>Partager avec mes amis</b><br><span class="mu">Position exacte, seulement avec ceux qui ont le même code de groupe.</span></span></label>
+<input class="f" id="rnCode" maxlength="20" placeholder="Code de groupe amis (4 caractères min.)">
+<button class="btn g" id="rnGps">📍 Me localiser (GPS)</button></div>
+<div class="card"><div class="lgd"><span><i style="background:#2d7ff9"></i>Moi</span><span><i style="background:var(--or)"></i>Pavillon hissé</span><span><i style="background:var(--ok)"></i>Amis</span></div>
+<svg id="rnMap" class="map" viewBox="0 0 680 410"></svg>
+<div class="mu">Sans GPS, touchez la carte pour indiquer où vous êtes.</div></div>
+<div class="err" id="rnErr"></div><div id="rnDet"></div>
+<h2>Mes amis</h2><div id="rnFriends"></div>
+<h2>Pavillons hissés</h2><div id="rnOpenList"></div>
+</div>
+</section>
+
+<!-- ===================== BOÎTE À IDÉES ===================== -->
+<section id="v-avis" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Boîte à idées</h1>
+<p class="lead">Dites-nous ce qui vous plaît et ce qu'il faut améliorer. Votez pour les idées des autres : les plus soutenues passent en priorité.</p>
+<div class="card">
+<div class="tchips" id="avType"></div>
+<label class="l" for="avMod">Partie de l'appli</label><select class="f" id="avMod"></select>
+<label class="l" for="avTxt">Votre message</label><textarea class="f" id="avTxt" rows="3" maxlength="300"></textarea>
+<button class="btn" id="avSend">Envoyer</button><div class="err" id="avMsg"></div>
+</div>
+<div class="tchips" id="avFilt" style="margin-top:6px"></div>
+<div id="avList"></div>
+</section>
+
+<!-- ===================== PORTS ===================== -->
+<section id="v-ports" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Ports & places visiteurs</h1>
+<p class="lead">Les plaisanciers signalent en direct s'il reste des places visiteurs.</p>
+<input type="search" class="srch" id="poQ" placeholder="Chercher un port ou une ville" aria-label="Chercher un port">
+<div class="chips" id="poChips"></div>
+<div class="leg"><span><i class="libre"></i>Places libres</span><span><i class="peu"></i>Peu de places</span><span><i class="complet"></i>Complet</span></div>
+<div id="poInfo" class="note" hidden></div>
+<div id="poList"></div>
+<p class="note">Les signalements datent de moins de 12 heures. Appelez la capitainerie avant d'arriver, surtout le week-end en été.</p>
+</section>
+
+<!-- ===================== MÉTÉO ===================== -->
+<section id="v-meteo" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Météo Léman</h1>
+<p class="lead">L'état du lac en photos, les vents, les feux de tempête et les bonnes sources avant de partir.</p>
+<h2>État du lac en photos</h2>
+<div class="card">
+<div class="mu" style="margin-bottom:8px">Partagez à quoi ressemble le lac là où vous êtes. Les photos des dernières 48 heures s'affichent ici.</div>
+<select id="mZone" class="f" aria-label="Zone du lac"></select>
+<button class="btn" id="mAdd">📷 Partager l'état du lac</button>
+</div>
+<div id="mFeed"></div>
+<h2>Prévisions en direct</h2>
+<div class="links">
+<a href="https://www.meteosuisse.admin.ch" target="_blank" rel="noopener">MétéoSuisse<small>Prévisions & alertes</small></a>
+<a href="https://www.windy.com/?46.45,6.55,10" target="_blank" rel="noopener">Windy<small>Carte des vents</small></a>
+<a href="https://www.meteoblue.com" target="_blank" rel="noopener">Meteoblue<small>Prévisions détaillées</small></a>
+<a href="https://www.meteofrance.com" target="_blank" rel="noopener">Météo-France<small>Rive française</small></a>
+</div>
+<h2>Quel vent souffle ?</h2>
+<div class="card"><div class="mu" style="margin-bottom:8px">D'où vient le vent ?</div><div class="rose" id="mRose"></div><div id="mRes" class="mu" style="margin-top:10px">Touchez une direction.</div></div>
+<div id="mWinds"></div>
+<h2>Feux d'avis de tempête</h2>
+<div class="card feu"><div class="lamp"></div><div><b>Avis de prudence</b><br><span class="mu">Environ 40 éclairs orange par minute. Du vent fort est attendu : petites embarcations, restez près de la rive.</span></div></div>
+<div class="card feu"><div class="lamp fast"></div><div><b>Avis de tempête</b><br><span class="mu">Environ 90 éclairs par minute. Tempête imminente : rentrez au port ou mettez-vous à l'abri immédiatement.</span></div></div>
+<h2>Convertisseur de vent</h2>
+<div class="card"><div class="conv"><input id="mV" type="number" inputmode="decimal" min="0" value="15" aria-label="Vitesse"><select id="mU" aria-label="Unité"><option value="kn">nœuds</option><option value="kmh">km/h</option><option value="ms">m/s</option></select></div><div id="mCv" style="margin-top:10px;font-weight:700"></div></div>
+<div class="card"><table id="mBf"><thead><tr><th>Beaufort</th><th>Nœuds</th><th>Sur le lac</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- ===================== WEBCAMS ===================== -->
+<section id="v-webcams" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Webcams du Léman</h1>
+<p class="lead">Regardez l'état du lac avant de rejoindre votre port. Touchez une caméra sur la carte.</p>
+<div id="wcNote" class="note" hidden></div>
+<div class="mapbox"><svg id="wcMap" class="map" viewBox="0 0 600 360" role="img" aria-label="Carte du Léman avec les webcams" style="margin:0"></svg></div>
+<div id="wcSel" class="card selcam" style="margin-top:12px"></div>
+<h2>Toutes les webcams</h2><div id="wcList"></div>
+<p class="note">Les images s'ouvrent sur le site de la webcam. Les « pages de webcams » regroupent plusieurs caméras proches. Autres caméras : <a href="https://www.windy.com/webcams" target="_blank" rel="noopener" style="color:var(--ac);font-weight:600">carte des webcams Windy</a>.</p>
+</section>
+
+<!-- ===================== ESCALES ===================== -->
+<section id="v-restos" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<div class="rhero"><h1>Escales gourmandes</h1><p>Restaurants au bord du Léman, et ceux où l'on arrive en bateau.</p></div>
+<div class="chips" id="reChips"></div>
+<div class="mapbox"><svg id="reMap" class="map" viewBox="0 0 600 360" role="img" aria-label="Carte des restaurants" style="margin:0"></svg></div>
+<div id="reList" style="margin-top:10px"></div>
+<h2>Ajouter une adresse</h2>
+<div class="card">
+<input class="f" id="reN" maxlength="50" placeholder="Nom du restaurant" aria-label="Nom du restaurant">
+<input class="f" id="reL" maxlength="40" placeholder="Lieu (ex. Le Bouveret)" aria-label="Lieu">
+<select class="f" id="reA" aria-label="Accès en bateau"><option value="ponton">Accès en bateau : ponton du restaurant</option><option value="port">Au port, à pied depuis les places visiteurs</option><option value="non">Pas d'accès en bateau</option></select>
+<input class="f" id="reD" maxlength="140" placeholder="Pourquoi y aller ? (spécialité, vue, ambiance…)" aria-label="Description">
+<button class="btn" id="reAdd" style="background:#e0662b;color:#fff">Ajouter</button><div class="err" id="reMsg"></div>
+</div>
+<p class="mu">Horaires et ouverture saisonnière : vérifiez avant de partir et réservez en été.</p>
+</section>
+
+<!-- ===================== ÉPAVES ===================== -->
+<section id="v-epaves" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Épaves du Léman</h1>
+<div class="card warn"><b>Prudence.</b> Beaucoup d’épaves sont profondes (40 à plus de 200 m) : plongée réservée à des plongeurs très expérimentés. Certaines sont des sites protégés : ne rien prélever. Cette page n’est pas un guide de plongée.</div>
+<div class="card"><div class="lgd"><span><i style="background:#2e9e5b"></i>≤ 30 m</span><span><i style="background:#e08a00"></i>31–60 m</span><span><i style="background:#c0392b"></i>&gt; 60 m</span></div>
+<svg id="epMap" class="map" viewBox="0 0 680 410"></svg><div class="mu">Touchez une épave pour voir sa fiche. Fond de carte schématique.</div></div>
+<div class="err" id="epMsg"></div><div id="epDet"></div>
+<button class="btn" id="epAdd">+ Ajouter une épave</button>
+<div id="epForm" class="card" hidden style="margin-top:10px">
+<label class="l" for="epN">Nom</label><input class="f" id="epN" maxlength="60">
+<div class="row"><div><label class="l" for="epA">Année du naufrage</label><input class="f" id="epA" inputmode="numeric" maxlength="4"></div><div><label class="l" for="epP">Profondeur max (m)</label><input class="f" id="epP" type="number"></div></div>
+<label class="l" for="epT">Description et source</label><textarea class="f" id="epT" rows="3" maxlength="600"></textarea>
+<label class="sw"><input type="checkbox" id="epAp" checked><span>Position approximative</span></label>
+<div class="mu" id="epPs" style="margin:6px 0">📍 Touchez la carte pour placer l’épave.</div>
+<div class="row"><button class="btn g" id="epCx">Annuler</button><button class="btn" id="epSv">Enregistrer</button></div></div>
+<h2>Épaves répertoriées</h2><div id="epList"></div>
+</section>
+
+<!-- ===================== VITESSE ===================== -->
+<section id="v-vitesse" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Compteur de vitesse</h1>
+<div class="card big"><div class="n" id="gV">0.0</div><div class="u">nœuds</div><div class="mu" id="gK" style="font-size:15px;margin-top:6px">0.0 km/h</div></div>
+<div class="gg">
+<div class="card"><b id="gMx">0.0</b><span>Vitesse max (nœuds)</span></div>
+<div class="card"><b id="gAv">0.0</b><span>Moyenne (nœuds)</span></div>
+<div class="card"><b id="gDs">0.00</b><span>Distance (milles nautiques)</span></div>
+<div class="card"><b id="gTm">00:00</b><span>Durée</span></div>
+<div class="card"><b id="gHd">—</b><span>Cap</span></div>
+<div class="card"><b id="gAc">—</b><span>Précision GPS</span></div>
+</div>
+<div class="err" id="gMsg"></div>
+<div class="row" style="margin-top:12px"><button class="btn" id="gGo" style="padding:14px;font-size:17px">▶ Démarrer</button><button class="btn g" id="gRs" style="padding:14px;font-size:17px">↺ Remise à zéro</button></div>
+<p class="mu">1 nœud = 1,852 km/h. Indicatif : ne remplace pas les instruments du bord. Autorisez la position et gardez l’écran allumé pendant la mesure.</p>
+</section>
+
+<!-- ===================== NŒUDS ===================== -->
+<section id="v-noeuds" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Nœuds marins</h1>
+<div class="mu" id="knPg">Appris : 0 sur 12</div><div class="bar"><i id="knPb"></i></div>
+<input class="f" id="knQ" type="search" placeholder="Rechercher un nœud (chaise, taquet, amarrage…)" aria-label="Rechercher un nœud">
+<select class="f" id="knC" aria-label="Usage"><option value="">Tous les usages</option><option>Amarrage</option><option>Boucle</option><option>Jonction</option><option>Arrêt</option><option>Divers</option></select>
+<div id="knList"></div>
+<p class="mu">Entraînez-vous à terre, avec un bout de 1 m, avant de vous en servir sur l’eau. Vérifiez toujours un nœud avant de le charger. Pour tout usage de sécurité, exercez-vous d’abord auprès d’un moniteur ou d’une société de sauvetage.</p>
+</section>
+
+<!-- ===================== ANNONCES ===================== -->
+<section id="v-annonces" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">À vendre · Troc · Dons</h1>
+<div class="card warn"><b>Restez prudent.</b> Voyez l’objet avant de payer, ne versez jamais d’avance et privilégiez une remise en main propre dans un port. Pour le matériel de sécurité, vérifiez l’état et les dates de validité.</div>
+<input class="f" id="anQ" type="search" placeholder="Rechercher (moteur, gilet, ancre…)" aria-label="Rechercher une annonce">
+<div class="row"><select class="f" id="anFt" aria-label="Type"><option value="">Tout</option><option>Vente</option><option>Troc</option><option>Don</option></select><select class="f" id="anFc" aria-label="Catégorie"></select></div>
+<button class="btn" id="anAdd">+ Publier une annonce</button>
+<div id="anForm" class="card" hidden style="margin-top:10px">
+<label class="l" for="anTi">Titre</label><input class="f" id="anTi" maxlength="70" placeholder="Ex. Moteur hors-bord 15 CV, révisé">
+<div class="row"><div><label class="l" for="anTy">Type</label><select class="f" id="anTy"><option>Vente</option><option>Troc</option><option>Don</option></select></div><div><label class="l" for="anPr">Prix (CHF)</label><input class="f" id="anPr" type="number" inputmode="decimal"></div></div>
+<div class="row"><div><label class="l" for="anCt">Catégorie</label><select class="f" id="anCt"></select></div><div><label class="l" for="anEt">État</label><select class="f" id="anEt"><option>Neuf</option><option>Très bon</option><option selected>Bon</option><option>Usagé</option><option>À réparer</option></select></div></div>
+<label class="l" for="anLo">Lieu (port ou localité)</label><input class="f" id="anLo" maxlength="40" placeholder="Ex. Morges">
+<label class="l" for="anDs">Description (pour un troc : ce que vous cherchez)</label><textarea class="f" id="anDs" rows="3" maxlength="500"></textarea>
+<div class="row"><button class="btn g" id="anCx">Annuler</button><button class="btn" id="anSv">Publier</button></div></div>
+<div class="err" id="anMsg"></div>
+<div id="anList" style="margin-top:12px"></div>
+</section>
+
+<!-- ===================== NAVIGATION ===================== -->
+<nav id="nav">
+<a data-v="accueil" href="#"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>Accueil</a>
+<a data-v="ponton" href="#ponton"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Ponton<span class="dot" id="unreadNav" hidden></span></a>
+<a data-v="panne" href="#panne" class="navsos"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.8"/><path d="M5.6 5.6l3.7 3.7M14.7 14.7l3.7 3.7M18.4 5.6l-3.7 3.7M9.3 14.7l-3.7 3.7"/></svg></span>SOS</a>
+<a data-v="meteo" href="#meteo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h8"/></svg>Météo</a>
+<a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
+</nav>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
+<script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
+<script src="app.js"></script>
+</body>
+</html>

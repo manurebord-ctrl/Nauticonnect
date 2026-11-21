@@ -1,0 +1,887 @@
+/* =====================================================================
+   NAUTICONNECT · application (Supabase + GitHub Pages)
+   ===================================================================== */
+"use strict";
+var $ = function (i) { return document.getElementById(i); };
+function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+function ls(k, v) { try { if (v == null) return localStorage.getItem(k) || ""; localStorage.setItem(k, v); } catch (e) { return ""; } }
+function km(a, b, c, d) { var r = Math.PI / 180, x = Math.sin((c - a) * r / 2), y = Math.sin((d - b) * r / 2), h = x * x + Math.cos(a * r) * Math.cos(c * r) * y * y; return 12742 * Math.asin(Math.sqrt(h)); }
+function ts(v) { return typeof v === "number" ? v : Date.parse(v) || 0; }
+function ago(v) { var m = Math.max(0, Math.round((Date.now() - ts(v)) / 60000)); return m < 1 ? "à l’instant" : m < 60 ? "il y a " + m + " min" : m < 1440 ? "il y a " + Math.round(m / 60) + " h" : "il y a " + Math.round(m / 1440) + " j"; }
+function iso(msAgo) { return new Date(Date.now() - msAgo).toISOString(); }
+function nowIso() { return new Date().toISOString(); }
+function norm(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+var toastT = null;
+function toast(t) { var d = $("toastEl"); if (!d) { d = el("div", "toast"); d.id = "toastEl"; document.body.appendChild(d); } d.textContent = t; d.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { d.hidden = true; }, 2800); }
+
+/* ---------------- connexion à Supabase ---------------- */
+var CFG = window.NC_CONFIG || {};
+var configured = /^https:\/\/.+/.test(CFG.url || "") && (CFG.key || "").length > 30;
+var sb = null;
+if (configured && window.supabase) sb = window.supabase.createClient(CFG.url, CFG.key);
+var session = null, uid = null, isAdmin = false;
+
+/* ---------------- données ---------------- */
+var P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+function me() { return uid && P[uid] ? P[uid] : null; }
+function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
+function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
+function badge(id, fb) { var b = el("span", "badge"); b.appendChild(el("span", "av", initial(id))); b.appendChild(document.createTextNode(nameOf(id, fb))); return b; }
+
+var Q = {
+  profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat").limit(5000); },
+  alertes: function () { return uid ? sb.from("alertes").select("*").gte("maj", iso(12 * 36e5)) : null; },
+  ouverts: function () { return sb.from("ouverts").select("*").gte("maj", iso(2 * 36e5)); },
+  messages: function () { return uid ? sb.from("messages").select("*").gte("t", iso(7 * 864e5)).order("t").limit(800) : null; },
+  avis: function () { return sb.from("avis").select("*").order("t", { ascending: false }).limit(300); },
+  votes: function () { return sb.from("votes").select("*").limit(5000); },
+  places: function () { return sb.from("places").select("*").gte("t", iso(12 * 36e5)); },
+  restos: function () { return sb.from("restos").select("*").order("t", { ascending: false }).limit(300); },
+  epaves: function () { return sb.from("epaves").select("*").limit(500); },
+  annonces: function () { return sb.from("annonces").select("*").gte("maj", iso(90 * 864e5)).order("maj", { ascending: false }).limit(300); },
+  photos: function () { return sb.from("photos").select("*").order("t", { ascending: false }).limit(400); },
+  reglages: function () { return sb.from("reglages").select("*"); },
+  sauvetages: function () { return sb.from("sauvetages").select("*"); }
+};
+function store(t, rows) {
+  rows = rows || [];
+  if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
+  else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows;
+  else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
+  else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows;
+  else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
+  else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); }
+}
+var pending = {}, reloadT = {};
+function load(t) {
+  if (!sb) return Promise.resolve();
+  var q = Q[t](); if (!q) { store(t, []); return Promise.resolve(); }
+  return q.then(function (r) { if (!r.error) store(t, r.data); renderAll(); });
+}
+function reload(t) { clearTimeout(reloadT[t]); reloadT[t] = setTimeout(function () { load(t); }, 250); }
+var channel = null;
+function subscribeAll() {
+  if (!sb) return;
+  if (channel) sb.removeChannel(channel);
+  channel = sb.channel("nauticonnect-" + Date.now());
+  Object.keys(Q).forEach(function (t) { channel.on("postgres_changes", { event: "*", schema: "public", table: t }, function () { reload(t); }); });
+  channel.subscribe();
+}
+function loadAll() { return Promise.all(Object.keys(Q).map(load)); }
+setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); if (uid) load("alertes"); } }, 120000);
+
+/* ---------------- navigation ---------------- */
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces"];
+var NEEDS_AUTH = { profil: 1 };
+function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "accueil" : h; }
+function goAuth(ret) { try { sessionStorage.setItem("nc-ret", ret || cur()); } catch (e) {} location.hash = "compte"; }
+function requireProfile(msgEl) {
+  if (!sb) { if (msgEl) msgEl.textContent = "L'appli n'est pas encore configurée."; return false; }
+  if (!uid) { goAuth(); return false; }
+  if (!me()) { try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "profil"; toast("Créez d'abord votre fiche bateau"); return false; }
+  return true;
+}
+function route() {
+  var h = cur();
+  if (NEEDS_AUTH[h] && !uid && sb) { goAuth(h); return; }
+  VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
+  Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
+  if (h === "profil") fillProfile();
+  if (h === "compte" && authMode !== "reset") setAuthMode(uid ? "in" : authMode);
+  if (h === "ponton") markRead();
+  if (h === "webcams") wcFromHash();
+  renderAll(); window.scrollTo(0, 0); heroStart();
+}
+window.addEventListener("hashchange", route);
+
+/* ---------------- géographie commune ---------------- */
+var Z = [["Hermance",46.301,6.243],["Corsier-Port",46.268,6.226],["Genève – Port-Noir / Eaux-Vives",46.222,6.168],["Genève – Pâquis",46.213,6.155],["Genthod",46.257,6.158],["Versoix",46.280,6.165],["Coppet",46.316,6.191],["Nyon",46.381,6.240],["Gland",46.415,6.267],["Yvoire (F)",46.371,6.329],["Rolle",46.454,6.337],["Sciez (F)",46.386,6.371],["Saint-Prex",46.483,6.455],["Thonon (F)",46.409,6.489],["Morges",46.506,6.495],["Préverenges",46.512,6.528],["Saint-Sulpice",46.511,6.557],["Lausanne – Vidy",46.515,6.590],["Évian (F)",46.401,6.589],["Lausanne – Ouchy",46.508,6.627],["Pully",46.507,6.660],["Lutry",46.503,6.687],["Cully",46.488,6.729],["Saint-Saphorin",46.471,6.795],["Saint-Gingolph",46.399,6.806],["Vevey",46.459,6.840],["Le Bouveret",46.392,6.857],["La Tour-de-Peilz",46.453,6.859],["Clarens / Montreux",46.432,6.911],["Territet",46.433,6.925],["Villeneuve",46.399,6.926]];
+Z.sort(function (a, b) { return a[2] - b[2]; });
+var OUT = [[6.155,46.213],[6.158,46.257],[6.165,46.28],[6.191,46.316],[6.24,46.381],[6.267,46.415],[6.337,46.454],[6.455,46.483],[6.495,46.506],[6.627,46.508],[6.687,46.503],[6.729,46.488],[6.84,46.459],[6.911,46.432],[6.926,46.399],[6.857,46.392],[6.806,46.399],[6.71,46.4],[6.59,46.401],[6.489,46.409],[6.371,46.386],[6.329,46.371],[6.243,46.301],[6.226,46.268],[6.168,46.222]];
+var TOWNS = [["Genève",6.155,46.213,16,"start"],["Nyon",6.24,46.381,-9,"middle"],["Lausanne",6.627,46.508,-9,"middle"],["Vevey",6.84,46.459,-9,"middle"],["Montreux",6.911,46.432,18,"middle"],["Évian",6.589,46.401,18,"middle"],["Thonon",6.489,46.409,18,"middle"]];
+function X(o) { return (o - 6.14) * 808.5; } function Y(a) { return (46.54 - a) * 1165.5; }
+var NS = "http://www.w3.org/2000/svg";
+function baseMap(s, labels) {
+  s.textContent = "";
+  function mk(t, a, st) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); if (st) e.setAttribute("style", st); s.appendChild(e); return e; }
+  mk("polygon", { points: OUT.map(function (q) { return X(q[0]).toFixed(0) + "," + Y(q[1]).toFixed(0); }).join(" ") }, "fill:var(--ac);fill-opacity:.18;stroke:var(--ac);stroke-width:2");
+  if (labels) TOWNS.forEach(function (r) { var t = mk("text", { x: X(r[1]), y: Y(r[2]) + r[3], "text-anchor": r[4], "font-size": 15 }, "fill:var(--mu)"); t.textContent = r[0]; });
+  return mk;
+}
+function svgPoint(s, e) { var r = s.getBoundingClientRect(); return { lon: 6.14 + ((e.clientX - r.left) / r.width * 680) / 808.5, lat: 46.54 - ((e.clientY - r.top) / r.height * 410) / 1165.5 }; }
+/* carte détaillée (webcams, restos) */
+var SHORE = [[46.208,6.145],[46.255,6.155],[46.283,6.168],[46.315,6.192],[46.382,6.240],[46.405,6.262],[46.458,6.337],[46.478,6.455],[46.505,6.497],[46.508,6.560],[46.517,6.597],[46.505,6.627],[46.507,6.660],[46.502,6.685],[46.488,6.730],[46.461,6.842],[46.453,6.858],[46.440,6.893],[46.432,6.910],[46.400,6.925],[46.383,6.857],[46.390,6.803],[46.408,6.722],[46.402,6.590],[46.393,6.530],[46.375,6.480],[46.358,6.425],[46.347,6.358],[46.372,6.327],[46.360,6.300],[46.325,6.268],[46.302,6.243],[46.276,6.223],[46.218,6.180],[46.203,6.150]];
+function X2(lo) { return 30 + (lo - 6.13) * 0.689 * 680; } function Y2(la) { return 20 + (46.54 - la) * 680; }
+function svgEl(t, a, p) { var e = document.createElementNS(NS, t); for (var k in a) e.setAttribute(k, a[k]); p.appendChild(e); return e; }
+function detailedLake(svg) {
+  svg.textContent = "";
+  svgEl("path", { class: "lakefill", d: "M" + SHORE.map(function (p) { return X2(p[1]).toFixed(1) + "," + Y2(p[0]).toFixed(1); }).join(" L") + "Z" }, svg);
+  svg.setAttribute("viewBox", "16 16 408 254");
+  return svgEl("g", {}, svg);
+}
+function mapsSearch(q) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q); }
+
+/* ================= COMPTE ================= */
+var authMode = "up";
+function setAuthMode(m) {
+  authMode = m;
+  Array.prototype.forEach.call($("auTabs").children, function (b) { b.classList.toggle("on", b.dataset.m === m); });
+  var reset = m === "reset";
+  $("auTabs").hidden = reset;
+  $("auTitle").textContent = reset ? "Nouveau mot de passe" : m === "up" ? "Rejoindre l'équipage" : "Bon retour à bord";
+  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Créez votre compte en 30 secondes pour discuter, alerter et partager." : "Connectez-vous avec votre e-mail.";
+  $("auGo").textContent = reset ? "Enregistrer le mot de passe" : m === "up" ? "Créer mon compte" : "Me connecter";
+  $("auPassL").textContent = m === "in" ? "Mot de passe" : "Mot de passe (8 caractères min.)";
+  $("auPass").autocomplete = m === "in" ? "current-password" : "new-password";
+  $("auEmail").parentNode.querySelector('label[for="auEmail"]').hidden = reset; $("auEmail").hidden = reset;
+  $("auForgot").hidden = m !== "in";
+  $("auMsg").textContent = ""; $("auMsg").className = "err";
+  if (uid && !reset) { $("auMsg").className = "okm"; $("auMsg").textContent = "Vous êtes connecté."; }
+}
+Array.prototype.forEach.call($("auTabs").children, function (b) { b.onclick = function () { setAuthMode(b.dataset.m); }; });
+function authErr(e) {
+  var m = (e && e.message) || "";
+  if (/Invalid login/i.test(m)) return "E-mail ou mot de passe incorrect.";
+  if (/Email not confirmed/i.test(m)) return "Confirmez d'abord votre e-mail (lien reçu par e-mail).";
+  if (/already registered/i.test(m)) return "Cette adresse a déjà un compte : utilisez « J'ai déjà un compte ».";
+  if (/Password should/i.test(m)) return "Mot de passe trop court (8 caractères minimum).";
+  if (/rate limit/i.test(m)) return "Trop de tentatives : réessayez dans quelques minutes.";
+  return "Erreur : " + (m || "réessayez.");
+}
+$("auGo").onclick = function () {
+  var m = $("auMsg"); m.className = "err"; m.textContent = "";
+  if (!sb) { m.textContent = "L'appli n'est pas encore configurée (fichier config.js)."; return; }
+  var em = $("auEmail").value.trim(), pw = $("auPass").value;
+  if (authMode !== "reset" && !/^\S+@\S+\.\S+$/.test(em)) { m.textContent = "Adresse e-mail invalide."; return; }
+  if (pw.length < 8) { m.textContent = "Mot de passe : 8 caractères minimum."; return; }
+  $("auGo").disabled = true;
+  var p = authMode === "up" ? sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: location.origin + location.pathname } })
+    : authMode === "in" ? sb.auth.signInWithPassword({ email: em, password: pw })
+    : sb.auth.updateUser({ password: pw });
+  p.then(function (r) {
+    if (r.error) { m.textContent = authErr(r.error); return; }
+    if (authMode === "up" && !r.data.session) { m.className = "okm"; m.textContent = "Presque fini ! Ouvrez l'e-mail reçu et touchez le lien de confirmation, puis revenez vous connecter."; setAuthMode("in"); $("auMsg").className = "okm"; $("auMsg").textContent = "Lien de confirmation envoyé à " + em + "."; return; }
+    if (authMode === "reset") { toast("Mot de passe modifié"); authMode = "in"; }
+    $("auPass").value = "";
+  }).catch(function () { m.textContent = "Pas de connexion internet ?"; }).then(function () { $("auGo").disabled = false; });
+};
+$("auForgot").onclick = function () {
+  var em = $("auEmail").value.trim(), m = $("auMsg");
+  if (!/^\S+@\S+\.\S+$/.test(em)) { m.className = "err"; m.textContent = "Indiquez d'abord votre e-mail ci-dessus."; return; }
+  sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname }).then(function (r) {
+    m.className = r.error ? "err" : "okm"; m.textContent = r.error ? authErr(r.error) : "E-mail envoyé : touchez le lien pour choisir un nouveau mot de passe.";
+  });
+};
+function onSession(s, ev) {
+  var was = uid; session = s; uid = s ? s.user.id : null;
+  if (ev === "PASSWORD_RECOVERY") { location.hash = "compte"; setAuthMode("reset"); }
+  if (uid !== was) {
+    isAdmin = false;
+    if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { isAdmin = !!(r.data && r.data.length); renderAll(); });
+    subscribeAll(); loadAll().then(function () {
+      if (uid && cur() === "compte" && authMode !== "reset") {
+        var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
+        location.hash = me() ? (ret && ret !== "compte" ? ret : "") : "profil";
+      }
+    });
+  }
+  renderAll();
+}
+
+/* ================= PROFIL ================= */
+var o0 = el("option", 0, "— choisir —"); o0.value = ""; $("pPort").appendChild(o0);
+Z.forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("pPort").appendChild(o); });
+function fillProfile() {
+  var p = me(); $("pfTitle").textContent = p ? "Ma fiche bateau" : "Créez votre fiche bateau";
+  $("pSave").textContent = p ? "Mettre à jour" : "Rejoindre l'équipage";
+  if (p) { $("pPseudo").value = p.pseudo || ""; $("pBoat").value = p.bateau || ""; $("pType").value = p.type || "Voilier"; $("pPort").value = p.port || ""; $("pImm").value = p.immat || ""; }
+  $("pEmail").textContent = session ? "Connecté avec " + session.user.email : "";
+  $("pMsg").textContent = "";
+}
+$("pSave").onclick = function () {
+  var m = $("pMsg"); m.className = "err"; m.textContent = "";
+  if (!uid) { goAuth("profil"); return; }
+  var ps = $("pPseudo").value.trim(), bt = $("pBoat").value.trim();
+  if (ps.length < 2) { m.textContent = "Indiquez un prénom ou un pseudo (2 caractères min.)."; return; }
+  var taken = Object.keys(P).some(function (k) { return k !== uid && norm(P[k].pseudo) === norm(ps) && norm(P[k].bateau) === norm(bt); });
+  if (taken) { m.textContent = "Ce pseudo est déjà pris avec ce nom de bateau. Ajoutez votre bateau ou changez de pseudo."; return; }
+  var first = !me();
+  var d = { id: uid, pseudo: ps, bateau: bt, type: $("pType").value, port: $("pPort").value, immat: $("pImm").value.trim().toUpperCase(), maj: nowIso() };
+  $("pSave").disabled = true;
+  sb.from("profils").upsert(d).then(function (r) {
+    if (r.error) { m.textContent = "Enregistrement impossible : " + r.error.message; return; }
+    P[uid] = d; m.className = "okm"; m.textContent = first ? "Bienvenue à bord, " + ps + " !" : "Fiche mise à jour.";
+    renderAll();
+    var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
+    if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
+  }).then(function () { $("pSave").disabled = false; });
+};
+$("pLogout").onclick = function () { sb.auth.signOut().then(function () { location.hash = ""; toast("Déconnecté. À bientôt sur l'eau !"); }); };
+var delStep = 0;
+$("pDelete").onclick = function () {
+  var m = $("pDelMsg");
+  if (!delStep) { delStep = 1; $("pDelete").textContent = "Confirmer : tout supprimer définitivement"; m.textContent = "Votre fiche, vos messages, alertes, avis, annonces et photos seront effacés. Touchez encore pour confirmer."; return; }
+  $("pDelete").disabled = true; m.textContent = "Suppression…";
+  sb.storage.from("photos").list(uid, { limit: 1000 }).then(function (r) {
+    var files = (r.data || []).map(function (f) { return uid + "/" + f.name; });
+    return files.length ? sb.storage.from("photos").remove(files) : null;
+  }).then(function () { return sb.rpc("supprimer_mon_compte"); }).then(function (r) {
+    if (r && r.error) throw r.error;
+    return sb.auth.signOut();
+  }).then(function () { location.hash = ""; toast("Compte supprimé."); })
+    .catch(function (e) { m.textContent = "Suppression impossible : " + ((e && e.message) || "réessayez."); $("pDelete").disabled = false; });
+};
+
+/* ================= ACCUEIL ================= */
+function renderChip() {
+  var c = $("meChip"), p = me(); c.textContent = "";
+  if (p) { c.className = "me"; c.href = "#profil"; c.appendChild(el("span", "av", initial(uid))); c.appendChild(el("span", 0, p.pseudo)); }
+  else if (uid) { c.className = "me new"; c.href = "#profil"; c.textContent = "Ma fiche bateau"; }
+  else { c.className = "me new"; c.href = "#compte"; c.textContent = "Se connecter"; }
+}
+var AVC = ["#f29a5b", "#9fe3c4", "#a9c8f5", "#f5d07a", "#e9a8d0", "#c7b8f5"];
+function openNow() { var l = Date.now() - 2 * 36e5; return O.filter(function (x) { return ts(x.maj) > l; }); }
+function renderHome() {
+  renderChip();
+  var op = openNow();
+  $("stMembers").textContent = sb ? Object.keys(P).length : "–"; $("stOpen").textContent = sb ? op.length : "–";
+  var N = $("pNow"); N.textContent = "";
+  if (op.length) {
+    var st = el("div", "stack"); op.slice(0, 5).forEach(function (x, i) { var a = el("span", 0, initial(x.id)); a.style.background = AVC[i % AVC.length]; st.appendChild(a); }); N.appendChild(st);
+    var t = op.slice(0, 2).map(function (x) { return (P[x.id] && P[x.id].pseudo) || "Un plaisancier"; }).join(", ");
+    N.appendChild(el("p", 0, t + (op.length > 2 ? " et " + (op.length - 2) + " autre" + (op.length > 3 ? "s" : "") : "") + (op.length > 1 ? " ont" : " a") + " hissé le pavillon."));
+  } else N.appendChild(el("p", 0, "Personne n'a encore hissé le pavillon. Lancez la première sortie !"));
+  var c = $("ctaMain"), p = me();
+  c.textContent = p ? "Hisser le pavillon" : "Rejoindre l'équipage"; c.href = p ? "#ponton" : uid ? "#profil" : "#compte";
+  var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = "⚠ " + n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
+  var u = unread(); $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
+  $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
+  $("phBtn").hidden = !isAdmin;
+}
+/* bannière animée */
+var heroRunning = false;
+function heroStart() { if (!heroRunning && !$("v-accueil").hidden) { heroRunning = true; heroSize(); requestAnimationFrame(heroDraw); } }
+var cv = $("heroCv"), cx = cv.getContext("2d"), t0 = performance.now(), still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function heroSize() { var r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = r.width * d; cv.height = r.height * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+function ridge(w, base, amp, seed, col) { cx.beginPath(); cx.moveTo(0, base); for (var x = 0; x <= w; x += 6) { var y = base - amp * (.55 * Math.sin(x * .012 + seed) + .3 * Math.sin(x * .031 + seed * 2) + .15 * Math.sin(x * .07 + seed * 3)); y -= amp * .9 * Math.max(0, 1 - Math.abs(x - w * (.62 + seed * .05)) / (w * .18)); cx.lineTo(x, y); } cx.lineTo(w, base + 400); cx.lineTo(0, base + 400); cx.closePath(); cx.fillStyle = col; cx.fill(); }
+function heroDraw(now) {
+  var r = cv.getBoundingClientRect(), w = r.width, h = r.height, t = (now - t0) / 1000; cx.clearRect(0, 0, w, h);
+  var hz = h * .72, g = cx.createRadialGradient(w * .78, hz - 6, 4, w * .78, hz - 6, 140);
+  g.addColorStop(0, "rgba(255,214,150,.95)"); g.addColorStop(.18, "rgba(255,176,110,.55)"); g.addColorStop(1, "rgba(255,160,100,0)"); cx.fillStyle = g; cx.fillRect(0, 0, w, h);
+  cx.fillStyle = "rgba(255,230,190,.95)"; cx.beginPath(); cx.arc(w * .78, hz - 4, 16, 0, 7); cx.fill();
+  for (var i = 0; i < 22; i++) { cx.fillStyle = "rgba(255,255,255," + (.25 + .35 * Math.abs(Math.sin(t * .6 + i))) + ")"; cx.fillRect((i * 97.3) % w, (i * 41.7) % (h * .32) + 8, 1.6, 1.6); }
+  ridge(w, hz, 46, .4, "rgba(52,74,120,.55)"); ridge(w, hz + 4, 30, 1.7, "rgba(28,48,84,.8)");
+  var lg = cx.createLinearGradient(0, hz, 0, h); lg.addColorStop(0, "#2a5c86"); lg.addColorStop(1, "#0d3557"); cx.fillStyle = lg; cx.fillRect(0, hz + 4, w, h - hz);
+  cx.fillStyle = "rgba(255,190,130,.5)"; for (var k = 0; k < 7; k++) { var ww = 40 - k * 4 + 6 * Math.sin(t * 1.3 + k); cx.fillRect(w * .78 - ww / 2, hz + 10 + k * 7, ww, 2); }
+  cx.strokeStyle = "rgba(255,255,255,.14)"; cx.lineWidth = 1.2;
+  for (var j = 0; j < 5; j++) { var y0 = hz + 18 + j * 12; cx.beginPath(); cx.moveTo(0, y0); for (var x = 0; x <= w; x += 8) cx.lineTo(x, y0 + 2.5 * Math.sin(x * .04 + t * (still ? 0 : 1.2) + j)); cx.stroke(); }
+  var bx = w * .24 + (still ? 0 : Math.sin(t * .25) * 10), by = hz + 20 + (still ? 0 : Math.sin(t * 1.4) * 1.5);
+  cx.fillStyle = "rgba(255,255,255,.92)"; cx.beginPath(); cx.moveTo(bx, by - 34); cx.lineTo(bx, by - 4); cx.lineTo(bx + 20, by - 4); cx.closePath(); cx.fill();
+  cx.fillStyle = "rgba(255,255,255,.7)"; cx.beginPath(); cx.moveTo(bx - 2, by - 28); cx.lineTo(bx - 2, by - 4); cx.lineTo(bx - 14, by - 4); cx.closePath(); cx.fill();
+  cx.fillStyle = "#0a2740"; cx.beginPath(); cx.moveTo(bx - 18, by - 2); cx.lineTo(bx + 24, by - 2); cx.lineTo(bx + 18, by + 4); cx.lineTo(bx - 13, by + 4); cx.closePath(); cx.fill();
+  if (!still && !document.hidden && !$("v-accueil").hidden && !document.querySelector(".hero.photo")) requestAnimationFrame(heroDraw); else heroRunning = false;
+}
+window.addEventListener("resize", heroSize); document.addEventListener("visibilitychange", heroStart);
+function photoUrl(path) { return sb ? sb.storage.from("photos").getPublicUrl(path).data.publicUrl : ""; }
+function applyBanner() {
+  var h = document.querySelector(".hero"), p = REG.banniere;
+  if (p) { $("heroPh").style.backgroundImage = 'url("' + photoUrl(p) + '")'; h.classList.add("photo"); } else { h.classList.remove("photo"); heroStart(); }
+}
+$("phIn").onchange = function () {
+  var f = this.files && this.files[0], inp = this; if (!f || !isAdmin) return; var lb = $("phBtn"); lb.firstChild.textContent = "Envoi… ";
+  shrink(f, 2000).then(function (blob) {
+    var path = uid + "/banniere-" + Date.now() + ".jpg";
+    return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }).then(function (r) {
+      if (r.error) throw r.error; var old = REG.banniere;
+      return sb.from("reglages").upsert({ k: "banniere", v: path }).then(function (r2) { if (r2.error) throw r2.error; REG.banniere = path; applyBanner(); if (old && old.indexOf(uid + "/") === 0) sb.storage.from("photos").remove([old]); });
+    });
+  }).then(function () { lb.firstChild.textContent = "📷 Photo de la bannière"; }, function () { lb.firstChild.textContent = "Échec, réessayer"; }).then(function () { inp.value = ""; });
+};
+/* installation */
+var deferredInstall = null;
+window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferredInstall = e; $("installBox").hidden = false; });
+$("installBtn").onclick = function () { if (!deferredInstall) return; deferredInstall.prompt(); deferredInstall.userChoice.then(function () { deferredInstall = null; $("installBox").hidden = true; }); };
+window.addEventListener("appinstalled", function () { $("installBox").hidden = true; toast("Nauticonnect est installé !"); });
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
+
+/* ================= PANNE ================= */
+var gp = null, pbv = "", PB = ["Panne moteur", "Batterie / électricité", "Panne de carburant", "Échouement", "Hélice / safran", "Autre"];
+Z.forEach(function (z, i) { var o = el("option", 0, "Zone : " + z[0]); o.value = i; $("pnZone").appendChild(o); });
+(function () { var p = ls("nc-zone"); if (p !== "") $("pnZone").value = p; })();
+PB.forEach(function (t) { var b = el("button", 0, t); b.onclick = function () { pbv = t; Array.prototype.forEach.call($("pnPbs").children, function (x) { x.className = ""; }); b.className = "on"; }; $("pnPbs").appendChild(b); });
+function pnPos() { if (gp) return gp; var z = Z[+$("pnZone").value] || Z[0]; return { nom: z[0], lat: z[1], lon: z[2] }; }
+function pnMsg(t) { $("pnMsg").textContent = t || ""; }
+$("pnZone").onchange = function () { gp = null; ls("nc-zone", this.value); renderPanne(); };
+$("pnGps").onclick = function () {
+  pnMsg(); if (!navigator.geolocation) { pnMsg("GPS indisponible : choisissez une zone."); return; }
+  $("pnGps").textContent = "📍 Recherche de la position…";
+  navigator.geolocation.getCurrentPosition(function (p) { gp = { nom: "Position GPS", lat: p.coords.latitude, lon: p.coords.longitude }; $("pnGps").textContent = "📍 Position GPS utilisée"; renderPanne(); },
+    function () { $("pnGps").textContent = "📍 Utiliser ma position GPS"; pnMsg("Position GPS refusée ou indisponible : choisissez une zone ou touchez la carte."); }, { timeout: 10000, enableHighAccuracy: true });
+};
+$("pnSos").onclick = function () { pnMsg(); if (!requireProfile($("pnMsg"))) return; var f = $("pnForm"); f.hidden = !f.hidden; if (!f.hidden) f.scrollIntoView({ behavior: "smooth" }); };
+$("pnGo").onclick = function () {
+  pnMsg(); if (!requireProfile($("pnMsg"))) return;
+  if (!pbv) { pnMsg("Étape 2 : choisissez le problème."); return; }
+  var tel = $("pnTel").value.trim(); if (tel && !/^[+0-9 ().\/-]{7,20}$/.test(tel)) { pnMsg("Numéro de téléphone invalide."); return; }
+  var p = me(), pos = pnPos(); $("pnGo").disabled = true;
+  sb.from("alertes").insert({ par: p.pseudo, bateau: p.bateau || "", zone: pos.nom, lat: pos.lat, lon: pos.lon, probleme: pbv, detail: $("pnDet").value.trim().slice(0, 140), tel: tel })
+    .then(function (r) {
+      if (r.error) { pnMsg("Envoi impossible. En cas de danger, appelez le 117."); return; }
+      $("pnForm").hidden = true; $("pnDet").value = ""; pbv = ""; Array.prototype.forEach.call($("pnPbs").children, function (x) { x.className = ""; });
+      toast("Alerte envoyée. Restez à bord, gilets mis."); load("alertes"); window.scrollTo({ top: 0, behavior: "smooth" });
+    }).then(function () { $("pnGo").disabled = false; });
+};
+function activeAlerts() { var lim = Date.now() - 12 * 36e5; return A.filter(function (a) { return a.etat === "ouverte" && ts(a.maj) > lim; }); }
+function renderPanne() {
+  var p = me(), W = $("pnWho"); W.textContent = "";
+  if (p) { W.appendChild(document.createTextNode("Alerte envoyée au nom de ")); W.appendChild(el("b", 0, nameOf(uid))); }
+  else W.textContent = uid ? "Créez votre fiche bateau pour pouvoir alerter (30 secondes)." : "Connectez-vous pour alerter les plaisanciers. En cas de danger : 117.";
+  var L = $("pnList"); L.textContent = ""; var pos = pnPos();
+  if (!uid) { L.appendChild(el("p", "mu", "Connectez-vous pour voir les alertes des plaisanciers.")); }
+  else {
+    var r = activeAlerts().map(function (a) { return { a: a, d: km(pos.lat, pos.lon, a.lat, a.lon) }; }).sort(function (x, y) { return (x.a.auteur === uid ? 0 : 1) - (y.a.auteur === uid ? 0 : 1) || x.d - y.d; });
+    if (!r.length) L.appendChild(el("p", "mu", "Aucune alerte active. Bonne navigation !"));
+    r.forEach(function (o) {
+      var a = o.a, m = a.auteur === uid, c = el("div", "card" + (m ? " mine" : ""));
+      c.appendChild(el("b", 0, (m ? "Mon alerte · " : "") + a.probleme));
+      if (!m) { var w = el("div"); w.style.margin = "6px 0"; w.appendChild(badge(a.auteur, a.par)); c.appendChild(w); }
+      c.appendChild(el("div", "mu", a.zone + " · à " + o.d.toFixed(1) + " km · " + ago(a.maj)));
+      if (a.detail) c.appendChild(el("div", 0, a.detail));
+      if (a.tel && !m) { var t = el("div"); t.appendChild(document.createTextNode("📞 ")); var tl = el("a", 0, a.tel); tl.href = "tel:" + a.tel.replace(/[^0-9+]/g, ""); tl.style.cssText = "color:var(--ac);font-weight:700"; t.appendChild(tl); c.appendChild(t); }
+      var ai = a.aides || [];
+      if (ai.length) c.appendChild(el("div", "okm", "🤝 Viennent aider : " + ai.map(function (x) { return nameOf(x); }).join(", ")));
+      else if (m) c.appendChild(el("div", "mu", "En attente d’un plaisancier… Si personne ne répond, appelez le 117."));
+      var row = el("div", "row"); row.style.marginTop = "8px";
+      if (!m) {
+        var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? "Je ne peux plus venir" : "🤝 Je peux aider");
+        b.onclick = function () { if (!requireProfile()) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
+        row.appendChild(b);
+        var w2 = el("button", "btn g", "💬 Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2);
+      } else {
+        var b2 = el("button", "btn g", "✅ Problème résolu"); b2.onclick = function () { sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function () { load("alertes"); toast("Bon retour au port !"); }); }; row.appendChild(b2);
+      }
+      c.appendChild(row); L.appendChild(c);
+    });
+  }
+  drawPanneMap(); renderSc();
+}
+function drawPanneMap() {
+  var s = $("pnMap"), mk = baseMap(s, false), sel = +$("pnZone").value;
+  activeAlerts().forEach(function (a) { mk("circle", { cx: X(a.lon), cy: Y(a.lat), r: 11 }, "fill:var(--red);fill-opacity:.85"); });
+  Z.forEach(function (z, i) { var x = X(z[2]), y = Y(z[1]), on = i === sel && !gp; mk("circle", { cx: x, cy: y, r: on ? 9 : 5 }, "fill:" + (on ? "var(--tx)" : "var(--mu)") + ";stroke:var(--bg);stroke-width:2"); var h = mk("circle", { cx: x, cy: y, r: 15 }, "fill:transparent;cursor:pointer"); h.onclick = function () { gp = null; $("pnZone").value = i; ls("nc-zone", i); renderPanne(); }; });
+  var z = Z[sel] || Z[0], zx = X(z[2]);
+  if (gp) mk("circle", { cx: X(gp.lon), cy: Y(gp.lat), r: 8 }, "fill:#2d7ff9;stroke:#fff;stroke-width:3");
+  else { var t = mk("text", { x: zx, y: Y(z[1]) - 16, "text-anchor": zx > 520 ? "end" : zx < 120 ? "start" : "middle", "font-size": 20 }, "fill:var(--tx);font-weight:600"); t.textContent = z[0]; }
+  var r = $("pnRoute"); r.href = "https://www.google.com/maps/dir/?api=1&destination=" + z[1] + "," + z[2]; r.textContent = "🧭 Itinéraire jusqu’à " + z[0];
+}
+["Clarens","Coppet","Cully","La Tour-de-Peilz","Le Bouveret","Lutry","Montreux","Morges","Nyon","Ouchy","Pully","Rivaz","Rolle","St-Prex","St-Saphorin","Territet","Vevey-Sentinelle","Vevey-Vétéran","Villeneuve","Villette"].forEach(function (n) { var o = el("option"); o.value = n; $("scDl").appendChild(o); });
+function renderSc() {
+  var L = $("scList"); L.textContent = "";
+  SC.slice().sort(function (a, b) { return a.nom.localeCompare(b.nom); }).forEach(function (s) { var d = el("div"); d.appendChild(document.createTextNode(s.nom + " : ")); var a = el("a", 0, s.tel); a.href = "tel:" + s.tel.replace(/[^0-9+]/g, ""); a.style.color = "var(--ac)"; d.appendChild(a); L.appendChild(d); });
+  if (!L.firstChild) L.appendChild(el("div", "mu", "Aucun numéro enregistré pour l’instant."));
+}
+$("scSave").onclick = function () {
+  pnMsg(); if (!requireProfile($("pnMsg"))) return;
+  var n = $("scName").value.trim(), t = $("scTel").value.trim();
+  if (!n || !/^[+0-9 ().\/-]{7,20}$/.test(t)) { pnMsg("Section et numéro valide requis."); return; }
+  sb.from("sauvetages").upsert({ nom: n.slice(0, 40), tel: t, maj: nowIso() }).then(function (r) { if (r.error) pnMsg("Enregistrement refusé."); else { $("scTel").value = ""; load("sauvetages"); } });
+};
+
+/* ================= LE PONTON ================= */
+var rgp = null, rman = null, sel = null, lastPush = 0, openWith = ls("nc-open") || null, FR = [], watchId = null;
+try { var mm = JSON.parse(ls("nc-man") || "null"); if (mm && typeof mm.lat === "number") rman = mm; } catch (e) {}
+function rPos() { return rgp || rman; }
+function rErr(t) { $("rnErr").textContent = t || ""; }
+$("rnCode").value = ls("nc-code"); $("rnMsgTxt").value = ls("nc-msg");
+$("rnOpen").checked = ls("nc-isopen") === "1"; $("rnFr").checked = ls("nc-isfr") === "1";
+function openOthers() { return openNow().filter(function (x) { return x.id !== uid; }); }
+function stat() { var o = $("rnOpen").checked, f = $("rnFr").checked, b = $("rnStt"); b.className = "stt" + (o || f ? " on" : ""); b.textContent = o && f ? "Pavillon hissé · amis et membres" : o ? "Pavillon hissé · visible par les membres (position arrondie)" : f ? "Position partagée avec mes amis uniquement" : "Pavillon baissé : votre position n'est pas partagée"; }
+function code() { return $("rnCode").value.trim().toLowerCase(); }
+function push() {
+  var p = rPos(); if (!p || !uid || !me()) return;
+  if ($("rnOpen").checked) sb.from("ouverts").upsert({ id: uid, msg: $("rnMsgTxt").value.trim().slice(0, 60), lat: Math.round(p.lat * 100) / 100, lon: Math.round(p.lon * 100) / 100, maj: nowIso() }).then(function (r) { if (r.error) rErr("Partage refusé."); else load("ouverts"); });
+  var c = code(); if ($("rnFr").checked && c.length >= 4) sb.from("amis").upsert({ code: c, auteur: uid, lat: p.lat, lon: p.lon, maj: nowIso() }, { onConflict: "code,auteur" }).then(function () { loadFriends(); });
+}
+function loadFriends() { var c = code(); if (!uid || c.length < 4) { FR = []; return; } sb.rpc("amis_du_groupe", { c: c }).then(function (r) { FR = (r.data || []).filter(function (x) { return x.auteur !== uid; }); if (cur() === "ponton") renderPonton(); }); }
+setInterval(function () { if (cur() === "ponton" && !document.hidden) { loadFriends(); if (Date.now() - lastPush > 5 * 60000) { lastPush = Date.now(); push(); } } }, 30000);
+$("rnOpen").onchange = function () {
+  rErr(); if (!requireProfile()) { this.checked = false; return; }
+  ls("nc-isopen", this.checked ? "1" : "0");
+  if (this.checked) { if (!rPos()) rErr("Localisez-vous (GPS) ou touchez la carte."); push(); } else sb.from("ouverts").delete().eq("id", uid).then(function () { load("ouverts"); });
+  stat();
+};
+$("rnFr").onchange = function () {
+  rErr(); if (!requireProfile()) { this.checked = false; return; }
+  var c = code(); ls("nc-code", c);
+  if (this.checked) { if (c.length < 4) { rErr("Code de groupe : 4 caractères minimum."); this.checked = false; return; } push(); }
+  else sb.from("amis").delete().eq("auteur", uid).then(function () { FR = []; renderPonton(); });
+  ls("nc-isfr", this.checked ? "1" : "0"); stat();
+};
+$("rnCode").onchange = function () { ls("nc-code", code()); loadFriends(); };
+$("rnMsgTxt").onchange = function () { ls("nc-msg", this.value.trim()); push(); };
+$("rnGps").onclick = function () {
+  rErr(); if (!navigator.geolocation) { rErr("GPS indisponible : touchez la carte pour vous placer."); return; }
+  if (watchId != null) return;
+  watchId = navigator.geolocation.watchPosition(function (p) { rgp = { lat: p.coords.latitude, lon: p.coords.longitude }; $("rnGps").textContent = "📍 Position GPS active"; if (Date.now() - lastPush > 20000) { lastPush = Date.now(); push(); } renderPonton(); },
+    function () { watchId = null; rErr("GPS refusé ou indisponible : touchez la carte pour vous placer."); }, { enableHighAccuracy: true });
+};
+$("rnMap").onclick = function (e) { if (rgp) return; rman = svgPoint(this, e); ls("nc-man", JSON.stringify(rman)); push(); renderPonton(); };
+function drawRnMap() {
+  var s = $("rnMap"), mk = baseMap(s, true);
+  function pt(x, fill, lab, onc) { var cx2 = X(x.lon), cy2 = Y(x.lat); mk("circle", { cx: cx2, cy: cy2, r: 9 }, "fill:" + fill + ";stroke:#fff;stroke-width:3");
+    if (lab) { var t = mk("text", { x: cx2, y: cy2 - 14, "text-anchor": cx2 > 520 ? "end" : "middle", "font-size": 16 }, "fill:var(--tx)"); t.textContent = lab; }
+    if (onc) { var h = mk("circle", { cx: cx2, cy: cy2, r: 16 }, "fill:transparent;cursor:pointer"); h.onclick = function (e) { e.stopPropagation(); onc(); }; } }
+  openOthers().forEach(function (x) { pt(x, "var(--or)", sel === x.id ? nameOf(x.id) : null, function () { sel = x.id; renderPonton(); }); });
+  FR.forEach(function (x) { pt(x, "var(--ok)", (P[x.auteur] && P[x.auteur].pseudo) || "Ami"); });
+  var p = rPos(); if (p) pt(p, "#2d7ff9", null);
+}
+function personCard(id, x) {
+  var p = rPos(), c = el("div", "card"), pr = P[id] || {}; c.appendChild(badge(id));
+  var info = [pr.type, pr.port ? "port d'attache : " + pr.port : ""].filter(Boolean).join(" · "); if (info) c.appendChild(el("div", "mu", info));
+  if (x && x.msg) c.appendChild(el("div", 0, "« " + x.msg + " »"));
+  if (x) c.appendChild(el("div", "mu", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position arrondie · " + ago(x.maj)));
+  var b = el("button", "btn sm", "💬 Écrire"); b.onclick = function () { openThread(id); }; c.appendChild(b); return c;
+}
+var PRESETS = ["👋 Salut !", "🍻 Un apéro au port ?", "⚓ On se retrouve au port ?", "🛟 Besoin d'aide ?"];
+function threads() { var T = {}; M.forEach(function (m) { var o = m.de === uid ? m.a : m.a === uid ? m.de : null; if (!o) return; (T[o] = T[o] || []).push(m); }); return T; }
+function unread() { if (!uid) return 0; var seen = +ls("nc-seen") || 0; return M.filter(function (m) { return m.a === uid && ts(m.t) > seen; }).length; }
+function markRead() { ls("nc-seen", String(Date.now())); }
+function openThread(id, txt) {
+  if (!id || id === uid) return; if (!requireProfile()) return;
+  openWith = id; ls("nc-open", id);
+  if (cur() !== "ponton") location.hash = "ponton"; else renderPonton();
+  setTimeout(function () { var t = $("th-" + id); if (t) t.scrollIntoView({ behavior: "smooth", block: "center" }); var i = $("in-" + id); if (i) { if (txt) i.value = txt; i.focus(); } }, 200);
+}
+var sending = false;
+function sendMsg(to, txt) {
+  txt = (txt || "").trim().slice(0, 200); if (!txt || sending || !uid) return; sending = true;
+  sb.from("messages").insert({ a: to, txt: txt }).then(function (r) { if (r.error) rErr("Message non envoyé."); else { openWith = to; markRead(); load("messages"); } }).then(function () { sending = false; });
+}
+function renderThreads() {
+  var W = $("rnThreads"); W.textContent = ""; var T = threads();
+  if (openWith && !T[openWith] && openWith !== uid && P[openWith]) T[openWith] = [];
+  var keys = Object.keys(T).sort(function (a, b) { var la = T[a].length ? ts(T[a][T[a].length - 1].t) : Date.now(), lb = T[b].length ? ts(T[b][T[b].length - 1].t) : Date.now(); return lb - la; });
+  if (!keys.length) { W.appendChild(el("p", "mu", "Aucune conversation. Touchez un plaisancier sur la carte, une annonce ou une alerte pour lui écrire.")); return; }
+  keys.forEach(function (k) {
+    var th = el("div", "thread"); th.id = "th-" + k; th.appendChild(badge(k));
+    T[k].slice(-10).forEach(function (m) { var b = el("div", "bub " + (m.de === uid ? "out" : "in"), m.txt); b.appendChild(el("small", 0, ago(m.t))); th.appendChild(b); });
+    var pr = el("div"); PRESETS.forEach(function (t) { var b = el("button", "btn g sm", t); b.onclick = function () { sendMsg(k, t); }; pr.appendChild(b); }); th.appendChild(pr);
+    var f = el("form", "send"), i = el("input", "f"); i.id = "in-" + k; i.maxLength = 200; i.placeholder = "Votre message…"; i.setAttribute("aria-label", "Message"); var s = el("button", "btn", "Envoyer");
+    f.appendChild(i); f.appendChild(s); f.onsubmit = function (e) { e.preventDefault(); var v = i.value; i.value = ""; sendMsg(k, v); }; th.appendChild(f); W.appendChild(th);
+  });
+}
+function renderPonton() {
+  var ok = !!me(); $("rnGate").hidden = ok; $("rnBody").hidden = !ok; if (!ok) return;
+  stat(); drawRnMap();
+  var ae = document.activeElement, aid = ae && ae.id && ae.id.indexOf("in-") === 0 ? ae.id : null, val = aid ? ae.value : "";
+  renderThreads(); if (aid && $(aid)) { $(aid).value = val; $(aid).focus(); }
+  var u = unread(); $("unreadRn").hidden = !u; $("unreadRn").textContent = u;
+  var D = $("rnDet"); D.textContent = ""; openOthers().forEach(function (x) { if (x.id === sel) D.appendChild(personCard(x.id, x)); });
+  var Fr = $("rnFriends"); Fr.textContent = ""; var p = rPos();
+  FR.forEach(function (x) { var d = el("div", "card"); d.appendChild(badge(x.auteur)); d.appendChild(el("div", "mu", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + ago(x.maj)));
+    var a = el("a", "btn g sm", "🧭 Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; d.appendChild(a);
+    var w = el("button", "btn sm", "💬 Écrire"); w.onclick = function () { openThread(x.auteur); }; d.appendChild(w); Fr.appendChild(d); });
+  if (!Fr.firstChild) Fr.appendChild(el("p", "mu", code().length >= 4 ? "Aucun ami en ligne dans ce groupe." : "Choisissez un code de groupe et donnez-le à vos amis."));
+  var L = $("rnOpenList"); L.textContent = ""; openOthers().sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).forEach(function (x) { L.appendChild(personCard(x.id, x)); });
+  if (!L.firstChild) L.appendChild(el("p", "mu", "Personne n'a hissé le pavillon pour l'instant."));
+}
+
+/* ================= BOÎTE À IDÉES ================= */
+var avType = "fix", avFilt = "tout", avBusy = false;
+var AVT = { like: "👍 J'aime", fix: "🔧 À améliorer", idea: "💡 Idée" }, STL = { prevu: "Prévu", encours: "En cours", fait: "Fait ✓", non: "Pas retenu" };
+var MODS = ["Général", "Le Ponton", "Panne / SOS", "Météo", "Webcams", "Ports", "Escales gourmandes", "À vendre · Troc", "Vitesse", "Nœuds", "Épaves"];
+MODS.forEach(function (m) { $("avMod").appendChild(el("option", 0, m)); });
+Object.keys(AVT).forEach(function (k) { var b = el("button", 0, AVT[k]); b.dataset.k = k; b.onclick = function () { avType = k; drawAvChips(); }; $("avType").appendChild(b); });
+[["tout", "Tout"], ["like", "👍 J'aime"], ["fix", "🔧 À améliorer"], ["idea", "💡 Idées"]].forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { avFilt = f[0]; renderAvis(); }; $("avFilt").appendChild(b); });
+function drawAvChips() {
+  Array.prototype.forEach.call($("avType").children, function (b) { b.classList.toggle("on", b.dataset.k === avType); });
+  $("avTxt").placeholder = avType === "like" ? "Ex. : la carte des webcams est top, je la regarde avant chaque sortie." : avType === "idea" ? "Ex. : ajouter les horaires des bateaux CGN." : "Ex. : la carte est difficile à lire sur mon téléphone.";
+}
+drawAvChips();
+$("avSend").onclick = function () {
+  var m = $("avMsg"); m.className = "err"; m.textContent = ""; if (!requireProfile(m)) return;
+  var t = $("avTxt").value.trim(); if (t.length < 5) { m.textContent = "Écrivez au moins quelques mots."; return; } if (avBusy) return;
+  avBusy = true; $("avSend").disabled = true;
+  sb.from("avis").insert({ ty: avType, module: $("avMod").value, txt: t.slice(0, 300) }).then(function (r) {
+    if (r.error) m.textContent = "Envoi impossible. Réessayez."; else { $("avTxt").value = ""; m.className = "okm"; m.textContent = "Merci ! Votre avis est publié."; load("avis"); }
+  }).then(function () { avBusy = false; $("avSend").disabled = false; });
+};
+function renderAvis() {
+  Array.prototype.forEach.call($("avFilt").children, function (b) { b.classList.toggle("on", b.dataset.k === avFilt); });
+  var c = {}, mine = {}; VO.forEach(function (v) { c[v.avis_id] = (c[v.avis_id] || 0) + 1; if (v.auteur === uid) mine[v.avis_id] = 1; });
+  var L = $("avList"); L.textContent = "";
+  var items = AV.filter(function (x) { return avFilt === "tout" || x.ty === avFilt; }).sort(function (a, b) { return (c[b.id] || 0) - (c[a.id] || 0) || ts(b.t) - ts(a.t); });
+  if (!items.length) { L.appendChild(el("p", "mu", AV.length ? "Rien dans cette catégorie pour l'instant." : "Aucun avis pour l'instant. Le premier avis est le plus utile !")); return; }
+  items.forEach(function (x) {
+    var d = el("div", "avi"), on = !!mine[x.id], vb = el("button", "vote" + (on ? " on" : ""), String(c[x.id] || 0)); vb.appendChild(el("small", 0, on ? "voté" : "+1")); vb.setAttribute("aria-label", "Voter pour cet avis");
+    vb.onclick = function () { if (!requireProfile()) return; vb.disabled = true; (on ? sb.from("votes").delete().eq("avis_id", x.id).eq("auteur", uid) : sb.from("votes").insert({ avis_id: x.id })).then(function () { load("votes"); }); };
+    d.appendChild(vb);
+    var bd = el("div", "body"), h = el("div"); h.appendChild(el("span", "pl " + x.ty, AVT[x.ty])); if (x.statut) h.appendChild(el("span", "pl st", STL[x.statut])); h.appendChild(el("span", "mu", x.module)); bd.appendChild(h);
+    bd.appendChild(el("div", "txt", x.txt)); var f = el("div", "mu"); f.appendChild(document.createTextNode(nameOf(x.auteur) + " · " + ago(x.t)));
+    if (x.auteur === uid || isAdmin) { var del = el("button", "del", "Supprimer"); del.onclick = function () { sb.from("avis").delete().eq("id", x.id).then(function () { load("avis"); }); }; f.appendChild(del); }
+    bd.appendChild(f);
+    if (isAdmin) { var se = el("select"); [["", "Statut…"], ["prevu", "Prévu"], ["encours", "En cours"], ["fait", "Fait"], ["non", "Pas retenu"]].forEach(function (o) { var op = el("option", 0, o[1]); op.value = o[0]; se.appendChild(op); }); se.value = x.statut || ""; se.setAttribute("aria-label", "Statut"); se.onchange = function () { sb.from("avis").update({ statut: se.value }).eq("id", x.id).then(function () { load("avis"); }); }; bd.appendChild(se); }
+    d.appendChild(bd); L.appendChild(d);
+  });
+}
+
+/* ================= PHOTOS ================= */
+function shrink(file, max) {
+  return (window.createImageBitmap ? createImageBitmap(file) : Promise.reject()).catch(function () {
+    return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = URL.createObjectURL(file); });
+  }).then(function (src) {
+    var w = src.width || src.naturalWidth, h = src.height || src.naturalHeight, s = Math.min(1, max / Math.max(w, h)), c = document.createElement("canvas");
+    c.width = Math.round(w * s); c.height = Math.round(h * s); c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+    return new Promise(function (r) { c.toBlob(r, "image/jpeg", .82); });
+  });
+}
+function photosOf(k) { return PH.filter(function (p) { return p.k === k; }).sort(function (a, b) { return ts(b.t) - ts(a.t); }); }
+function modal(title) {
+  var ov = el("div", "ph-ov"), bx = el("div", "ph-box"); ov.appendChild(bx);
+  var hd = el("div", "ph-hd"); hd.appendChild(el("b", 0, title)); var x = el("button", "ph-x", "✕"); x.setAttribute("aria-label", "Fermer"); hd.appendChild(x); bx.appendChild(hd);
+  function close() { ov.remove(); document.removeEventListener("keydown", esc); } function esc(e) { if (e.key === "Escape") close(); }
+  x.onclick = close; ov.onclick = function (e) { if (e.target === ov) close(); }; document.addEventListener("keydown", esc); document.body.appendChild(ov);
+  return { bx: bx, close: close };
+}
+function pickPhoto(k, label) {
+  if (!requireProfile()) return;
+  var md = modal("Ajouter une photo"), bx = md.bx;
+  bx.appendChild(el("div", "mu", label));
+  var fi = el("input", "f"); fi.type = "file"; fi.accept = "image/*"; fi.style.marginTop = "8px"; bx.appendChild(fi);
+  var im = el("img", "ph-prev"); im.alt = ""; im.hidden = true; bx.appendChild(im);
+  var cap = el("input", "f"); cap.maxLength = 120; cap.placeholder = "Légende (ex. ponton visiteurs plein, lac calme…)"; cap.style.marginTop = "8px"; bx.appendChild(cap);
+  var go = el("button", "btn", "Publier la photo"); go.disabled = true; bx.appendChild(go);
+  var msg = el("div", "err"); bx.appendChild(msg);
+  bx.appendChild(el("div", "mu", "Visible par tous. Évitez de photographier des personnes reconnaissables sans leur accord."));
+  fi.onchange = function () { var f = fi.files && fi.files[0]; go.disabled = !f; if (f) { im.src = URL.createObjectURL(f); im.hidden = false; } };
+  go.onclick = function () {
+    var f = fi.files && fi.files[0]; if (!f) return; go.disabled = true; msg.className = "mu"; msg.textContent = "Envoi en cours…";
+    var path = uid + "/" + Date.now() + ".jpg";
+    shrink(f, 1600).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
+      .then(function (r) { if (r.error) throw r.error; return sb.from("photos").insert({ k: k, chemin: path, c: cap.value.trim().slice(0, 120) }); })
+      .then(function (r) { if (r.error) throw r.error; md.close(); toast("Photo publiée, merci !"); load("photos"); })
+      .catch(function () { msg.className = "err"; msg.textContent = "L'envoi a échoué. Vérifiez la connexion et réessayez (photo JPEG ou PNG)."; go.disabled = false; });
+  };
+}
+function gallery(title, k, label) {
+  var md = modal(title), bx = md.bx;
+  function draw() {
+    while (bx.children.length > 1) bx.lastChild.remove();
+    var add = el("button", "btn", "📷 Ajouter une photo"); add.onclick = function () { md.close(); pickPhoto(k, label || title); }; bx.appendChild(add);
+    var ps = photosOf(k); if (!ps.length) bx.appendChild(el("div", "mu", "Pas encore de photo. Soyez le premier à documenter !"));
+    var wrap = el("div"); wrap.style.marginTop = "12px"; bx.appendChild(wrap);
+    ps.slice(0, 20).forEach(function (p) {
+      var it = el("div", "ph-item"), img = el("img"); img.loading = "lazy"; img.alt = p.c || "Photo"; img.src = photoUrl(p.chemin); it.appendChild(img);
+      if (p.c) it.appendChild(el("div", 0, p.c));
+      var m = el("div", "ph-meta"); m.appendChild(el("span", 0, nameOf(p.auteur) + " · " + ago(p.t)));
+      if (p.auteur === uid || isAdmin) { var d = el("button", "del", "Supprimer"); d.onclick = function () { sb.from("photos").delete().eq("id", p.id).then(function () { sb.storage.from("photos").remove([p.chemin]); PH = PH.filter(function (x) { return x.id !== p.id; }); draw(); renderAll(); }); }; m.appendChild(d); }
+      it.appendChild(m); wrap.appendChild(it);
+    });
+  }
+  draw();
+}
+function thumb(k, title, label) {
+  var w = el("div", "ph-thumb"), ps = photosOf(k);
+  if (ps.length) { var i = el("img"); i.alt = ""; i.src = photoUrl(ps[0].chemin); w.appendChild(i); }
+  w.appendChild(el("span", 0, ps.length ? "📷 " + ps.length + " photo" + (ps.length > 1 ? "s" : "") + " · dernière " + ago(ps[0].t) : "📷 Ajouter la première photo"));
+  w.onclick = function (e) { e.stopPropagation(); ps.length ? gallery(title, k, label) : pickPhoto(k, label || title); };
+  return w;
+}
+
+/* ================= PORTS ================= */
+var PORTS = [["gen","Genève – Port Noir","Genève","Petit-Lac"],["her","Hermance","Genève","Petit-Lac"],["ver","Versoix – Port Choiseul","Genève","Petit-Lac"],["cop","Coppet","Vaud","Petit-Lac"],["nyo","Nyon","Vaud","Petit-Lac"],
+["rol","Rolle","Vaud","Côte vaudoise"],["spx","Saint-Prex","Vaud","Côte vaudoise"],["mor","Morges","Vaud","Côte vaudoise"],["ssu","Saint-Sulpice","Vaud","Côte vaudoise"],["vid","Lausanne – Vidy","Vaud","Côte vaudoise"],["ouc","Lausanne – Ouchy","Vaud","Côte vaudoise"],["pul","Pully","Vaud","Côte vaudoise"],["lut","Lutry","Vaud","Côte vaudoise"],["cul","Cully","Vaud","Côte vaudoise"],
+["vev","Vevey","Vaud","Haut-Lac"],["ltp","La Tour-de-Peilz","Vaud","Haut-Lac"],["cla","Montreux – Clarens","Vaud","Haut-Lac"],["vil","Villeneuve","Vaud","Haut-Lac"],["bou","Le Bouveret","Valais","Haut-Lac"],["sgi","Saint-Gingolph","Valais","Haut-Lac"],
+["evi","Évian-les-Bains","Haute-Savoie","Rive française"],["tho","Thonon – Port de Rives","Haute-Savoie","Rive française"],["yvo","Yvoire","Haute-Savoie","Rive française"]].map(function (a) { return { id: a[0], n: a[1], r: a[2], z: a[3] }; });
+var PZ = ["Tous", "Favoris", "Petit-Lac", "Côte vaudoise", "Haut-Lac", "Rive française"], poZone = ls("nc-pzone") || "Tous", poQ = "", favs = {};
+try { JSON.parse(ls("nc-favs") || "[]").forEach(function (f) { favs[f] = 1; }); } catch (e) {}
+PZ.forEach(function (z) { var b = el("button", 0, z === "Favoris" ? "★ Favoris" : z); b.dataset.z = z; b.onclick = function () { poZone = z; ls("nc-pzone", z); renderPorts(); }; $("poChips").appendChild(b); });
+$("poQ").oninput = function () { poQ = norm(this.value); renderPorts(); };
+var LBL = { libre: "Places libres", peu: "Peu de places", complet: "Complet" };
+function portStatus(id) { var best = null, n = 0, lim = Date.now() - 12 * 36e5; PL.forEach(function (r) { if (r.port !== id || ts(r.t) < lim) return; n++; if (!best || ts(r.t) > ts(best.t)) best = r; }); return best ? { s: best.s, t: best.t, n: n } : null; }
+function renderPorts() {
+  Array.prototype.forEach.call($("poChips").children, function (b) { b.classList.toggle("on", b.dataset.z === poZone); });
+  var L = $("poList"); L.textContent = ""; var last = null, shown = 0;
+  PORTS.filter(function (p) { return (poZone === "Tous" || (poZone === "Favoris" ? favs[p.id] : p.z === poZone)) && (!poQ || norm(p.n + " " + p.r).indexOf(poQ) >= 0); }).forEach(function (p) {
+    if (p.z !== last && poZone !== "Favoris") { L.appendChild(el("h3", "sub", p.z)); last = p.z; }
+    shown++; var s = portStatus(p.id), c = el("div", "port");
+    var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n)); nm.appendChild(el("span", 0, p.r));
+    var fv = el("button", "fav" + (favs[p.id] ? " on" : ""), "★"); fv.setAttribute("aria-label", "Favori"); fv.onclick = function () { if (favs[p.id]) delete favs[p.id]; else favs[p.id] = 1; ls("nc-favs", JSON.stringify(Object.keys(favs))); renderPorts(); };
+    top.appendChild(d); top.appendChild(nm); top.appendChild(fv); c.appendChild(top);
+    c.appendChild(el("div", "st " + (s ? s.s : "none"), s ? LBL[s.s] + " · " + ago(s.t) + (s.n > 1 ? " · " + s.n + " signalements" : "") : "Pas de signalement récent"));
+    c.appendChild(thumb("port-" + p.id, p.n, "Port : " + p.n + " (ponton visiteurs, capitainerie, état du port…)"));
+    var a = el("div", "act"), mine = PL.filter(function (r) { return r.port === p.id && r.auteur === uid && ts(r.t) > Date.now() - 12 * 36e5; })[0];
+    ["libre", "peu", "complet"].forEach(function (k) { var b = el("button", k + (mine && mine.s === k ? " mine" : ""), k === "libre" ? "Libre" : k === "peu" ? "Peu" : "Complet");
+      b.onclick = function () { if (!requireProfile()) return; b.disabled = true; (mine && mine.s === k ? sb.from("places").delete().eq("port", p.id).eq("auteur", uid) : sb.from("places").upsert({ port: p.id, auteur: uid, s: k, t: nowIso() }, { onConflict: "port,auteur" })).then(function () { load("places"); toast("Merci pour le signalement !"); }); };
+      a.appendChild(b); });
+    var m = el("a", 0, "Carte"); m.href = mapsSearch("port " + p.n.replace(" – ", " ")); m.target = "_blank"; m.rel = "noopener"; a.appendChild(m);
+    var wc = el("a", 0, "Webcam"); wc.href = "#webcams"; wc.onclick = function () { wcPort = p.id; }; a.appendChild(wc);
+    c.appendChild(a); L.appendChild(c);
+  });
+  if (!shown) L.appendChild(el("div", "note", poZone === "Favoris" ? "Touchez ★ sur un port pour l'ajouter à vos favoris." : "Aucun port ne correspond."));
+}
+
+/* ================= MÉTÉO ================= */
+var MZ = ["Genève – Petit-Lac", "Nyon – Coppet", "Rolle – Morges", "Lausanne – Lutry", "Lavaux – Vevey", "Montreux – Villeneuve", "Le Bouveret – Saint-Gingolph", "Évian – Thonon", "Yvoire – Sciez", "Large du Grand-Lac"];
+MZ.forEach(function (z, i) { var o = el("option", 0, z); o.value = "z" + i; $("mZone").appendChild(o); });
+(function () { var z = ls("nc-mzone"); if (z) $("mZone").value = z; })();
+$("mZone").onchange = function () { ls("nc-mzone", this.value); };
+$("mAdd").onclick = function () { pickPhoto("meteo-" + $("mZone").value, "Zone : " + $("mZone").options[$("mZone").selectedIndex].text); };
+function renderMeteoFeed() {
+  var F = $("mFeed"); F.textContent = ""; var lim = Date.now() - 48 * 36e5;
+  var ps = PH.filter(function (p) { return p.k.indexOf("meteo-") === 0 && ts(p.t) > lim; }).slice(0, 15);
+  if (!ps.length) { F.appendChild(el("p", "mu", "Pas encore de photo récente. Partagez la première !")); return; }
+  ps.forEach(function (p) {
+    var zi = +p.k.slice(8), zn = MZ[zi] || "Léman", c = el("div", "feed"), im = el("img"); im.loading = "lazy"; im.alt = p.c || "État du lac"; im.src = photoUrl(p.chemin); c.appendChild(im);
+    var d = el("div"); d.appendChild(el("b", 0, zn)); if (p.c) d.appendChild(el("div", 0, p.c)); d.appendChild(el("span", "mu", nameOf(p.auteur) + " · " + ago(p.t))); c.appendChild(d);
+    c.onclick = function () { gallery(zn, p.k, "Zone : " + zn); }; F.appendChild(c);
+  });
+}
+var WINDS = [
+  { n: "Bise", d: "NE", dirs: ["N", "NE", "E"], t: "Vent froid et sec du nord-est, souvent par beau temps. Il souffle sur tout le lac, fort surtout vers Genève, et lève des vagues courtes et creuses. Il peut durer plusieurs jours.", w: "Fort et durable" },
+  { n: "Vent", d: "SO", dirs: ["SO", "O", "S"], t: "Le « vent » du sud-ouest arrive souvent avec le mauvais temps et la pluie. Il souffle fort sur le Grand-Lac, avec des vagues longues.", w: "Souvent annonciateur de pluie" },
+  { n: "Joran", d: "NO", dirs: ["NO", "N", "O"], t: "Descend du Jura vers le lac, souvent brutalement, en fin de journée ou derrière un orage. Il peut passer du calme au coup de vent en quelques minutes.", w: "Soudain et dangereux" },
+  { n: "Vaudaire", d: "SE", dirs: ["SE", "S", "E"], t: "Foehn qui sort de la vallée du Rhône et balaie le Haut-Lac (Villeneuve, Montreux, Le Bouveret). Chaud et très rafaleux.", w: "Rafales violentes" },
+  { n: "Séchard", d: "E", dirs: ["E", "NE"], t: "Petit vent d'est de beau temps, plutôt sur le Haut-Lac. Agréable pour naviguer.", w: "" },
+  { n: "Brises thermiques", d: "variable", dirs: [], t: "Par beau temps calme, des brises locales se lèvent l'après-midi (du lac vers la terre) et le soir (de la terre vers le lac). Elles restent faibles.", w: "" }];
+WINDS.forEach(function (w, i) { var c = el("div", "card wind"); c.id = "w" + i; c.appendChild(el("span", "dir", w.d)); c.appendChild(el("b", 0, w.n)); c.appendChild(el("div", "mu", w.t)); if (w.w) c.appendChild(el("span", "wwarn", "⚠ " + w.w)); $("mWinds").appendChild(c); });
+["N", "NE", "E", "SE", "S", "SO", "O", "NO"].forEach(function (d) {
+  var b = el("button", 0, d); b.onclick = function () {
+    Array.prototype.forEach.call($("mRose").children, function (x) { x.classList.toggle("on", x === b); });
+    var m = []; WINDS.forEach(function (w, i) { var hit = w.dirs.indexOf(d) >= 0; $("w" + i).classList.toggle("hl", hit); if (hit) m.push([w, i]); });
+    $("mRes").textContent = m.length ? "Probablement : " + m.map(function (x) { return x[0].n; }).join(" ou ") + "." : "Pas de vent régional typique : sans doute une brise locale.";
+    if (m[0]) $("w" + m[0][1]).scrollIntoView({ behavior: "smooth", block: "center" });
+  }; $("mRose").appendChild(b);
+});
+var BF = [[0,0,.5,"Calme, lac miroir"],[1,1,3,"Rides"],[2,4,6,"Vaguelettes"],[3,7,10,"Petits moutons épars"],[4,11,16,"Moutons nombreux"],[5,17,21,"Vagues marquées : prudence"],[6,22,27,"Vent fort : petites embarcations à l'abri"],[7,28,33,"Grand frais : rester au port"],[8,34,40,"Coup de vent"],[9,41,47,"Fort coup de vent"]];
+BF.forEach(function (r) { var tr = el("tr"); tr.appendChild(el("td", 0, r[0])); tr.appendChild(el("td", 0, r[0] === 0 ? "< 1" : r[1] + "–" + r[2])); tr.appendChild(el("td", 0, r[3])); $("mBf").tBodies[0].appendChild(tr); });
+function conv() {
+  var x = parseFloat($("mV").value), u = $("mU").value; if (isNaN(x) || x < 0) { $("mCv").textContent = ""; return; }
+  var kn = u === "kn" ? x : u === "kmh" ? x / 1.852 : x * 1.94384, b = -1; for (var i = 0; i < BF.length; i++) if (kn < BF[i][2] + .5) { b = i; break; } if (b < 0) b = kn < 56 ? 10 : kn < 64 ? 11 : 12;
+  $("mCv").textContent = kn.toFixed(1) + " nœuds · " + (kn * 1.852).toFixed(0) + " km/h · " + (kn / 1.94384).toFixed(1) + " m/s · force " + b;
+  Array.prototype.forEach.call($("mBf").tBodies[0].rows, function (t, i) { t.classList.toggle("sel", i === b); });
+}
+$("mV").oninput = conv; $("mU").onchange = conv; conv();
+
+/* ================= WEBCAMS ================= */
+var CAMS = [
+  { id: "cologny", n: "Genève – Cologny", d: "Vue sur la rade et le jet d'eau.", la: 46.218, lo: 6.180, u: "https://windy.com/webcams/1697037687", s: "Windy", k: "Vue directe" },
+  { id: "geneve", n: "Genève – rade", d: "Panoramas 360° de la Société Nautique et de la plage du Vengeron.", la: 46.205, lo: 6.152, dx: -14, u: "https://www.windfinder.com/webcams/geneve", s: "Windfinder", k: "Page de webcams" },
+  { id: "versoix", n: "Versoix", d: "Webcams autour de Versoix et du Petit-Lac.", la: 46.283, lo: 6.168, u: "https://en.windfinder.com/webcams/versoix_lac_leman", s: "Windfinder", k: "Page de webcams" },
+  { id: "coppet", n: "Coppet & Nyon", d: "Panoramas 360° de Coppet et de Nyon.", la: 46.330, lo: 6.205, u: "https://en.windfinder.com/webcams/celigny_lac_leman", s: "Windfinder", k: "Page de webcams" },
+  { id: "stcergue", n: "Saint-Cergue (hauteur)", d: "Vue en hauteur sur le lac, au-dessus de Nyon.", la: 46.446, lo: 6.158, u: "https://www.windy.com/webcams/1357314208", s: "Windy", k: "Vue directe" },
+  { id: "stprex", n: "Saint-Prex", d: "Vue sud-est sur le lac et les Alpes françaises.", la: 46.478, lo: 6.455, u: "https://windy.com/webcams/1551967599", s: "Windy", k: "Vue directe" },
+  { id: "lausanne", n: "Lausanne", d: "Vue sur la ville, la cathédrale et le lac.", la: 46.522, lo: 6.632, u: "https://www.snow-online.com/webcam/lausanne--lac-leman.htm", s: "Snow-Online", k: "Vue directe" },
+  { id: "lutry", n: "Lutry", d: "Vue sur le lac depuis Lutry.", la: 46.502, lo: 6.685, u: "https://windy.com/webcams/1697035085", s: "Windy", k: "Vue directe" },
+  { id: "cully", n: "Bourg-en-Lavaux (Cully)", d: "Vue plein sud sur le lac depuis Lavaux.", la: 46.488, lo: 6.732, u: "https://windy.com/webcams/1252954428", s: "Windy", k: "Vue directe" },
+  { id: "vevey", n: "Vevey & La Tour-de-Peilz", d: "Panoramas 360° de Vevey, Chexbres et La Tour-de-Peilz.", la: 46.461, lo: 6.842, u: "https://www.windfinder.com/webcams/vevey", s: "Windfinder", k: "Page de webcams" },
+  { id: "montreux", n: "Montreux", d: "Panoramas 360° de Montreux et des Rochers-de-Naye.", la: 46.432, lo: 6.910, u: "https://www.windfinder.com/webcams/montreux", s: "Windfinder", k: "Page de webcams" },
+  { id: "bouveret", n: "Le Bouveret – Port-Valais", d: "Vidéo en direct du port de Port-Valais, au Bouveret.", la: 46.386, lo: 6.854, u: "https://www.youtube.com/live/Du8kmgjsOew", s: "YouTube · Port-Valais", k: "Vidéo en direct" },
+  { id: "thonon", n: "Thonon – Port de Rives", d: "Vue sur le port de Rives. Webcams d'Évian à proximité sur la même page.", la: 46.377, lo: 6.478, u: "https://www.windy.com/webcams/1759008664", s: "Windy", k: "Vue directe" },
+  { id: "sciez", n: "Sciez & Excenevex", d: "Webcams autour de Sciez, dont la plage d'Excenevex.", la: 46.347, lo: 6.358, u: "https://www.windfinder.com/webcams/sciez", s: "Windfinder", k: "Page de webcams" }];
+var PORTXY = { gen: [46.212, 6.165], her: [46.302, 6.243], ver: [46.283, 6.168], cop: [46.315, 6.192], nyo: [46.382, 6.240], rol: [46.458, 6.337], spx: [46.478, 6.455], mor: [46.505, 6.497], ssu: [46.508, 6.560], vid: [46.517, 6.597], ouc: [46.505, 6.627], pul: [46.507, 6.660], lut: [46.502, 6.685], cul: [46.488, 6.730], vev: [46.461, 6.842], ltp: [46.453, 6.858], cla: [46.440, 6.893], vil: [46.400, 6.925], bou: [46.383, 6.857], sgi: [46.390, 6.803], evi: [46.402, 6.590], tho: [46.377, 6.478], yvo: [46.372, 6.327] };
+var wcCur = null, wcPort = null;
+function renderWebcams() {
+  var g = detailedLake($("wcMap"));
+  CAMS.forEach(function (c, i) {
+    var n = svgEl("g", { class: "cam" + (c.id === wcCur ? " on" : ""), tabindex: 0, role: "button", "aria-label": c.n, transform: "translate(" + (X2(c.lo) + (c.dx || 0)).toFixed(1) + "," + Y2(c.la).toFixed(1) + ")" }, g);
+    svgEl("circle", { r: 20, style: "fill:transparent" }, n); svgEl("circle", { class: "b", r: 11 }, n); var t = svgEl("text", { class: "num", "text-anchor": "middle", y: 4 }, n); t.textContent = i + 1;
+    n.onclick = function () { wcPick(c.id, true); }; n.onkeydown = function (e) { if (e.key === "Enter") wcPick(c.id, true); };
+  });
+  var L = $("wcList"); L.textContent = "";
+  CAMS.forEach(function (c, i) { var b = el("button", "item" + (c.id === wcCur ? " on" : "")), d = el("div"); b.appendChild(el("i", 0, i + 1)); d.appendChild(el("b", 0, c.n)); d.appendChild(el("span", "mu", c.k + " · " + c.s)); b.appendChild(d); b.onclick = function () { wcPick(c.id); window.scrollTo({ top: 0, behavior: "smooth" }); }; L.appendChild(b); });
+  var c = CAMS.filter(function (x) { return x.id === wcCur; })[0] || CAMS[0], S = $("wcSel"); S.textContent = "";
+  S.appendChild(el("b", 0, c.n)); S.lastChild.style.cssText = "font-size:18px;display:block"; S.appendChild(el("div", "mu", c.d)); S.appendChild(el("span", "pill", c.k + " · " + c.s));
+  var a = el("a", "btn", "Voir la webcam"); a.href = c.u; a.target = "_blank"; a.rel = "noopener"; a.style.marginTop = "12px"; S.appendChild(a);
+}
+function wcPick(id, scroll) { wcCur = id; renderWebcams(); if (scroll) $("wcSel").scrollIntoView({ behavior: "smooth", block: "nearest" }); }
+function wcFromHash() {
+  var note = $("wcNote"), p = wcPort ? PORTXY[wcPort] : null; wcPort = null;
+  if (!p) { note.hidden = true; if (!wcCur) wcCur = CAMS[0].id; return; }
+  var best = null, bd = 1e9; CAMS.forEach(function (c) { var d = km(p[0], p[1], c.la, c.lo); if (d < bd) { bd = d; best = c; } });
+  var pn = PORTS.filter(function (x) { return PORTXY[x.id] === p; })[0]; pn = pn ? pn.n : "ce port";
+  note.hidden = false; note.textContent = (bd <= 12 ? "Webcam la plus proche de " : "Pas de webcam répertoriée près de ") + pn + (bd <= 12 ? " : " : ". La plus proche : ") + best.n + " (environ " + Math.max(1, Math.round(bd)) + " km).";
+  wcCur = best.id;
+}
+
+/* ================= ESCALES ================= */
+var RESTOS = [
+  { id: "plage-ev", n: "Restaurant de la Plage & Buvette", l: "Genève – Eaux-Vives", r: "CH", a: "", la: 46.211, lo: 6.168, d: "Sur pilotis au bout de la plage des Eaux-Vives, avec vue sur le jet d'eau, la rade et le nouveau port." },
+  { id: "belotte", n: "La Belotte", l: "Vésenaz (Genève)", r: "CH", a: "", la: 46.238, lo: 6.196, d: "Filets de perche du Léman à la minute selon arrivage, raclette au poêlon quand il fait frais." },
+  { id: "gitana", n: "Auberge Port-Gitana", l: "Bellevue (Genève)", r: "CH", a: "", la: 46.255, lo: 6.157, d: "Hôtel-restaurant au calme sur la rive, avec accès direct à la plage." },
+  { id: "petitlac", n: "Le Petit-Lac", l: "Corsier-Port (Genève)", r: "CH", a: "port", la: 46.268, lo: 6.226, d: "Sur le port de Corsier, pour l'un des plus beaux couchers de soleil de la région." },
+  { id: "pavillon", n: "Le Pavillon", l: "Versoix", r: "CH", a: "ponton", la: 46.283, lo: 6.170, d: "Ambiance Riviera, avec un ponton qui accueille jusqu'à 6 bateaux." },
+  { id: "3jetees", n: "Plage des Trois-Jetées", l: "Nyon", r: "CH", a: "ponton", la: 46.384, lo: 6.243, d: "Service à l'emporter pensé pour les navigateurs : on s'amarre, on commande, on repart." },
+  { id: "barge", n: "La Barge du Léman", l: "Le Bouveret", r: "CH", a: "port", la: 46.387, lo: 6.857, d: "Dans le port du Bouveret, au bord de l'eau : grillades et boissons en terrasse." },
+  { id: "sechex", n: "Le Léman", l: "Port de Séchex, Margencel", r: "FR", a: "ponton", la: 46.381, lo: 6.425, d: "Pêche du jour au gré des filets. Ponton privé pour les bateaux, débarcadère CGN à 300 m." },
+  { id: "pecheurs", n: "Restaurant-Plage Les Pêcheurs", l: "Sciez", r: "FR", a: "ponton", la: 46.352, lo: 6.395, d: "Une institution depuis 1964, les pieds dans l'eau sous les platanes. Deux pontons privés ; réservation conseillée." },
+  { id: "chaletport", n: "Le Chalet du Port", l: "Sciez", r: "FR", a: "port", la: 46.346, lo: 6.380, d: "Sur le port de Sciez : féra, perche et terrasse avec vue sur le lac. Aire de jeux pour les enfants." }];
+var ACC = { ponton: ["⚓ Ponton du restaurant", "pt"], port: ["⚓ Au port", "pt"], non: ["Pas d'accès bateau", ""] };
+var RF = [["tous", "Tous"], ["bateau", "Accès en bateau"], ["CH", "Rive suisse"], ["FR", "Rive française"], ["user", "Ajouts des membres"]], reFilt = "tous", reCur = null;
+RF.forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { reFilt = f[0]; renderRestos(); }; $("reChips").appendChild(b); });
+var PLACES = [["geneve",46.21,6.16,"CH"],["versoix",46.283,6.17,"CH"],["coppet",46.316,6.192,"CH"],["nyon",46.382,6.24,"CH"],["rolle",46.458,6.337,"CH"],["prex",46.48,6.455,"CH"],["morges",46.506,6.497,"CH"],["lausanne",46.507,6.627,"CH"],["ouchy",46.505,6.627,"CH"],["pully",46.507,6.66,"CH"],["lutry",46.502,6.685,"CH"],["cully",46.488,6.73,"CH"],["vevey",46.461,6.842,"CH"],["peilz",46.453,6.858,"CH"],["montreux",46.432,6.91,"CH"],["clarens",46.44,6.893,"CH"],["villeneuve",46.4,6.925,"CH"],["bouveret",46.386,6.856,"CH"],["gingolph",46.392,6.805,"CH"],["evian",46.402,6.59,"FR"],["thonon",46.376,6.48,"FR"],["yvoire",46.372,6.327,"FR"],["sciez",46.35,6.39,"FR"],["excenevex",46.347,6.358,"FR"],["hermance",46.302,6.243,"CH"],["meillerie",46.408,6.722,"FR"]];
+function placeOf(l) { var s = norm(l); for (var i = 0; i < PLACES.length; i++) if (s.indexOf(PLACES[i][0]) >= 0) return PLACES[i]; return null; }
+function allRestos() {
+  return RESTOS.concat(RU.map(function (x) { var p = placeOf(x.lieu), j = (x.id % 7) - 3; return { id: "u" + x.id, dbid: x.id, u: x.auteur, n: x.nom, l: x.lieu, a: x.acces, d: x.descr, r: p ? p[3] : "", la: p ? p[1] + j * .0015 : null, lo: p ? p[2] + j * .002 : null }; }));
+}
+function renderRestos() {
+  Array.prototype.forEach.call($("reChips").children, function (b) { b.classList.toggle("on", b.dataset.k === reFilt); });
+  var S = allRestos().filter(function (x) { return reFilt === "tous" || (reFilt === "bateau" ? (x.a === "ponton" || x.a === "port") : reFilt === "user" ? !!x.u : x.r === reFilt); });
+  var g = detailedLake($("reMap"));
+  S.forEach(function (x) { if (x.la == null) return; var n = svgEl("g", { class: "pin" + (x.u ? " user" : "") + (x.id === reCur ? " on" : ""), transform: "translate(" + X2(x.lo).toFixed(1) + "," + Y2(x.la).toFixed(1) + ")" }, g);
+    svgEl("circle", { r: 18, style: "fill:transparent" }, n); svgEl("circle", { class: "pb", r: x.id === reCur ? 10 : 8 }, n);
+    n.onclick = function () { reCur = x.id; renderRestos(); var c = $("r-" + x.id); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }; });
+  var L = $("reList"); L.textContent = "";
+  if (!S.length) L.appendChild(el("p", "mu", reFilt === "user" ? "Aucune adresse ajoutée pour l'instant. Soyez le premier !" : "Aucune adresse."));
+  S.forEach(function (x) {
+    var c = el("div", "card rcard" + (x.id === reCur ? " on" : "")); c.id = "r-" + x.id;
+    c.appendChild(el("h3", 0, x.n)); c.appendChild(el("div", "where", x.l + (x.r ? " · " + (x.r === "CH" ? "Suisse" : "France") : "")));
+    var T = el("div", "tags"), ac = ACC[x.a]; if (ac) T.appendChild(el("span", "tag " + ac[1], ac[0])); if (x.u) T.appendChild(el("span", "tag us", "Ajouté par " + ((P[x.u] && P[x.u].pseudo) || "un membre"))); c.appendChild(T);
+    if (x.d) c.appendChild(el("div", 0, x.d));
+    c.appendChild(thumb("resto-" + x.id, x.n, "Escale : " + x.n + " (plats, terrasse, ponton…)"));
+    var A2 = el("div", "acts"), go = el("a", "p", "Y aller"); go.href = mapsSearch(x.n + " " + x.l); go.target = "_blank"; go.rel = "noopener"; A2.appendChild(go);
+    if (x.u && (x.u === uid || isAdmin)) { var rm = el("button", 0, "Retirer"); rm.onclick = function () { sb.from("restos").delete().eq("id", x.dbid).then(function () { load("restos"); }); }; A2.appendChild(rm); }
+    c.appendChild(A2); c.onclick = function (e) { if (e.target.closest("a,button,.ph-thumb")) return; reCur = x.id; renderRestos(); }; L.appendChild(c);
+  });
+}
+$("reAdd").onclick = function () {
+  var m = $("reMsg"); m.className = "err"; m.textContent = ""; if (!requireProfile(m)) return;
+  var n = $("reN").value.trim(), l = $("reL").value.trim(); if (n.length < 2 || l.length < 2) { m.textContent = "Indiquez au moins le nom et le lieu."; return; }
+  $("reAdd").disabled = true;
+  sb.from("restos").insert({ nom: n, lieu: l, acces: $("reA").value, descr: $("reD").value.trim().slice(0, 140) }).then(function (r) {
+    if (r.error) m.textContent = "Ajout impossible. Réessayez."; else { m.className = "okm"; m.textContent = "Merci ! L'adresse est visible par tous."; $("reN").value = $("reL").value = $("reD").value = ""; reFilt = "user"; load("restos"); }
+  }).then(function () { $("reAdd").disabled = false; });
+};
+
+/* ================= ÉPAVES ================= */
+var epEd = null, epPend = null, epSel = null;
+function epCol(p) { return p <= 30 ? "#2e9e5b" : p <= 60 ? "#e08a00" : "#c0392b"; }
+function renderEpaves() {
+  var mk = baseMap($("epMap"), true);
+  EP.forEach(function (w) { var x = X(w.lon), y = Y(w.lat); mk("circle", { cx: x, cy: y, r: epSel === w.id ? 12 : 9 }, "fill:" + epCol(+w.pm || 0) + ";stroke:#fff;stroke-width:3"); var h = mk("circle", { cx: x, cy: y, r: 16 }, "fill:transparent;cursor:pointer"); h.onclick = function (e) { e.stopPropagation(); epSel = w.id; renderEpaves(); }; });
+  if (epPend) mk("circle", { cx: X(epPend.lon), cy: Y(epPend.lat), r: 11 }, "fill:none;stroke:#2d7ff9;stroke-width:4");
+  var D = $("epDet"), L = $("epList"); D.textContent = ""; L.textContent = "";
+  function card(w) { var c = el("div", "card"); c.appendChild(el("b", 0, "⚓ " + w.nom + (w.annee ? " · " + w.annee : ""))); c.appendChild(el("div", "mu", "Profondeur max : " + (w.pm ? w.pm + " m" : "inconnue") + " · 📍 " + (w.approx ? "position approximative" : "position précise"))); if (w.note) c.appendChild(el("div", 0, w.note));
+    if (uid && (w.auteur === uid || isAdmin)) { var b = el("button", "btn g sm", "✏️ Modifier"); b.onclick = function () { epOpen(w); }; c.appendChild(b); } return c; }
+  EP.filter(function (w) { return w.id === epSel; }).forEach(function (w) { D.appendChild(card(w)); });
+  EP.slice().sort(function (a, b) { return (+a.pm || 0) - (+b.pm || 0); }).forEach(function (w) { L.appendChild(card(w)); });
+  if (!EP.length) L.appendChild(el("p", "mu", "Aucune épave pour l’instant."));
+}
+$("epMap").onclick = function (e) { if ($("epForm").hidden) return; epPend = svgPoint(this, e); $("epPs").textContent = "📍 Position choisie : " + epPend.lat.toFixed(4) + ", " + epPend.lon.toFixed(4); renderEpaves(); };
+function epOpen(w) { epEd = w ? w.id : null; $("epN").value = w ? w.nom : ""; $("epA").value = w ? w.annee || "" : ""; $("epP").value = w ? w.pm || "" : ""; $("epT").value = w ? w.note || "" : ""; $("epAp").checked = w ? !!w.approx : true; epPend = w ? { lat: w.lat, lon: w.lon } : null; $("epPs").textContent = w ? "📍 Touchez la carte pour déplacer l’épave." : "📍 Touchez la carte pour placer l’épave."; $("epForm").hidden = false; renderEpaves(); $("epMap").scrollIntoView({ behavior: "smooth" }); }
+$("epAdd").onclick = function () { if (!requireProfile($("epMsg"))) return; epOpen(null); };
+$("epCx").onclick = function () { $("epForm").hidden = true; epPend = null; renderEpaves(); };
+$("epSv").onclick = function () {
+  var m = $("epMsg"); m.textContent = ""; var n = $("epN").value.trim(); if (!n) { m.textContent = "Nom requis."; return; } if (!epPend) { m.textContent = "Touchez la carte pour placer l’épave."; return; }
+  var o = { nom: n, annee: $("epA").value.trim(), pm: parseInt($("epP").value, 10) || 0, note: $("epT").value.trim(), lat: epPend.lat, lon: epPend.lon, approx: $("epAp").checked, maj: nowIso() };
+  (epEd ? sb.from("epaves").update(o).eq("id", epEd) : sb.from("epaves").insert(o)).then(function (r) { if (r.error) m.textContent = "Enregistrement refusé."; else { $("epForm").hidden = true; epPend = null; epEd = null; load("epaves"); } });
+};
+
+/* ================= VITESSE ================= */
+var gRun = false, gWid = null, glp = null, gls = null, gDist = 0, gMax = 0, gEl = 0, gSt = 0, gTk = null, gWl = null;
+function hav(a, b, c, d) { return km(a, b, c, d) * 1000; }
+function gMsg(t) { $("gMsg").textContent = t || ""; }
+function gTimer() { var s = Math.floor((gEl + (gRun ? Date.now() - gSt : 0)) / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), c = s % 60, p = function (n) { return (n < 10 ? "0" : "") + n; }; $("gTm").textContent = (h ? h + ":" : "") + p(m) + ":" + p(c); var hrs = (gEl + (gRun ? Date.now() - gSt : 0)) / 3.6e6; $("gAv").textContent = hrs > 0 ? (gDist / 1852 / hrs).toFixed(1) : "0.0"; }
+function gOk(p) {
+  var c = p.coords, t = p.timestamp; $("gAc").textContent = "±" + Math.round(c.accuracy) + " m";
+  if (c.accuracy > 50) { gMsg("Signal GPS faible, attendez…"); return; } gMsg();
+  var s = c.speed; if (s == null && glp) { var dt = (t - glp.t) / 1000; if (dt > 0) s = hav(glp.la, glp.lo, c.latitude, c.longitude) / dt; }
+  var v = (s || 0) * 1.943844; if (v < .3) v = 0;
+  $("gV").textContent = v.toFixed(1); $("gK").textContent = (v * 1.852).toFixed(1) + " km/h"; if (v > gMax) { gMax = v; $("gMx").textContent = gMax.toFixed(1); }
+  if (c.heading != null && !isNaN(c.heading) && v > .5) $("gHd").textContent = Math.round(c.heading) + "° " + ["N", "NE", "E", "SE", "S", "SO", "O", "NO"][Math.round(c.heading / 45) % 8];
+  if (!gls) gls = { la: c.latitude, lo: c.longitude }; else { var d = hav(gls.la, gls.lo, c.latitude, c.longitude); if (d > Math.max(5, c.accuracy / 2)) { gDist += d; gls = { la: c.latitude, lo: c.longitude }; $("gDs").textContent = (gDist / 1852).toFixed(2); } }
+  glp = { la: c.latitude, lo: c.longitude, t: t };
+}
+function gStop() { gRun = false; gEl += Date.now() - gSt; if (gWid != null) navigator.geolocation.clearWatch(gWid); gWid = null; clearInterval(gTk); try { if (gWl) gWl.release(); } catch (e) {} gWl = null; $("gGo").textContent = "▶ Reprendre"; $("gGo").classList.remove("r"); $("gV").textContent = "0.0"; $("gK").textContent = "0.0 km/h"; }
+$("gGo").onclick = function () {
+  gMsg(); if (gRun) { gStop(); return; } if (!navigator.geolocation) { gMsg("GPS indisponible sur cet appareil."); return; }
+  gRun = true; gSt = Date.now(); glp = null; gls = null; $("gGo").textContent = "⏹ Arrêter"; $("gGo").classList.add("r");
+  gWid = navigator.geolocation.watchPosition(gOk, function (e) { gMsg(e.code === 1 ? "GPS refusé : autorisez la position pour Nauticonnect." : "Position indisponible, réessayez en extérieur."); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+  gTk = setInterval(gTimer, 1000); try { navigator.wakeLock.request("screen").then(function (w) { gWl = w; }).catch(function () {}); } catch (e) {}
+};
+$("gRs").onclick = function () { if (gRun) gStop(); gDist = 0; gMax = 0; gEl = 0; glp = null; gls = null; ["gMx", "gAv", "gV"].forEach(function (i) { $(i).textContent = "0.0"; }); $("gDs").textContent = "0.00"; $("gK").textContent = "0.0 km/h"; $("gTm").textContent = "00:00"; $("gHd").textContent = "—"; $("gAc").textContent = "—"; $("gGo").textContent = "▶ Démarrer"; gMsg(); };
+
+/* ================= NŒUDS ================= */
+var KN = [
+{n:"Nœud de huit",en:"Figure-eight knot",c:"Arrêt",d:1,u:"Bloquer le bout d’une écoute pour qu’elle ne s’échappe pas d’une poulie. Il se défait facilement, même après avoir été tendu.",s:["Faites une boucle en croisant le bout par-dessus le courant (la partie longue du cordage).","Passez le bout derrière le courant.","Ramenez-le devant et glissez-le dans la boucle, de l’avant vers l’arrière.","Serrez en tirant sur le bout et sur le courant : le nœud a la forme d’un 8."],t:"Laissez dépasser quelques centimètres de bout après avoir serré."},
+{n:"Nœud plat",en:"Reef knot",c:"Jonction",d:1,u:"Relier deux bouts de même diamètre pour un usage léger : prendre un ris, fermer un sac ou une voile roulée.",s:["Prenez un bout dans chaque main.","Croisez le bout de droite sur celui de gauche et faites un demi-nœud (un tour de l’un autour de l’autre).","Croisez maintenant le bout qui est devenu à gauche sur celui de droite et refaites un demi-nœud.","Serrez en tirant sur les quatre brins. Les deux boucles doivent être symétriques."],t:"Mémo : « droite sur gauche, puis gauche sur droite ».",w:"Ne l’utilisez jamais pour relier deux cordages qui portent une charge importante : il peut se défaire. Si les boucles ne sont pas symétriques, c’est un nœud de vache qui glisse."},
+{n:"Nœud de chaise",en:"Bowline",c:"Boucle",d:2,u:"Faire une boucle fixe au bout d’un cordage, qui ne se resserre pas : œil sur un anneau, écoute de foc, boucle de sécurité à passer autour d’un taquet. Il tient sous charge et se défait quand on le détend.",s:["Faites une petite boucle dans le courant, à la distance voulue du bout, en passant le bout par-dessus. Cette boucle est le « terrier du lapin ».","Le « lapin » (le bout) sort du terrier par le dessous.","Il fait le tour de l’« arbre » (le courant), par derrière.","Il redescend dans son terrier, par le dessus de la boucle.","Serrez en tirant sur le courant tout en tenant les deux brins de la boucle."],t:"Laissez au moins 10 cm de bout libre, ou davantage sur un cordage glissant. Un nœud de chaise tient mal sur du cordage très lisse.",w:"Sous charge très variable ou si le bout peut se mettre à flotter, assurez-le par une demi-clé de plus."},
+{n:"Nœud de cabestan",en:"Clove hitch",c:"Amarrage",d:1,u:"Fixer rapidement un bout sur un poteau, une filière ou un anneau, par exemple pour suspendre un pare-battage. Facile à faire et à régler.",s:["Faites un tour autour du support avec le bout.","Croisez le bout par-dessus le courant et faites un second tour dans le même sens.","Glissez le bout sous ce second tour, entre le support et la croisée.","Serrez en tirant sur les deux brins."],t:"Il se règle en faisant glisser le nœud sur son support.",w:"Il peut se desserrer si la traction n’est pas constante : ajoutez une demi-clé pour un amarrage durable."},
+{n:"Deux demi-clés",en:"Two half hitches",c:"Amarrage",d:1,u:"Amarrer un bateau à un anneau de quai ou à un poteau. Simple, solide et facile à défaire.",s:["Passez le bout dans l’anneau (ou autour du poteau).","Faites un tour autour du courant et glissez le bout dans la boucle formée : c’est la première demi-clé.","Recommencez dans le même sens pour faire la seconde demi-clé.","Serrez en glissant les demi-clés contre le support."],t:"Les deux demi-clés doivent être faites dans le même sens, sinon le nœud peut glisser."},
+{n:"Tour mort et deux demi-clés",en:"Round turn and two half hitches",c:"Amarrage",d:2,u:"Amarrer sous forte traction : bateau au mouillage, remorquage, grosse houle. Le tour mort absorbe la traction pendant que l’on fait les demi-clés.",s:["Faites un tour complet (le « tour mort ») autour du support, voire deux si le bout glisse.","Tenez le courant fermement avec le tour mort pour garder la tension.","Faites deux demi-clés dans le même sens autour du courant.","Serrez le tout contre le support."],t:"Pratique pour un nœud qu’on doit pouvoir défaire même après une forte charge."},
+{n:"Nœud de taquet",en:"Cleat hitch",c:"Amarrage",d:2,u:"Fixer une amarre ou une écoute sur un taquet. À maîtriser en priorité pour l’amarrage au port.",s:["Faites un tour complet autour de la base du taquet, sous les deux cornes.","Passez le bout par-dessus le taquet en diagonale, puis sous la corne opposée.","Revenez en diagonale par-dessus le taquet et faites un second huit.","Terminez par une demi-clé de blocage : passez une boucle autour d’une corne, le bout ressortant parallèle au courant."],t:"Deux huit suffisent. Plus de trois huit n’apportent rien et le nœud devient difficile à défaire.",w:"Si la demi-clé de blocage est faite à l’envers, elle ne bloque pas et le nœud peut glisser."},
+{n:"Double nœud de pêcheur",en:"Double fisherman's knot",c:"Jonction",d:2,u:"Relier deux bouts fins de même diamètre (lignes, cordelettes). Très sûr et il ne glisse pas.",s:["Placez les deux bouts côte à côte, en sens opposés.","Avec le bout A, faites un double tour autour du courant de B, puis passez-le dans la boucle : c’est un nœud simple double.","Avec le bout B, faites la même chose autour du courant de A.","Tirez sur les deux courants pour que les deux nœuds se rejoignent et se serrent."],t:"Humidifiez la corde avant de serrer, cela aide sur les matériaux lisses."},
+{n:"Nœud d’écoute",en:"Sheet bend",c:"Jonction",d:2,u:"Relier deux cordages de diamètres différents, par exemple une écoute à une amarre. Il est plus sûr que le nœud plat.",s:["Faites une boucle en U au bout du cordage le plus gros.","Passez le bout du cordage fin par l’arrière dans cette boucle.","Contournez ensuite les deux brins de la boucle.","Glissez le bout du cordage fin sous lui-même, puis serrez en tirant sur les courants."],t:"Si les diamètres sont très différents, faites un second tour autour de la boucle (nœud d’écoute double)."},
+{n:"Nœud d’ancre",en:"Anchor bend",c:"Amarrage",d:3,u:"Fixer une ligne de mouillage à l’organeau (anneau) de l’ancre. Il résiste aux à-coups, aux secousses et au frottement.",s:["Passez deux fois le bout dans l’organeau pour faire un double tour.","Faites passer le bout autour du courant, puis sous les deux tours pour faire une première demi-clé.","Faites une seconde demi-clé autour du courant.","Serrez, puis assurez le bout avec un brin de fil si le mouillage doit rester longtemps en place."],t:"Vérifiez ce nœud avant chaque mouillage."},
+{n:"Nœud de bois",en:"Timber hitch",c:"Divers",d:2,u:"Tirer, hisser ou remorquer un objet de forme cylindrique : tronc, espar, bidon. Il se serre sous la traction et se défait facilement.",s:["Passez le bout autour de l’objet.","Faites passer le bout autour de son propre courant.","Faites au moins trois tours en torsade du bout autour de lui-même, vers l’objet.","Tirez sur le courant : le nœud se serre sur l’objet."],t:"Plus l’objet est lisse, plus il faut faire de torsades."},
+{n:"Nœud de jambe de chien",en:"Sheepshank",c:"Divers",d:3,u:"Raccourcir temporairement un cordage sans le couper, ou isoler une partie usée. Il ne tient que sous tension.",s:["Repliez le cordage en forme de Z pour obtenir la longueur à raccourcir (trois brins parallèles).","À chaque extrémité, faites une demi-clé autour du pli voisin.","Serrez les deux demi-clés.","Tendez le cordage : le nœud tient."],t:"Un cordage tendu en permanence peut s’abîmer au niveau des plis.",w:"Il se défait dès que la tension disparaît : ne l’utilisez pas pour une charge qui fluctue."}];
+function knProg() { var n = KN.filter(function (k, i) { return ls("kn" + i) === "1"; }).length; $("knPg").textContent = "Appris : " + n + " sur " + KN.length; $("knPb").style.width = (n * 100 / KN.length) + "%"; }
+function renderNoeuds() {
+  var L = $("knList"), q = norm($("knQ").value), fc = $("knC").value; L.textContent = "";
+  KN.forEach(function (k, i) {
+    if (fc && k.c !== fc) return; if (norm(k.n + " " + k.en + " " + k.u + " " + k.c).indexOf(q) < 0) return;
+    var d = el("details", "kn"), s = el("summary"), l = el("div"); l.appendChild(el("b", 0, k.n)); l.appendChild(el("span", "mu", k.en + " · " + k.c + " · " + ["Facile", "Moyen", "Avancé"][k.d - 1])); s.appendChild(l);
+    var ok = el("span", "okm", ls("kn" + i) === "1" ? "✓" : ""); ok.style.fontSize = "20px"; s.appendChild(ok); d.appendChild(s);
+    var n = el("div", "kin"); n.appendChild(el("div", 0, k.u)); var o = el("ol"); k.s.forEach(function (t) { o.appendChild(el("li", 0, t)); }); n.appendChild(o);
+    if (k.t) n.appendChild(el("div", "tip", "Astuce : " + k.t)); if (k.w) n.appendChild(el("div", "wr", "À éviter : " + k.w));
+    var lb = el("label", "sw"), cb = el("input"); cb.type = "checkbox"; cb.checked = ls("kn" + i) === "1"; cb.onchange = function () { ls("kn" + i, cb.checked ? "1" : "0"); ok.textContent = cb.checked ? "✓" : ""; knProg(); }; lb.appendChild(cb); lb.appendChild(el("b", 0, "Je sais le faire")); n.appendChild(lb);
+    d.appendChild(n); L.appendChild(d);
+  });
+  if (!L.firstChild) L.appendChild(el("p", "mu", "Aucun nœud trouvé.")); knProg();
+}
+$("knQ").oninput = renderNoeuds; $("knC").onchange = renderNoeuds;
+
+/* ================= ANNONCES ================= */
+var CATS = ["Moteurs et hélices", "Voiles et gréement", "Électronique et GPS", "Sécurité", "Ancres et mouillage", "Remorques", "Annexes et pneumatiques", "Bateaux", "Plongée et loisirs", "Autre"];
+var COL = { Vente: "#1f8a4c", Troc: "#0b6fa4", Don: "#c26a00" }, anEd = null;
+var fo = el("option", 0, "Toutes les catégories"); fo.value = ""; $("anFc").appendChild(fo);
+CATS.forEach(function (c) { $("anFc").appendChild(el("option", 0, c)); $("anCt").appendChild(el("option", 0, c)); });
+function anMsg(t) { $("anMsg").textContent = t || ""; }
+function renderAnnonces() {
+  var L = $("anList"); L.textContent = ""; var q = norm($("anQ").value), ft = $("anFt").value, fc = $("anFc").value;
+  AN.filter(function (a) { return (!ft || a.type === ft) && (!fc || a.cat === fc) && norm([a.titre, a.descr, a.lieu, a.cat].join(" ")).indexOf(q) > -1; }).forEach(function (a) {
+    var c = el("div", "card"), h = el("div"), b = el("span", "bdg", a.type); b.style.background = COL[a.type] || "#555"; h.appendChild(b); h.appendChild(el("b", 0, a.titre)); c.appendChild(h);
+    c.appendChild(el("div", "price", a.type === "Vente" ? (+a.prix ? a.prix + " CHF" : "Prix à discuter") : a.type === "Don" ? "Gratuit" : "Troc"));
+    c.appendChild(el("div", "mu", [a.cat, a.etat, a.lieu].filter(Boolean).join(" · "))); if (a.descr) c.appendChild(el("div", 0, a.descr));
+    var by = el("div", "mu"); by.style.marginTop = "6px"; by.appendChild(document.createTextNode("Par ")); by.appendChild(badge(a.auteur)); by.appendChild(document.createTextNode(" · " + ago(a.maj))); c.appendChild(by);
+    if (a.auteur === uid || isAdmin) {
+      var e = el("button", "btn g sm", "Modifier"); e.onclick = function () { anOpen(a); }; c.appendChild(e);
+      var d = el("button", "btn g sm", "Retirer (vendu / donné)"); d.onclick = function () { sb.from("annonces").delete().eq("id", a.id).then(function () { load("annonces"); }); }; c.appendChild(d);
+    } else {
+      var k = el("button", "btn sm", "💬 Contacter"); k.onclick = function () { openThread(a.auteur, "Bonjour, votre annonce « " + a.titre + " » m'intéresse. "); }; c.appendChild(k);
+      var r = el("button", "btn g sm", "Signaler"); r.onclick = function () { if (!requireProfile()) return; sb.from("signalements").insert({ quoi: "annonce", ref: String(a.id) }).then(function () { r.textContent = "Signalée"; r.disabled = true; }); }; c.appendChild(r);
+    }
+    L.appendChild(c);
+  });
+  if (!L.firstChild) L.appendChild(el("p", "mu", "Aucune annonce pour l’instant. Publiez la première !"));
+}
+function anOpen(a) { anEd = a ? a.id : null; $("anTi").value = a ? a.titre : ""; $("anTy").value = a ? a.type : "Vente"; $("anPr").value = a ? a.prix || "" : ""; $("anCt").value = a ? a.cat : CATS[0]; $("anEt").value = a ? a.etat : "Bon"; $("anLo").value = a ? a.lieu || "" : ""; $("anDs").value = a ? a.descr || "" : ""; $("anForm").hidden = false; $("anForm").scrollIntoView({ behavior: "smooth" }); }
+$("anAdd").onclick = function () { anMsg(); if (!requireProfile($("anMsg"))) return; anOpen(null); };
+$("anCx").onclick = function () { $("anForm").hidden = true; anEd = null; };
+$("anSv").onclick = function () {
+  anMsg(); var t = $("anTi").value.trim(); if (t.length < 2) { anMsg("Titre requis."); return; }
+  var o = { titre: t, type: $("anTy").value, prix: $("anTy").value === "Vente" ? +$("anPr").value || 0 : 0, cat: $("anCt").value, etat: $("anEt").value, lieu: $("anLo").value.trim(), descr: $("anDs").value.trim(), maj: nowIso() };
+  (anEd ? sb.from("annonces").update(o).eq("id", anEd) : sb.from("annonces").insert(o)).then(function (r) { if (r.error) anMsg("Publication impossible. Réessayez."); else { $("anForm").hidden = true; anEd = null; load("annonces"); toast("Annonce publiée"); } });
+};
+["anQ", "anFt", "anFc"].forEach(function (i) { $(i).oninput = renderAnnonces; $(i).onchange = renderAnnonces; });
+
+/* ================= RENDU GLOBAL & DÉMARRAGE ================= */
+function renderAll() {
+  renderHome();
+  var v = cur();
+  if (v === "panne") renderPanne(); else if (v === "ponton") { renderPonton(); if (unread()) markRead(); }
+  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") renderMeteoFeed();
+  else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
+  else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces();
+}
+if (!configured || !sb) {
+  var warn = el("div", "card warn"); warn.style.margin = "16px";
+  warn.innerHTML = "<b>Appli pas encore configurée.</b> Ouvrez le fichier <b>config.js</b> et collez-y l'adresse et la clé de votre projet Supabase (étape 4 du guide).";
+  if (configured && !window.supabase) warn.innerHTML = "<b>Connexion impossible.</b> Vérifiez votre connexion internet puis rechargez la page.";
+  document.body.insertBefore(warn, document.body.firstChild);
+}
+route();
+if (sb) {
+  sb.auth.getSession().then(function (r) { onSession(r.data.session, "INITIAL"); if (!r.data.session) { subscribeAll(); loadAll(); } });
+  sb.auth.onAuthStateChange(function (ev, s) { if (ev === "INITIAL_SESSION") return; if (ev === "TOKEN_REFRESHED") { session = s; return; } onSession(s, ev); });
+}

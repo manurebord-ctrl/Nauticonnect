@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confidentialité · Nauticonnect</title>
+<meta name="theme-color" content="#0a2740">
+<link rel="icon" href="favicon-64.png">
+<style>
+:root{--bg:#eef5f9;--card:#fff;--tx:#12212b;--mu:#5d7280;--ac:#0b6fa4;--bd:#d6e2ea}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1a22;--card:#182630;--tx:#e8f0f5;--mu:#93a7b4;--ac:#4aa8dc;--bd:#2a3b47;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:68ch;margin:0 auto;padding:24px 18px 60px}
+h1{font-size:28px;line-height:1.15;margin:8px 0 4px}h2{font-size:19px;margin:28px 0 6px}
+a{color:var(--ac)}.mu{color:var(--mu);font-size:14px}
+ul{padding-left:20px}li{margin:4px 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin:12px 0}
+</style>
+</head>
+<body><main>
+<p><a href="./">← Retour à Nauticonnect</a></p>
+<h1>Politique de confidentialité</h1>
+<p class="mu">Dernière mise à jour : 21 novembre 2026</p>
+
+<div class="card">Nauticonnect est une application communautaire pour les plaisanciers du lac Léman, éditée par un particulier. Elle collecte le moins de données possible et ne les vend à personne. Il n'y a ni publicité ni pistage.</div>
+
+<h2>Qui est responsable ?</h2>
+<p>Manuel Rebord, Ardon (Valais, Suisse). Contact : <a id="mail" href="#">voir ci-dessous</a>.</p>
+
+<h2>Quelles données sont collectées ?</h2>
+<ul>
+<li><b>Compte</b> : votre adresse e-mail et un mot de passe chiffré, pour vous connecter.</li>
+<li><b>Fiche bateau</b> : pseudo, nom et type du bateau, port d'attache, immatriculation (facultative). Elle est visible par les autres utilisateurs.</li>
+<li><b>Position</b>, seulement si vous l'activez :
+  <ul>
+  <li>« Hisser le pavillon » : position arrondie à environ 1 km, visible par les membres connectés, effacée de l'affichage après 2 heures ;</li>
+  <li>partage avec vos amis : position précise, visible seulement par les personnes qui connaissent votre code de groupe, pendant 15 minutes après la dernière mise à jour ;</li>
+  <li>alerte de panne : la zone ou la position GPS que vous indiquez, visible par les membres connectés ;</li>
+  <li>compteur de vitesse : la position reste sur votre téléphone et n'est jamais envoyée.</li>
+  </ul></li>
+<li><b>Messages privés</b> : visibles seulement par l'expéditeur et le destinataire. Ils ne sont pas chiffrés de bout en bout.</li>
+<li><b>Contenus publiés</b> : alertes (avec le téléphone si vous le donnez), signalements de places, avis, votes, annonces, restaurants, épaves et photos.</li>
+<li><b>Sur votre téléphone</b> : quelques préférences (favoris, nœuds appris, zone choisie) restent dans votre navigateur.</li>
+</ul>
+
+<h2>Où sont stockées les données ?</h2>
+<p>Les données et les photos sont hébergées par <b>Supabase</b>, dans un centre de données en Europe. Le site est servi par <b>GitHub Pages</b>. Les polices de caractères viennent de Google Fonts. Les liens vers les webcams, la météo et les cartes ouvrent des sites tiers qui ont leurs propres règles.</p>
+
+<h2>Combien de temps ?</h2>
+<p>Vos données sont conservées tant que votre compte existe. Les positions et les alertes ne s'affichent plus après quelques heures. Les messages de plus de 7 jours ne sont plus affichés dans l'appli.</p>
+
+<h2>Vos droits et la suppression du compte</h2>
+<p>Vous pouvez modifier votre fiche à tout moment. Pour <b>supprimer votre compte</b> : ouvrez l'appli, puis <b>Profil › Supprimer mon compte</b>. Votre fiche, vos messages, alertes, avis, annonces et photos sont alors effacés définitivement. Vous pouvez aussi demander la suppression ou une copie de vos données par e-mail. Cette politique suit la loi suisse sur la protection des données (nLPD) et, pour les utilisateurs de l'Union européenne, le RGPD.</p>
+
+<h2>Sécurité et bon usage</h2>
+<p>Nauticonnect est un complément, <b>pas un service de secours</b>. En cas de danger pour des personnes, appelez le 117, le 144 ou le 112, ou utilisez la VHF canal 16. Les contenus abusifs peuvent être signalés et supprimés.</p>
+
+<h2>Contact</h2>
+<p id="contact">Écrivez à l'adresse indiquée dans l'appli.</p>
+</main>
+<script src="config.js"></script>
+<script>
+var c=(window.NC_CONFIG||{}).contact||"";
+if(/@/.test(c)&&c.indexOf("exemple")<0){var a=document.getElementById("mail");a.textContent=c;a.href="mailto:"+c;var p=document.getElementById("contact");p.textContent="";var l=document.createElement("a");l.href="mailto:"+c;l.textContent=c;p.appendChild(document.createTextNode("Par e-mail : "));p.appendChild(l);}
+else document.getElementById("mail").textContent="(adresse à compléter)";
+</script>
+</body>
+</html>
