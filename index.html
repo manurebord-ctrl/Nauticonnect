@@ -67,6 +67,7 @@
 <h3 class="sub">Entre plaisanciers</h3>
 <div class="grid">
 <a class="tile t-lake" href="#ponton"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></span><span class="tt">Le Ponton</span><span class="ts">Le réseau des plaisanciers</span></a>
+<a class="tile t-lake" href="#location"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l2 4h14l2-4z"/><path d="M12 3v11M12 4l6 8h-6"/><path d="M9 9l-3 5h6"/></svg></span><span class="tt">Location</span><span class="ts">Louer le bateau d'un membre</span></a>
 <a class="tile t-sun" href="#annonces"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg></span><span class="tt">À vendre · Troc</span><span class="ts">Matériel nautique</span></a>
 <a class="tile t-sky evtile" href="#evenements"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg></span><span class="tt">Événements</span><span class="ts">Fêtes et rendez-vous au bord du lac</span></a>
 </div>
@@ -355,6 +356,31 @@
 <div class="row"><button class="btn g" id="anCx">Annuler</button><button class="btn" id="anSv">Publier</button></div></div>
 <div class="err" id="anMsg"></div>
 <div id="anList" style="margin-top:12px"></div>
+</section>
+
+<!-- ===================== LOCATION ===================== -->
+<section id="v-location" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Location entre membres</h1>
+<p class="lead">Louez le bateau d'un plaisancier du Léman, ou rentabilisez le vôtre quand il reste au port.</p>
+<input class="f" id="loQ" type="search" placeholder="Rechercher (port, voilier, wakeboard…)" aria-label="Rechercher un bateau">
+<div class="row"><select class="f" id="loFt" aria-label="Type"><option value="">Tous les bateaux</option></select><select class="f" id="loFp" aria-label="Permis"><option value="">Avec ou sans permis</option><option value="non">Sans permis</option><option value="skip">Avec skipper</option></select></div>
+<div id="loMod"></div>
+<div id="loList" style="margin-top:12px"></div>
+<h2>Vous louez votre bateau ?</h2>
+<button class="btn" id="loAdd">+ Proposer mon bateau</button>
+<div id="loForm" class="card" hidden style="margin-top:10px">
+<label class="l" for="loNo">Nom du bateau et modèle</label><input class="f" id="loNo" maxlength="60" placeholder="Ex. Shaydane – Quicksilver 605">
+<div class="row"><div><label class="l" for="loTy">Type</label><select class="f" id="loTy"></select></div><div><label class="l" for="loPo">Port</label><input class="f" id="loPo" maxlength="40" placeholder="Ex. Le Bouveret"></div></div>
+<div class="row"><div><label class="l" for="loPl">Personnes max.</label><input class="f" id="loPl" type="number" inputmode="numeric" min="1" max="30" value="6"></div><div><label class="l" for="loCa">Caution (CHF)</label><input class="f" id="loCa" type="number" inputmode="decimal" min="0" placeholder="0"></div></div>
+<div class="row"><div><label class="l" for="loPd">Prix ½ journée (CHF)</label><input class="f" id="loPd" type="number" inputmode="decimal" min="0"></div><div><label class="l" for="loPj">Prix journée (CHF)</label><input class="f" id="loPj" type="number" inputmode="decimal" min="0"></div></div>
+<label class="chk"><input type="checkbox" id="loPe" checked> Permis bateau obligatoire</label>
+<label class="chk"><input type="checkbox" id="loSk"> Possible avec moi comme skipper</label>
+<label class="l" for="loDs">Description (équipement, carburant compris ou non, disponibilités…)</label><textarea class="f" id="loDs" rows="4" maxlength="800"></textarea>
+<div class="note">Vérifiez avec votre assurance que la location à des tiers est couverte. Vous restez responsable de vérifier le permis de la personne qui loue.</div>
+<div class="row"><button class="btn g" id="loCx">Annuler</button><button class="btn" id="loSv">Publier</button></div></div>
+<div class="err" id="loMsg"></div>
+<div class="card warn" style="margin-top:14px"><b>Avant de partir</b><br>Contrôlez ensemble le permis et une pièce d'identité, faites un état des lieux avec photos et le niveau de carburant, et mettez-vous d'accord par écrit sur le prix et la caution. Ne payez jamais d'avance à quelqu'un que vous n'avez pas rencontré.</div>
 </section>
 
 <!-- ===================== ÉVÉNEMENTS ===================== -->

@@ -283,3 +283,9 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .wxrow{display:flex;gap:12px;align-items:center}.wxrow .kn{margin-left:auto;text-align:right;font-weight:700;font-size:18px;white-space:nowrap}
 .wxrow .kn small{display:block;font-size:12px;font-weight:600;color:var(--mu)}
 .wxrow svg{flex:none}.wxrow.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac) inset}
+
+/* location */
+.chk{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:15px}.chk input{width:20px;height:20px}
+.loc .tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.loc .price{margin-top:4px}
+.loc .lacts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.loc .lacts .btn{width:auto;flex:1;margin:0}
+.loc.off{opacity:.65}

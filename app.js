@@ -24,7 +24,7 @@ var session = null, uid = null, isAdmin = false, guest = false;
 function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
-var EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
@@ -40,6 +40,7 @@ var Q = {
   places: function () { return sb.from("places").select("*").gte("t", iso(12 * 36e5)); },
   restos: function () { return sb.from("restos").select("*").order("t", { ascending: false }).limit(300); },
   epaves: function () { return sb.from("epaves").select("*").limit(500); },
+  locations: function () { return sb.from("locations").select("*").order("maj", { ascending: false }).limit(300); },
   annonces: function () { return sb.from("annonces").select("*").gte("maj", iso(90 * 864e5)).order("maj", { ascending: false }).limit(300); },
   photos: function () { return sb.from("photos").select("*").order("t", { ascending: false }).limit(400); },
   reglages: function () { return sb.from("reglages").select("*"); },
@@ -53,7 +54,7 @@ function store(t, rows) {
   if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
   else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows;
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
-  else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows;
+  else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
   else if (t === "amities") FS = rows;
   else if (t === "evenements") EV = rows;
@@ -79,7 +80,7 @@ function loadAll() { return Promise.all(Object.keys(Q).map(load)); }
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "evenements"];
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements"];
 var NEEDS_AUTH = { profil: 1 };
 function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "accueil" : h; }
 function goAuth(ret) { try { sessionStorage.setItem("nc-ret", ret || cur()); } catch (e) {} location.hash = "compte"; }
@@ -547,7 +548,7 @@ function renderPonton() {
 /* ================= BOÎTE À IDÉES ================= */
 var avType = "fix", avFilt = "tout", avBusy = false;
 var AVT = { like: "👍 J'aime", fix: "🔧 À améliorer", idea: "💡 Idée" }, STL = { prevu: "Prévu", encours: "En cours", fait: "Fait ✓", non: "Pas retenu" };
-var MODS = ["Général", "Le Ponton", "Panne / SOS", "Météo", "Webcams", "Ports", "Escales gourmandes", "À vendre · Troc", "Vitesse", "Nœuds", "Épaves"];
+var MODS = ["Général", "Le Ponton", "Panne / SOS", "Météo", "Webcams", "Ports", "Escales gourmandes", "À vendre · Troc", "Location", "Vitesse", "Nœuds", "Épaves"];
 MODS.forEach(function (m) { $("avMod").appendChild(el("option", 0, m)); });
 Object.keys(AVT).forEach(function (k) { var b = el("button", 0, AVT[k]); b.dataset.k = k; b.onclick = function () { avType = k; drawAvChips(); }; $("avType").appendChild(b); });
 [["tout", "Tout"], ["like", "👍 J'aime"], ["fix", "🔧 À améliorer"], ["idea", "💡 Idées"]].forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { avFilt = f[0]; renderAvis(); }; $("avFilt").appendChild(b); });
@@ -1105,6 +1106,87 @@ $("anSv").onclick = function () {
 };
 ["anQ", "anFt", "anFc"].forEach(function (i) { $(i).oninput = renderAnnonces; $(i).onchange = renderAnnonces; });
 
+/* ================= LOCATION ENTRE MEMBRES ================= */
+var LTYPES = ["Bateau à moteur", "Voilier", "Pneumatique / semi-rigide", "Wakeboard / ski", "Bateau sans permis", "Paddle / kayak", "Autre"];
+LTYPES.forEach(function (t) { $("loFt").appendChild(el("option", 0, t)); $("loTy").appendChild(el("option", 0, t)); });
+var loEd = null;
+function loMsg(t) { $("loMsg").textContent = t || ""; }
+function chf(n) { return (+n || 0).toLocaleString("fr-CH") + " CHF"; }
+function loCard(x, mod) {
+  var c = el("div", "card loc" + (!x.actif || x.signale ? " off" : ""));
+  c.appendChild(el("b", 0, x.nom)); c.lastChild.style.cssText = "font-size:18px;display:block";
+  c.appendChild(el("div", "mu", x.type + (x.port ? " · " + x.port : "") + " · " + x.places + " pers. max."));
+  var tg = el("div", "tags"); tg.appendChild(el("span", "pill", x.permis ? "Permis requis" : "Sans permis")); if (x.skipper) tg.appendChild(el("span", "pill", "Skipper possible")); if (+x.caution) tg.appendChild(el("span", "pill", "Caution " + chf(x.caution)));
+  if (x.signale) tg.appendChild(el("span", "pill", "⚠ Signalée, en vérification")); else if (!x.actif) tg.appendChild(el("span", "pill", "En pause")); c.appendChild(tg);
+  var pr = [+x.prix_demi ? "½ journée " + chf(x.prix_demi) : "", +x.prix_jour ? "journée " + chf(x.prix_jour) : ""].filter(Boolean).join(" · ");
+  c.appendChild(el("div", "price", pr || "Prix à discuter"));
+  if (x.descr) c.appendChild(el("div", 0, x.descr));
+  c.appendChild(thumb("loc-" + x.id, x.nom, "Photos du bateau " + x.nom));
+  var by = el("div", "mu"); by.style.marginTop = "6px"; by.appendChild(document.createTextNode("Proposé par ")); by.appendChild(badge(x.auteur)); by.appendChild(document.createTextNode(" · " + ago(x.maj))); c.appendChild(by);
+  var A = el("div", "lacts");
+  if (mod) {
+    var ok = el("button", "btn sm", "✓ Rétablir"); ok.onclick = function () { sb.from("locations").update({ signale: false }).eq("id", x.id).then(function () { load("locations"); toast("Annonce rétablie"); }); }; A.appendChild(ok);
+  }
+  if (x.auteur === uid || isAdmin) {
+    if (x.auteur === uid) { var e = el("button", "btn g sm", "Modifier"); e.onclick = function () { loOpen(x); }; A.appendChild(e);
+      var pa = el("button", "btn g sm", x.actif ? "Mettre en pause" : "Réactiver"); pa.onclick = function () { sb.from("locations").update({ actif: !x.actif }).eq("id", x.id).then(function () { load("locations"); }); }; A.appendChild(pa); }
+    var d = el("button", "btn g sm", "Supprimer"); d.onclick = function () { if (confirm("Supprimer cette annonce de location ?")) sb.from("locations").delete().eq("id", x.id).then(function () { load("locations"); toast("Annonce supprimée"); }); }; A.appendChild(d);
+  } else {
+    var k = el("button", "btn sm", "📅 Demander une location"); k.onclick = function () { loAsk(x); }; A.appendChild(k);
+    var r = el("button", "btn g sm", "Signaler"); r.onclick = function () { if (!confirm("Signaler cette annonce ? Elle sera masquée et vérifiée.")) return; if (!guestOk(function () { r.onclick(); })) return; sb.from("signalements").insert({ quoi: "location", ref: String(x.id) }).then(function () { LO = LO.filter(function (y) { return y.id !== x.id; }); renderLoc(); toast("Annonce signalée. Merci !"); }); }; A.appendChild(r);
+  }
+  c.appendChild(A); return c;
+}
+function renderLoc() {
+  var q = norm($("loQ").value), ft = $("loFt").value, fp = $("loFp").value, L = $("loList"), M2 = $("loMod"); L.textContent = ""; M2.textContent = "";
+  var rep = LO.filter(function (x) { return x.signale; });
+  if (isAdmin && rep.length) { M2.appendChild(el("h2", 0, "Annonces signalées (" + rep.length + ")")); rep.forEach(function (x) { M2.appendChild(loCard(x, true)); }); }
+  var mine = LO.filter(function (x) { return x.auteur === uid; });
+  if (mine.length) { L.appendChild(el("h2", 0, "Mes bateaux en location")); mine.forEach(function (x) { L.appendChild(loCard(x)); }); L.appendChild(el("h2", 0, "Bateaux à louer")); }
+  var n = 0;
+  LO.filter(function (x) { return x.actif && !x.signale && x.auteur !== uid && (!ft || x.type === ft) && (!fp || (fp === "non" ? !x.permis : x.skipper)) && norm([x.nom, x.type, x.port, x.descr].join(" ")).indexOf(q) > -1; })
+    .forEach(function (x) { L.appendChild(loCard(x)); n++; });
+  if (!n) L.appendChild(el("p", "mu", LO.length ? "Aucun bateau ne correspond à votre recherche." : "Pas encore de bateau à louer. Proposez le vôtre !"));
+}
+function loOpen(x) {
+  loEd = x ? x.id : null; $("loNo").value = x ? x.nom : ""; $("loTy").value = x ? x.type : LTYPES[0]; $("loPo").value = x ? x.port : ((me() && me().port) || "");
+  $("loPl").value = x ? x.places : 6; $("loCa").value = x && +x.caution ? x.caution : ""; $("loPd").value = x && +x.prix_demi ? x.prix_demi : ""; $("loPj").value = x && +x.prix_jour ? x.prix_jour : "";
+  $("loPe").checked = x ? x.permis : true; $("loSk").checked = x ? x.skipper : false; $("loDs").value = x ? x.descr : "";
+  $("loSv").textContent = x ? "Enregistrer" : "Publier"; $("loForm").hidden = false; $("loForm").scrollIntoView({ behavior: "smooth" });
+}
+$("loAdd").onclick = function () { loMsg(); if (!requireProfile($("loMsg"))) return; loOpen(null); };
+$("loCx").onclick = function () { $("loForm").hidden = true; loEd = null; };
+$("loTy").onchange = function () { if (this.value === "Bateau sans permis" || this.value === "Paddle / kayak") $("loPe").checked = false; };
+$("loSv").onclick = function () {
+  loMsg(); var nm = $("loNo").value.trim(); if (nm.length < 2) { loMsg("Indiquez le nom ou le modèle du bateau."); return; }
+  if (!$("loPo").value.trim()) { loMsg("Indiquez le port."); return; }
+  var o = { nom: nm, type: $("loTy").value, port: $("loPo").value.trim(), places: Math.min(30, Math.max(1, +$("loPl").value || 1)), caution: Math.max(0, +$("loCa").value || 0),
+    prix_demi: Math.max(0, +$("loPd").value || 0), prix_jour: Math.max(0, +$("loPj").value || 0), permis: $("loPe").checked, skipper: $("loSk").checked, descr: $("loDs").value.trim() };
+  $("loSv").disabled = true;
+  (loEd ? sb.from("locations").update(o).eq("id", loEd) : sb.from("locations").insert(o)).then(function (r) {
+    if (r.error) { loMsg("Publication impossible. Réessayez."); return; }
+    $("loForm").hidden = true; toast(loEd ? "Annonce mise à jour" : "Bateau publié ! Ajoutez des photos pour donner envie."); loEd = null; load("locations");
+  }).then(function () { $("loSv").disabled = false; });
+};
+function loAsk(x) {
+  if (!requireProfile()) return;
+  var md = modal("Demander « " + x.nom + " »"), bx = md.bx;
+  var d = el("input", "f"); d.type = "date"; d.min = new Date().toISOString().slice(0, 10); d.value = d.min;
+  var du = el("select", "f"); ["½ journée (matin)", "½ journée (après-midi)", "Journée", "Plusieurs jours"].forEach(function (t) { du.appendChild(el("option", 0, t)); });
+  var pe = el("input", "f"); pe.type = "number"; pe.min = 1; pe.max = x.places; pe.value = Math.min(2, x.places);
+  var sk = el("label", "chk"), skc = el("input"); skc.type = "checkbox"; sk.appendChild(skc); sk.appendChild(document.createTextNode(" Avec le propriétaire comme skipper")); 
+  [["Date", d], ["Durée", du], ["Nombre de personnes (max. " + x.places + ")", pe]].forEach(function (f) { var l = el("label", "l", f[0]); bx.appendChild(l); bx.appendChild(f[1]); });
+  if (x.skipper) bx.appendChild(sk);
+  if (x.permis) bx.appendChild(el("div", "note", "Ce bateau demande un permis : le propriétaire voudra le voir le jour de la location."));
+  var go = el("button", "btn", "Préparer le message"); bx.appendChild(go);
+  go.onclick = function () {
+    var dt = d.value ? new Date(d.value + "T12:00").toLocaleDateString("fr-CH", { weekday: "short", day: "numeric", month: "short" }) : "?";
+    var t = "📅 Location « " + x.nom.slice(0, 30) + " » : " + dt + ", " + du.value + ", " + (+pe.value || 1) + " pers." + (skc.checked ? ", avec skipper" : "") + ". Dispo ? ";
+    md.close(); openThread(x.auteur, t.slice(0, 190));
+  };
+}
+["loQ", "loFt", "loFp"].forEach(function (i) { $(i).oninput = renderLoc; $(i).onchange = renderLoc; });
+
 /* ================= RENDU GLOBAL & DÉMARRAGE ================= */
 function renderAll() {
   renderHome();
@@ -1112,7 +1194,7 @@ function renderAll() {
   if (v === "panne") renderPanne(); else if (v === "ponton") { renderPonton(); if (unread()) markRead(); }
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); }
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
-  else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "evenements") renderEvents();
+  else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
 }
 if (!configured || !sb) {
   var warn = el("div", "card warn"); warn.style.margin = "16px";
@@ -1139,7 +1221,7 @@ function evCard(e, adm) {
   b.appendChild(el("div", "mu", "📅 " + evDates(e) + (e.heure ? " · " + e.heure : "") + " · 📍 " + e.lieu));
   if (e.descr) b.appendChild(el("div", 0, e.descr));
   if (e.statut !== "publie" || adm) b.appendChild(el("div", e.statut === "publie" ? "okm" : "err", STE[e.statut]));
-  var A = el("div", "acts");
+  var A = el("div", "lacts");
   if (/^https?:\/\//.test(e.site)) { var a = el("a", "p", "🌐 Infos"); a.href = e.site; a.target = "_blank"; a.rel = "noopener"; A.appendChild(a); }
   var go = el("a", 0, "🧭 Y aller"); go.href = mapsSearch(e.lieu); go.target = "_blank"; go.rel = "noopener"; A.appendChild(go);
   if (e.contact) { var ct = el("a", 0, "✉️ Contact"); ct.href = /@/.test(e.contact) ? "mailto:" + e.contact : "tel:" + e.contact.replace(/[^0-9+]/g, ""); A.appendChild(ct); }
