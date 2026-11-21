@@ -296,3 +296,13 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .thd{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .thx{margin-left:auto;font-size:13px;font-weight:700;color:var(--mu);background:none;border:1px solid var(--bd);border-radius:20px;padding:5px 11px}
 .linkb{background:none;border:0;color:var(--ac);font-weight:600;font-size:14px;padding:4px 0 10px}
+
+/* notifications, invitation, lac */
+.nbox{display:flex;gap:12px;align-items:flex-start;margin:12px 16px;border-left:5px solid var(--ac)}.nbox .ic{font-size:26px}
+.nbox b{display:block}.nbox .mu{display:block;margin:2px 0 8px}.nbox .btn{width:auto;display:inline-block;margin:0 10px 0 0}
+.btn.sm{padding:9px 12px;font-size:14px}
+.p-inv{display:block;width:100%;margin-top:8px;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-weight:700;font-size:15px;position:relative;z-index:1}
+.lacg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lact{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 12px}
+.lact b{display:block;font-size:24px;font-weight:800}.lact span{font-size:13px;color:var(--mu)}
+.lacn{margin-top:8px}

@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=13">
+<link rel="stylesheet" href="app.css?v=14">
 </head>
 <body>
 
@@ -48,7 +48,10 @@
 <li><b>Chattez, amarrez-vous</b><span>Écrivez aux membres en privé, et on se retrouve au port.</span></li>
 </ol>
 <a class="p-go" href="#ponton">💬 Ouvrir le chat du Ponton</a>
+<button class="p-inv" data-invite>📣 Inviter un ami sur Nauticonnect</button>
 </section>
+
+<div class="card nbox" id="notifAsk" hidden><span class="ic">🔔</span><div><b>Ne ratez rien sur l'eau</b><span class="mu">Messages du Ponton, bateaux en panne près de vous, alertes vaudaire et coups de vent.</span><button class="btn sm" id="notifAskGo">Activer les notifications</button><button class="linkb" id="notifAskNo">Plus tard</button></div></div>
 
 <a class="card windbar" id="homeMod" href="#meteo" hidden></a>
 <a class="card windbar" id="homeWind" href="#meteo" hidden></a>
@@ -116,6 +119,15 @@
 <div class="err" id="pMsg"></div>
 </div>
 <p class="mu">N'indiquez ni adresse ni numéro de téléphone dans votre fiche.</p>
+<div class="card" id="notifCard"><b>🔔 Notifications</b><div class="mu" id="nfState" style="margin:4px 0 10px"></div>
+<button class="btn" id="nfOn">Activer les notifications</button>
+<div id="nfPrefs" hidden>
+<label class="chk"><input type="checkbox" id="nfMsg"> Messages reçus sur Le Ponton</label>
+<label class="chk"><input type="checkbox" id="nfSos"> Bateau en panne sur le lac (SOS)</label>
+<label class="chk"><input type="checkbox" id="nfVent"> Alertes vaudaire et coups de vent</label>
+<div class="row"><button class="btn g sm" id="nfTest">Envoyer un test</button><button class="btn g sm" id="nfOff">Désactiver</button></div>
+</div></div>
+<div class="card"><b>📣 Faire grandir l'équipage</b><div class="mu" style="margin:4px 0 10px">Plus il y a de plaisanciers, plus l'entraide marche. Partagez l'appli à vos voisins de ponton.</div><button class="btn" data-invite>Inviter un ami</button></div>
 <div class="card"><b>Mon compte</b><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
 <button class="btn g" id="pLogout">Se déconnecter</button>
 <button class="btn g" id="pDelete" style="margin-top:8px;color:var(--red)">Supprimer mon compte</button>
@@ -210,6 +222,8 @@
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
 <h1 class="ph1">Météo Léman</h1>
 <p class="lead">Les balises vent en direct, les alertes, l'état du lac en photos, les vents, les feux de tempête et les bonnes sources avant de partir.</p>
+<h2>Le lac en ce moment</h2>
+<div id="lacBox"><p class="mu">Chargement…</p></div>
 <h2>Alertes vent</h2>
 <div id="wxAlerts"><p class="mu">Chargement des données de vent…</p></div>
 <h2>Balises vent en direct</h2>
@@ -424,9 +438,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=13"></script>
+<script src="config.js?v=14"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=13"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

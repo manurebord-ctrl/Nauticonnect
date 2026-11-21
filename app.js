@@ -200,7 +200,7 @@ function onSession(s, ev) {
   if (uid !== was) {
     isAdmin = false;
     if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { isAdmin = !!(r.data && r.data.length); if (isAdmin) load("photos"); renderAll(); });
-    subscribeAll(); loadAll().then(function () {
+    subscribeAll(); loadAll().then(function () { pushRefresh();
       if (real() && cur() === "compte" && authMode !== "reset") {
         var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
         location.hash = me() ? (ret && ret !== "compte" ? ret : "") : "profil";
@@ -238,7 +238,7 @@ $("pSave").onclick = function () {
     if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
   }).then(function () { $("pSave").disabled = false; });
 };
-$("pLogout").onclick = function () { sb.auth.signOut().then(function () { location.hash = ""; toast("Déconnecté. À bientôt sur l'eau !"); }); };
+$("pLogout").onclick = function () { (typeof pushDisable === "function" && mySub ? pushDisable() : Promise.resolve()).catch(function () {}).then(function () { return sb.auth.signOut(); }).then(function () { location.hash = ""; toast("Déconnecté. À bientôt sur l'eau !"); }); };
 var delStep = 0;
 $("pDelete").onclick = function () {
   var m = $("pDelMsg");
@@ -266,7 +266,7 @@ function openNow() { var l = Date.now() - 2 * 36e5; return O.filter(function (x)
 function renderHome() {
   renderChip();
   var op = openNow();
-  $("stMembers").textContent = sb ? Object.keys(P).length : "–"; $("stOpen").textContent = sb ? op.length : "–";
+  var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm < 25 ? "🆕" : nm; $("stMembers").nextElementSibling.textContent = sb && nm < 25 ? "réseau tout neuf" : "membres"; $("stOpen").textContent = sb ? op.length : "–";
   var N = $("pNow"); N.textContent = "";
   if (op.length) {
     var st = el("div", "stack"); op.slice(0, 5).forEach(function (x, i) { var a = el("span", 0, initial(x.id)); a.style.background = AVC[i % AVC.length]; st.appendChild(a); }); N.appendChild(st);
@@ -1194,12 +1194,95 @@ function loAsk(x) {
 }
 ["loQ", "loFt", "loFp"].forEach(function (i) { $(i).oninput = renderLoc; $(i).onchange = renderLoc; });
 
+/* ================= NOTIFICATIONS PUSH ================= */
+var pushOk = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && !!CFG.vapid;
+var mySub = null, myAbo = null;
+function b64u(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; var r = atob(s), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
+function swReg() { return navigator.serviceWorker.getRegistration().then(function (r) { return r || navigator.serviceWorker.register("sw.js"); }).then(function () { return navigator.serviceWorker.ready; }); }
+function pushRefresh() {
+  if (!pushOk || !real()) { mySub = null; myAbo = null; notifUI(); return Promise.resolve(); }
+  return swReg().then(function (r) { return r.pushManager.getSubscription(); }).then(function (s) {
+    mySub = s; if (!s) { myAbo = null; notifUI(); return; }
+    return sb.from("push_abos").select("*").eq("endpoint", s.endpoint).maybeSingle().then(function (r) {
+      myAbo = r.data || null;
+      if (!myAbo && Notification.permission === "granted") return pushSave(s); /* réabonner ce compte sur cet appareil */
+      notifUI();
+    });
+  }).catch(function () { notifUI(); });
+}
+function pushSave(s, prefs) {
+  var j = s.toJSON(), o = { endpoint: s.endpoint, uid: uid, p256dh: j.keys.p256dh, auth: j.keys.auth, maj: nowIso() };
+  if (prefs) for (var k in prefs) o[k] = prefs[k];
+  return sb.from("push_abos").upsert(o, { onConflict: "endpoint" }).select().maybeSingle().then(function (r) { if (r.error) throw r.error; myAbo = r.data; mySub = s; notifUI(); });
+}
+function pushEnable() {
+  if (!pushOk) { toast("Votre navigateur ne gère pas les notifications. Installez l'appli sur l'écran d'accueil."); return; }
+  if (!requireProfile()) return;
+  Notification.requestPermission().then(function (p) {
+    if (p !== "granted") { toast("Notifications refusées. Autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); notifUI(); return; }
+    return swReg().then(function (r) { return r.pushManager.getSubscription().then(function (s) { return s || r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }); }); })
+      .then(function (s) { return pushSave(s); }).then(function () { toast("🔔 Notifications activées !"); });
+  }).catch(function () { toast("Activation impossible. Réessayez."); });
+}
+function pushDisable() {
+  var s = mySub; if (!s) return Promise.resolve();
+  return sb.from("push_abos").delete().eq("endpoint", s.endpoint).then(function () { return s.unsubscribe(); }).then(function () { mySub = null; myAbo = null; notifUI(); });
+}
+function notifUI() {
+  var on = !!(mySub && myAbo), den = pushOk && Notification.permission === "denied";
+  $("nfState").textContent = !pushOk ? "Pas disponible sur ce navigateur. Installez l'appli sur l'écran d'accueil (Chrome)." : den ? "Bloquées sur ce téléphone : autorisez-les dans les réglages (Applications › Chrome › Notifications)." : on ? "Activées sur ce téléphone." : "Désactivées.";
+  $("nfOn").hidden = on || !pushOk || den; $("nfPrefs").hidden = !on;
+  if (on) { $("nfMsg").checked = myAbo.msg; $("nfSos").checked = myAbo.sos; $("nfVent").checked = myAbo.vent; }
+  var ask = $("notifAsk"); ask.hidden = !(pushOk && me() && !on && !den && !ls("nc-notif-later"));
+}
+["nfMsg", "nfSos", "nfVent"].forEach(function (id) { $(id).onchange = function () { if (!mySub) return; pushSave(mySub, { msg: $("nfMsg").checked, sos: $("nfSos").checked, vent: $("nfVent").checked }).then(function () { toast("Préférences enregistrées"); }); }; });
+$("nfOn").onclick = pushEnable; $("notifAskGo").onclick = pushEnable;
+$("notifAskNo").onclick = function () { ls("nc-notif-later", "1"); $("notifAsk").hidden = true; };
+$("nfOff").onclick = function () { pushDisable().then(function () { toast("Notifications désactivées"); }); };
+$("nfTest").onclick = function () { sb.rpc("push_test").then(function (r) { toast(r.error ? "Test impossible." : "Notification de test envoyée…"); }); };
+
+/* ================= INVITER UN AMI ================= */
+function invite() {
+  var url = location.origin + location.pathname, txt = "Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac ⛵";
+  if (navigator.share) { navigator.share({ title: "Nauticonnect", text: txt, url: url }).catch(function () {}); return; }
+  var md = modal("Inviter un ami"), bx = md.bx;
+  var wa = el("a", "btn", "Partager sur WhatsApp"); wa.href = "https://wa.me/?text=" + encodeURIComponent(txt + " " + url); wa.target = "_blank"; wa.rel = "noopener"; bx.appendChild(wa);
+  var sm = el("a", "btn g", "Envoyer par SMS"); sm.href = "sms:?&body=" + encodeURIComponent(txt + " " + url); sm.style.marginTop = "8px"; bx.appendChild(sm);
+  var cp = el("button", "btn g", "Copier le lien"); cp.style.marginTop = "8px"; cp.onclick = function () { (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast("Lien copié"); }, function () { prompt("Copiez le lien :", url); }); }; bx.appendChild(cp);
+}
+Array.prototype.forEach.call(document.querySelectorAll("[data-invite]"), function (b) { b.onclick = invite; });
+
+/* ================= LE LAC : TEMPÉRATURE & NIVEAU ================= */
+var LAC = null, lacAt = 0;
+function loadLac() {
+  if (Date.now() - lacAt < 20 * 6e4) return; lacAt = Date.now();
+  fetch(CFG.url + "/functions/v1/lac").then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) { LAC = j; renderLac(); }).catch(function () { LAC = { err: 1 }; renderLac(); });
+}
+function renderLac() {
+  var B = $("lacBox"); if (!B) return; B.textContent = "";
+  if (!LAC) { B.appendChild(el("p", "mu", "Chargement…")); return; }
+  if (LAC.err || (!LAC.temp.length && !LAC.niveau)) { B.appendChild(el("p", "mu", "Données du lac indisponibles pour le moment.")); return; }
+  if (LAC.temp.length) {
+    var g = el("div", "lacg");
+    LAC.temp.forEach(function (t) { var c = el("div", "lact"); c.appendChild(el("b", 0, "🌡 " + String(t.t).replace(".", ",") + " °C")); c.appendChild(el("span", 0, t.n)); g.appendChild(c); });
+    B.appendChild(g);
+  }
+  if (LAC.niveau) {
+    var n = LAC.niveau, d = Math.round((n.m - n.moy) * 100), c = el("div", "card lacn");
+    c.appendChild(el("b", 0, "📏 Niveau du lac : " + n.m.toFixed(2).replace(".", ",") + " m"));
+    c.appendChild(el("div", "mu", (d === 0 ? "Pile dans la moyenne" : Math.abs(d) + " cm " + (d > 0 ? "au-dessus" : "au-dessous") + " de la moyenne") + " · mesuré à Saint-Prex " + ago(n.at)));
+    B.appendChild(c);
+  }
+  B.appendChild(el("p", "note", "Eau en surface : modèle Alplakes (Eawag), mis à jour toutes les 3 h. Niveau : mesure de l'OFEV."));
+}
+
 /* ================= RENDU GLOBAL & DÉMARRAGE ================= */
 function renderAll() {
   renderHome();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") { renderPonton(); if (unread()) markRead(); }
-  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); }
+  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
+  else if (v === "profil") notifUI();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
 }
