@@ -109,7 +109,14 @@ setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("p
 
 /* ---------------- navigation ---------------- */
 var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements"].concat(SORTIES_ON ? ["sorties"] : []);
-var NEEDS_AUTH = { profil: 1 };
+var NEEDS_AUTH = { profil: 1, location: 1, annonces: 1, vitesse: 1, epaves: 1, noeuds: 1 };
+var WHYV = {
+  location: "La location de bateaux entre plaisanciers est réservée aux membres. Créez votre compte gratuit pour voir les bateaux disponibles.",
+  annonces: "Les petites annonces (vente, troc, dons) sont réservées aux membres. Créez votre compte gratuit pour les voir.",
+  vitesse: "Le compteur de vitesse est réservé aux membres. Créez votre compte gratuit pour l'utiliser.",
+  epaves: "La carte des épaves du Léman est réservée aux membres. Créez votre compte gratuit pour la découvrir.",
+  noeuds: "Le guide des nœuds marins est réservé aux membres. Créez votre compte gratuit pour y accéder."
+};
 function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "accueil" : h; }
 function goAuth(ret, why) { try { sessionStorage.setItem("nc-ret", ret || cur()); sessionStorage.setItem("nc-why", why || ""); } catch (e) {} location.hash = "compte"; }
 /* Consulter = libre. Participer (publier, voter, aider, notifications) = compte gratuit */
@@ -142,7 +149,7 @@ var prevView = "accueil", lastView = "accueil";
 function route() {
   var h = cur(); if (h !== lastView) { prevView = lastView; lastView = h; }
   if (h !== "compte" && prevView === "compte") { try { sessionStorage.removeItem("nc-why"); } catch (e) {} }
-  if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h); return; }
+  if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h, WHYV[h]); return; }
   VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
   Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
   if (h === "profil") fillProfile();
@@ -328,7 +335,8 @@ function renderJoinBar(nm) {
   $("joinTxt").textContent = nm >= 10 ? "Rejoignez les " + nm + " plaisanciers du Léman" : "Rejoignez les plaisanciers du Léman";
 }
 function renderHome() {
-  renderChip(); var ph = document.querySelector(".p-how"); if (ph) ph.hidden = !!me();
+  renderChip();
+  Array.prototype.forEach.call(document.querySelectorAll("a.tile"), function (a) { a.classList.toggle("locked", !!NEEDS_AUTH[a.getAttribute("href").slice(1)] && !real()); }); var ph = document.querySelector(".p-how"); if (ph) ph.hidden = !!me();
   var op = openNow();
   var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm; $("stMembers").nextElementSibling.textContent = nm === 1 ? "membre" : "membres"; $("stOpen").textContent = sb ? op.length : "–";
   renderJoinBar(nm);

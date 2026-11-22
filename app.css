@@ -617,3 +617,8 @@ html.previewing body{padding-top:48px}
 .lk-st div{flex:1;border:1px solid var(--bd);border-radius:14px;padding:8px;text-align:center}
 .lk-st b{display:block;font-size:22px;font-family:var(--fd)}.lk-st span{font-size:12px;color:var(--mu)}
 .lk-ul{margin:0 0 12px;padding-left:20px;line-height:1.6}
+
+/* rubriques réservées aux membres */
+.tile{position:relative}
+.tile.locked::after{content:"Membres";position:absolute;top:6px;right:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;background:var(--ac);color:var(--acx);border-radius:10px;padding:2px 6px}
+.tile.locked .ti{opacity:.55}
