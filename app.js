@@ -292,6 +292,8 @@ function renderHome() {
   renderChip(); var ph = document.querySelector(".p-how"); if (ph) ph.hidden = !!me();
   var op = openNow();
   var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm; $("stMembers").nextElementSibling.textContent = nm === 1 ? "membre" : "membres"; $("stOpen").textContent = sb ? op.length : "–";
+  var HS = $("heroStat"); HS.hidden = !sb || !nm; HS.textContent = ""; HS.appendChild(el("b", 0, String(nm))); HS.appendChild(document.createTextNode(" plaisancier" + (nm > 1 ? "s" : "") + " inscrit" + (nm > 1 ? "s" : "")));
+  if (op.length) { HS.appendChild(el("i")); HS.appendChild(el("b", 0, String(op.length))); HS.appendChild(document.createTextNode(" sur l\u2019eau")); }
   var N = $("pNow"); N.textContent = "";
   if (op.length) {
     var st = el("div", "stack"); op.slice(0, 5).forEach(function (x, i) { var a = el("span", 0, initial(x.id)); a.style.background = AVC[i % AVC.length]; st.appendChild(a); }); N.appendChild(st);
