@@ -133,6 +133,14 @@ function route() {
   if (h === "webcams") wcFromHash();
   renderAll(); window.scrollTo(0, 0); heroStart();
 }
+/* écran d'ouverture : l'en-tête avec le chat en démo, puis bouton « Entrer » */
+function enterApp() {
+  var h = $("hero"); if (!h || !h.classList.contains("splash")) return;
+  try { sessionStorage.setItem("nc-in", "1"); } catch (e) {}
+  h.classList.remove("splash"); h.classList.add("compact"); document.documentElement.classList.remove("splashing"); window.scrollTo(0, 0);
+}
+$("enterBtn").onclick = enterApp;
+window.addEventListener("hashchange", enterApp);
 window.addEventListener("hashchange", route);
 
 /* ---------------- géographie commune ---------------- */

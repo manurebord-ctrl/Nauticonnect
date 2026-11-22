@@ -20,7 +20,8 @@
 
 <!-- ===================== ACCUEIL ===================== -->
 <section id="v-accueil">
-<header class="hero photo art">
+<header class="hero photo art" id="hero">
+<script>(function(){var h=document.getElementById("hero"),d=location.hash.slice(1),e;try{e=sessionStorage.getItem("nc-in")}catch(x){}if(!e&&(!d||d==="accueil")){h.classList.add("splash");document.documentElement.classList.add("splashing")}else h.classList.add("compact")})();</script>
 <canvas id="heroCv" aria-hidden="true"></canvas><div class="hero-ph" id="heroPh" style="background-image:url(fond-accueil.svg?v=1)"></div>
 <label class="phbtn" id="phBtn" hidden>Photo de la bannière<input type="file" id="phIn" accept="image/jpeg,image/png,image/webp" hidden></label>
 <div class="hero-in">
@@ -35,6 +36,7 @@
 <div class="bb typ"><i style="background:#f29a5b">J</i><span aria-label="Julie écrit"><b></b><b></b><b></b></span></div>
 </div>
 <div class="cta"><a class="cta1" id="ctaMain" href="#compte">Rejoindre l'équipage</a><a class="cta2" href="#ponton">Qui est sur l'eau&nbsp;?</a></div>
+<button class="enter" id="enterBtn">Entrer</button>
 <div class="hero-chips"><a class="hchip al" id="alertPill" href="#panne" hidden></a><a class="hchip" href="#ponton" id="msgChip" hidden>Messages<span class="dot" id="unreadHome"></span></a></div>
 </div>
 </header>
