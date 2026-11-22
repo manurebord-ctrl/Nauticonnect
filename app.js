@@ -1487,6 +1487,10 @@ $("nfFix").onclick = function () {
     return swReg();
   }).then(function (r) {
     step("Service worker : " + (r.active ? "actif (" + (r.active.scriptURL.split("/").pop()) + ")" : "inactif"));
+    return r.showNotification("Nauticonnect · test direct", { body: "Si vous voyez ceci, le téléphone peut afficher les notifications.", icon: "icon-192.png", tag: "local" })
+      .then(function () { step("Notification directe : affichée par l'appli"); }, function (e) { step("Notification directe : ERREUR " + (e && e.message)); })
+      .then(function () { return r; });
+  }).then(function (r) {
     return r.pushManager.getSubscription().then(function (s) { step("Ancien abonnement : " + (s ? "oui, supprimé" : "aucun")); return s ? s.unsubscribe().then(function () { return r; }) : r; });
   }).then(function (r) {
     return r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) });
