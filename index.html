@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=18">
+<link rel="stylesheet" href="app.css?v=19">
 </head>
 <body>
 
@@ -146,8 +146,14 @@
 <div class="card warn"><b>Danger pour des personnes ?</b> Appelez d’abord le <a href="tel:117"><b>117</b></a> (police) ou le <a href="tel:144"><b>144</b></a>, ou lancez un appel de détresse radio VHF canal 16. Cette appli est un complément, pas un service de secours.</div>
 <h2>Alertes actives</h2><div id="pnList"></div>
 <div class="card"><b>Carte</b><div class="mu">Touchez un port pour le choisir. Rouge = alerte active.</div><svg id="pnMap" class="map" viewBox="0 0 680 410"></svg><a class="btn g" id="pnRoute" target="_blank" rel="noopener">Itinéraire</a></div>
-<div class="card"><b>Sociétés de sauvetage du lac (SISL)</b><div class="mu">Bénévoles. Numéros ajoutés par les membres : vérifiez-les sur sisl.ch.</div><div id="scList" style="margin:6px 0"></div>
-<input class="f" id="scName" list="scDl" placeholder="Section (ex. Le Bouveret)"><datalist id="scDl"></datalist><input class="f" id="scTel" type="tel" placeholder="Numéro de téléphone"><button class="btn g" id="scSave">Enregistrer le numéro</button></div>
+<div class="card"><b>Sauvetage du lac (SISL) le plus proche</b>
+<div class="mu" id="scWhere" style="margin:2px 0 8px"></div>
+<div class="scurg"><b>Urgence sur le lac</b><span>La police alerte elle-même la section de sauvetage la plus proche.</span><div class="urg"><a href="tel:117">117 Suisse</a><a href="tel:112">112 Europe</a><a href="tel:18">18 France</a></div></div>
+<div id="scNear"></div>
+<button class="linkb" id="scAllBtn">Voir les 34 sections</button><div id="scAll" hidden></div>
+<div class="mu" style="margin-top:8px">Les numéros des sections sont ceux de leur local ou de leur comité, publiés par les sections. Ils ne remplacent pas le 117 ou le 112. Les sections sont bénévoles.</div>
+<details class="scadd"><summary>Signaler un numéro manquant ou faux</summary><div id="scList" style="margin:6px 0"></div>
+<input class="f" id="scName" list="scDl" placeholder="Section (ex. Le Bouveret)"><datalist id="scDl"></datalist><input class="f" id="scTel" type="tel" placeholder="Numéro de téléphone"><button class="btn g" id="scSave">Enregistrer le numéro</button></details></div>
 </section>
 
 <!-- ===================== LE PONTON ===================== -->
@@ -427,9 +433,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=18"></script>
+<script src="config.js?v=19"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

@@ -334,3 +334,11 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .bb.typ b{width:7px;height:7px;border-radius:50%;background:#8aa0ad;animation:typ 1.2s infinite}
 .bb.typ b:nth-child(2){animation-delay:.2s}.bb.typ b:nth-child(3){animation-delay:.4s}
 @keyframes typ{0%,60%,100%{opacity:.35;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+.scurg{background:var(--redT,#fdecea);border:1.5px solid var(--red);border-radius:14px;padding:10px 12px;margin:0 0 10px}
+.scurg b{display:block;color:var(--red)}.scurg span{display:block;font-size:13px;margin:2px 0 8px}
+.scurg .urg{display:flex;gap:6px}.scurg .urg a{flex:1;text-align:center;font-weight:800;font-size:14px;padding:10px 4px;border-radius:12px;background:var(--red);color:#fff}
+.sccard{margin:8px 0 0;padding:12px}.sccard.near{border:2px solid var(--ac)}
+.schd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sccard .acts{flex-wrap:wrap}.sccard .acts a{flex:1 1 auto;min-width:70px}
+.scadd{margin-top:10px}.scadd summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--ac)}
+@media (prefers-color-scheme:dark){.scurg{background:rgba(220,50,40,.12)}}

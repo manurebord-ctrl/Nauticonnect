@@ -407,12 +407,71 @@ function drawPanneMap() {
   else { var t = mk("text", { x: zx, y: Y(z[1]) - 16, "text-anchor": zx > 520 ? "end" : zx < 120 ? "start" : "middle", "font-size": 20 }, "fill:var(--tx);font-weight:600"); t.textContent = z[0]; }
   var r = $("pnRoute"); r.href = "https://www.google.com/maps/dir/?api=1&destination=" + z[1] + "," + z[2]; r.textContent = "Itinéraire jusqu’à " + z[0];
 }
-["Clarens","Coppet","Cully","La Tour-de-Peilz","Le Bouveret","Lutry","Montreux","Morges","Nyon","Ouchy","Pully","Rivaz","Rolle","St-Prex","St-Saphorin","Territet","Vevey-Sentinelle","Vevey-Vétéran","Villeneuve","Villette"].forEach(function (n) { var o = el("option"); o.value = n; $("scDl").appendChild(o); });
-function renderSc() {
-  var L = $("scList"); L.textContent = "";
-  SC.slice().sort(function (a, b) { return a.nom.localeCompare(b.nom); }).forEach(function (s) { var d = el("div"); d.appendChild(document.createTextNode(s.nom + " : ")); var a = el("a", 0, s.tel); a.href = "tel:" + s.tel.replace(/[^0-9+]/g, ""); a.style.color = "var(--ac)"; d.appendChild(a); L.appendChild(d); });
-  if (!L.firstChild) L.appendChild(el("div", "mu", "Aucun numéro enregistré pour l’instant."));
+/* Sections SISL : position du local + coordonnées publiées par les sections (vérifiées nov. 2026) */
+var SISL = [
+  { n: "Genève", la: 46.2105, lo: 6.1530, pays: "CH", tel: "022 731 11 82", lieu: "Bains des Pâquis" },
+  { n: "Bellevue-Genthod", la: 46.2550, lo: 6.1555, pays: "CH", tel: "022 774 23 28", mail: "bellevue-genthod@sisl.ch", lieu: "Port Gitana", h24: true },
+  { n: "Versoix", la: 46.2830, lo: 6.1680, pays: "CH", tel: "022 755 20 20", lieu: "Port du Bourg", h24: true },
+  { n: "La Belotte-Bellerive", la: 46.2340, lo: 6.1960, pays: "CH", tel: "022 752 31 00", lieu: "Vésenaz" },
+  { n: "Hermance", la: 46.3020, lo: 6.2430, pays: "CH", tel: "022 751 10 08", lieu: "Port d'Hermance" },
+  { n: "Coppet", la: 46.3150, lo: 6.1940, pays: "CH" },
+  { n: "Nyon", la: 46.3820, lo: 6.2420, pays: "CH", mail: "info@sauvetage-nyon.ch", web: "https://sauvetage-nyon.ch", lieu: "Quai Louis-Bonnard" },
+  { n: "Rolle", la: 46.4580, lo: 6.3370, pays: "CH", mail: "rolle@sisl.ch", web: "https://www.sauvetage-rolle.ch" },
+  { n: "St-Prex", la: 46.4790, lo: 6.4600, pays: "CH" },
+  { n: "Morges", la: 46.5080, lo: 6.4970, pays: "CH", tel: "021 801 43 50", mail: "morges@sisl.ch", web: "https://www.sauvetage-morges.ch", lieu: "Place de la Navigation" },
+  { n: "Ouchy", la: 46.5050, lo: 6.6280, pays: "CH", mail: "comite@sauvetage-ouchy.ch", web: "https://sauvetage-ouchy.ch", lieu: "Chemin des Pêcheurs" },
+  { n: "Pully", la: 46.5070, lo: 6.6600, pays: "CH" },
+  { n: "Lutry", la: 46.5010, lo: 6.6850, pays: "CH", tel: "021 791 44 77", web: "http://sauvetage-lutry.ch" },
+  { n: "Villette", la: 46.4970, lo: 6.7090, pays: "CH", mail: "villette@sisl.ch", web: "https://villette.clubdesk.com/sauvetage-villette-sisl/bienvenue/" },
+  { n: "Cully", la: 46.4880, lo: 6.7300, pays: "CH", mail: "cully@sisl.ch" },
+  { n: "Rivaz", la: 46.4760, lo: 6.7790, pays: "CH" },
+  { n: "St-Saphorin", la: 46.4730, lo: 6.7960, pays: "CH" },
+  { n: "Vevey-Sentinelle", la: 46.4600, lo: 6.8400, pays: "CH", mail: "vevey-sentinelle@sisl.ch", web: "https://www.sauvetage-vevey-sentinelle.ch", lieu: "Quai Ansermet" },
+  { n: "Vevey-Vétéran", la: 46.4620, lo: 6.8470, pays: "CH" },
+  { n: "La Tour-de-Peilz", la: 46.4520, lo: 6.8580, pays: "CH" },
+  { n: "Clarens", la: 46.4380, lo: 6.8930, pays: "CH" },
+  { n: "Montreux", la: 46.4330, lo: 6.9100, pays: "CH", tel: "021 963 75 30", mail: "montreux032@gmail.com", web: "https://www.sauvetage-montreux.ch", lieu: "Quai de Vernex" },
+  { n: "Territet", la: 46.4220, lo: 6.9220, pays: "CH" },
+  { n: "Villeneuve", la: 46.3970, lo: 6.9270, pays: "CH", web: "https://www.sauvetage-villeneuve.ch" },
+  { n: "Le Bouveret", la: 46.3860, lo: 6.8560, pays: "CH" },
+  { n: "St-Gingolph", la: 46.3930, lo: 6.8050, pays: "CH", mail: "info@st-gingolph-sisl.com" },
+  { n: "Bret-Locum", la: 46.3980, lo: 6.7800, pays: "FR" },
+  { n: "Meillerie", la: 46.4070, lo: 6.7230, pays: "FR" },
+  { n: "Lugrin-Tourronde", la: 46.4040, lo: 6.6550, pays: "FR" },
+  { n: "Évian", la: 46.4020, lo: 6.5900, pays: "FR", tel: "+33 4 50 75 27 09", mail: "evian@sisl.ch", lieu: "Quai Paul-Léger" },
+  { n: "Amphion-Publier", la: 46.3990, lo: 6.5280, pays: "FR" },
+  { n: "Thonon", la: 46.3760, lo: 6.4800, pays: "FR", mail: "sauvetage.thonon@wanadoo.fr", lieu: "Port de Rives" },
+  { n: "Sciez", la: 46.3420, lo: 6.3880, pays: "FR" },
+  { n: "Yvoire", la: 46.3720, lo: 6.3260, pays: "FR", tel: "+33 4 50 72 84 86", mail: "secretariat.sauvetage.yvoire@gmail.com", lieu: "Quai Léopold-Thorens" }
+];
+SISL.forEach(function (x) { var o = el("option"); o.value = x.n; $("scDl").appendChild(o); });
+function telHref(t) { var d = t.replace(/[^0-9+]/g, ""); if (d.charAt(0) === "0" && d.charAt(1) !== "0") d = "+41" + d.slice(1); return "tel:" + d; }
+function scCard(x, pos, big) {
+  var c = el("div", "card sccard" + (big ? " near" : "")), h = el("div", "schd");
+  h.appendChild(el("b", 0, "Sauvetage " + x.n + (x.pays === "FR" ? " (France)" : "")));
+  h.appendChild(el("span", "mu", km(pos.lat, pos.lon, x.la, x.lo).toFixed(1).replace(".", ",") + " km")); c.appendChild(h);
+  if (x.lieu) c.appendChild(el("div", "mu", x.lieu + (x.h24 ? " · joignable 24 h/24" : "")));
+  var mem = SC.filter(function (s) { return norm(s.nom) === norm(x.n); })[0], tel = x.tel || (mem && mem.tel);
+  var A = el("div", "acts");
+  if (tel) { var t = el("a", big ? "p" : 0, "Appeler " + tel); t.href = telHref(tel); A.appendChild(t); }
+  if (x.mail) { var m = el("a", 0, "E-mail"); m.href = "mailto:" + x.mail; A.appendChild(m); }
+  if (x.web) { var w = el("a", 0, "Site"); w.href = x.web; w.target = "_blank"; w.rel = "noopener"; A.appendChild(w); }
+  var g = el("a", 0, "Y aller"); g.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.la + "," + x.lo; g.target = "_blank"; g.rel = "noopener"; A.appendChild(g);
+  c.appendChild(A);
+  if (!x.tel && mem) c.appendChild(el("div", "mu", "Numéro ajouté par un membre, à vérifier."));
+  if (!tel && !x.mail && !x.web) c.appendChild(el("div", "mu", "Pas de contact public : en cas de besoin, le 117 alerte cette section."));
+  return c;
 }
+function renderSc() {
+  var pos = pnPos(), S = SISL.slice().sort(function (a, b) { return km(pos.lat, pos.lon, a.la, a.lo) - km(pos.lat, pos.lon, b.la, b.lo); });
+  $("scWhere").textContent = gp ? "Depuis votre position GPS." : "Depuis " + pos.nom + ". Utilisez le GPS ou choisissez une autre zone plus haut.";
+  var N = $("scNear"); N.textContent = ""; S.slice(0, 3).forEach(function (x, i) { N.appendChild(scCard(x, pos, i === 0)); });
+  var L = $("scAll"); L.textContent = ""; S.slice(3).forEach(function (x) { L.appendChild(scCard(x, pos, false)); });
+  var M = $("scList"); M.textContent = "";
+  SC.slice().sort(function (a, b) { return a.nom.localeCompare(b.nom); }).forEach(function (s) { var d = el("div"); d.appendChild(document.createTextNode(s.nom + " : ")); var a = el("a", 0, s.tel); a.href = telHref(s.tel); a.style.color = "var(--ac)"; d.appendChild(a); M.appendChild(d); });
+  if (!M.firstChild) M.appendChild(el("div", "mu", "Aucun numéro ajouté par les membres pour l’instant."));
+}
+$("scAllBtn").onclick = function () { var L = $("scAll"); L.hidden = !L.hidden; this.textContent = L.hidden ? "Voir les 34 sections" : "Masquer les autres sections"; };
 $("scSave").onclick = function () {
   pnMsg(); if (!guestOk(function () { $("scSave").onclick(); }, $("pnMsg"))) return;
   var n = $("scName").value.trim(), t = $("scTel").value.trim();
