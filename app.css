@@ -477,3 +477,6 @@ details.acc>summary .mu{font-size:13px}
 details.acc[open]{padding-bottom:14px}details.acc[open]>:not(summary){margin-left:16px;margin-right:16px}
 details.acc[hidden]{display:none}
 .pfinv{margin:12px 0}
+.hero.art .hero-ph{background-position:center bottom;background-color:#0a2740}
+.hero.art .hero-t,.hero.art .hero-s{text-shadow:0 2px 12px rgba(4,16,30,.45)}
+.hero.art::before{background:linear-gradient(180deg,rgba(6,22,36,.2) 0%,rgba(6,22,36,0) 30%,rgba(6,22,36,0) 85%,rgba(6,22,36,.3) 100%)}

@@ -309,7 +309,7 @@ function renderHome() {
 }
 /* bannière animée */
 var heroRunning = false;
-function heroStart() { if (!heroRunning && !$("v-accueil").hidden) { heroRunning = true; heroSize(); requestAnimationFrame(heroDraw); } }
+function heroStart() { if (document.querySelector(".hero").classList.contains("photo")) return; if (!heroRunning && !$("v-accueil").hidden) { heroRunning = true; heroSize(); requestAnimationFrame(heroDraw); } }
 var cv = $("heroCv"), cx = cv.getContext("2d"), t0 = performance.now(), still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function heroSize() { var r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1; cv.width = r.width * d; cv.height = r.height * d; cx.setTransform(d, 0, 0, d, 0, 0); }
 function ridge(w, base, amp, seed, col) { cx.beginPath(); cx.moveTo(0, base); for (var x = 0; x <= w; x += 6) { var y = base - amp * (.55 * Math.sin(x * .012 + seed) + .3 * Math.sin(x * .031 + seed * 2) + .15 * Math.sin(x * .07 + seed * 3)); y -= amp * .9 * Math.max(0, 1 - Math.abs(x - w * (.62 + seed * .05)) / (w * .18)); cx.lineTo(x, y); } cx.lineTo(w, base + 400); cx.lineTo(0, base + 400); cx.closePath(); cx.fillStyle = col; cx.fill(); }
@@ -334,7 +334,7 @@ window.addEventListener("resize", heroSize); document.addEventListener("visibili
 function photoUrl(path) { return sb ? sb.storage.from("photos").getPublicUrl(path).data.publicUrl : ""; }
 function applyBanner() {
   var h = document.querySelector(".hero"), p = REG.banniere;
-  if (p) { $("heroPh").style.backgroundImage = 'url("' + photoUrl(p) + '")'; h.classList.add("photo"); } else { h.classList.remove("photo"); heroStart(); }
+  $("heroPh").style.backgroundImage = 'url("' + (p ? photoUrl(p) : "fond-accueil.svg?v=1") + '")'; h.classList.add("photo"); h.classList.toggle("art", !p);
 }
 $("phIn").onchange = function () {
   var f = this.files && this.files[0], inp = this; if (!f || !isAdmin) return; var lb = $("phBtn"); lb.firstChild.textContent = "Envoi… ";
