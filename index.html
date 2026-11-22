@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=23">
+<link rel="stylesheet" href="app.css?v=24">
 </head>
 <body>
 
@@ -100,7 +100,7 @@
 <p class="lead">Elle vous identifie dans Le Ponton et dans les alertes de panne. Elle est visible par les membres.</p>
 <div class="card pfph"><span class="pfav" id="pfAv">?</span><div><b>Photo de profil</b><div class="mu" id="pfPhSt"></div>
 <div class="row" style="margin-top:8px"><label class="btn sm" id="pfPhLb">Choisir une photo<input type="file" id="pfPhIn" accept="image/*" hidden></label><button class="btn g sm" id="pfPhRm" hidden>Retirer</button></div></div></div>
-<div class="card" id="pfQueueBox" hidden><b>Photos de profil à vérifier (admin)</b><div id="pfQueue"></div></div>
+<div class="card" id="pfQueueBox" hidden><b>Photos de profil des membres (admin)</b><div class="mu">En cas d'abus, vous pouvez retirer une photo.</div><div id="pfQueue"></div></div>
 <div class="card">
 <label class="l" for="pPseudo">Prénom ou pseudo *</label><input class="f" id="pPseudo" maxlength="24" placeholder="ex. Manu">
 <label class="l" for="pBoat">Nom du bateau</label><input class="f" id="pBoat" maxlength="30" placeholder="ex. Mistral">
@@ -453,9 +453,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=23"></script>
+<script src="config.js?v=24"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>

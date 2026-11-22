@@ -28,7 +28,7 @@ var SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [],
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
-function photoOf(id) { var p = P[id]; return p && p.photo && (p.photo_ok || id === uid || isAdmin) ? photoUrl(p.photo) : ""; }
+function photoOf(id) { var p = P[id]; return p && p.photo ? photoUrl(p.photo) : ""; }
 function putPhoto(a, id) { var u = photoOf(id); if (u) { a.textContent = ""; a.style.backgroundImage = "url(\"" + u + "\")"; a.classList.add("ph"); } return a; }
 function badge(id, fb) { var b = el("span", "badge"); b.appendChild(putPhoto(el("span", "av", initial(id)), id)); b.appendChild(document.createTextNode(nameOf(id, fb))); return b; }
 
@@ -794,8 +794,7 @@ function drawPfPhoto() {
   var p = me(), A = $("pfAv"); A.className = "pfav"; A.style.backgroundImage = ""; A.textContent = p ? initial(uid) : "?";
   if (p) putPhoto(A, uid);
   $("pfPhRm").hidden = !(p && p.photo);
-  $("pfPhSt").textContent = !p ? "Enregistrez d'abord votre fiche, puis ajoutez une photo." : !p.photo ? "Une photo de vous ou de votre bateau. Elle est vérifiée avant d'être visible par les autres membres."
-    : p.photo_ok ? "Votre photo est visible par les membres." : "Photo en attente de vérification : vous seul la voyez pour l'instant.";
+  $("pfPhSt").textContent = !p ? "Enregistrez d'abord votre fiche, puis ajoutez une photo." : !p.photo ? "Une photo de vous ou de votre bateau, visible par les membres." : "Votre photo est visible par les membres.";
   $("pfPhLb").hidden = !p;
   drawPfQueue();
 }
@@ -804,7 +803,7 @@ $("pfPhIn").onchange = function () {
   var old = me().photo, path = uid + "/profil-" + Date.now() + ".jpg"; $("pfPhSt").textContent = "Envoi de la photo…";
   squareJpeg(f, 400).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
     .then(function (r) { if (r.error) throw r.error; return sb.from("profils").update({ photo: path }).eq("id", uid); })
-    .then(function (r) { if (r.error) throw r.error; P[uid].photo = path; P[uid].photo_ok = false; if (old) sb.storage.from("photos").remove([old]); toast("Photo envoyée. Elle sera visible après vérification."); renderAll(); drawPfPhoto(); })
+    .then(function (r) { if (r.error) throw r.error; P[uid].photo = path; P[uid].photo_ok = true; if (old) sb.storage.from("photos").remove([old]); toast("Photo de profil mise à jour !"); renderAll(); drawPfPhoto(); })
     .catch(function () { $("pfPhSt").textContent = "Envoi impossible. Réessayez avec une autre photo."; });
 };
 $("pfPhRm").onclick = function () {
@@ -812,15 +811,14 @@ $("pfPhRm").onclick = function () {
   sb.from("profils").update({ photo: "" }).eq("id", uid).then(function (r) { if (r.error) { toast("Action impossible."); return; } P[uid].photo = ""; sb.storage.from("photos").remove([old]); renderAll(); drawPfPhoto(); });
 };
 function drawPfQueue() {
-  var Q2 = $("pfQueue"); Q2.textContent = ""; var ids = isAdmin ? Object.keys(P).filter(function (k) { return P[k].photo && !P[k].photo_ok; }) : [];
+  var Q2 = $("pfQueue"); Q2.textContent = ""; var ids = isAdmin ? Object.keys(P).filter(function (k) { return k !== uid && P[k].photo; }) : [];
   $("pfQueueBox").hidden = !ids.length;
   ids.forEach(function (k) {
     var c = el("div", "pfq"), a = el("span", "pfav sm"); putPhoto(a, k); c.appendChild(a);
-    var mid = el("div"); mid.appendChild(el("b", 0, P[k].pseudo)); var R = el("div", "row");
-    var ok = el("button", "btn sm", "Valider"), no = el("button", "btn g sm", "Refuser");
-    ok.onclick = function () { ok.disabled = true; sb.rpc("valider_photo_profil", { membre: k, ok: true }).then(function (r) { if (r.error) { toast("Erreur"); ok.disabled = false; return; } P[k].photo_ok = true; toast("Photo validée"); renderAll(); drawPfPhoto(); }); };
-    no.onclick = function () { no.disabled = true; var path = P[k].photo; sb.rpc("valider_photo_profil", { membre: k, ok: false }).then(function (r) { if (r.error) { toast("Erreur"); no.disabled = false; return; } sb.storage.from("photos").remove([path]); P[k].photo = ""; toast("Photo refusée et supprimée"); renderAll(); drawPfPhoto(); }); };
-    R.appendChild(ok); R.appendChild(no); mid.appendChild(R); c.appendChild(mid); Q2.appendChild(c);
+    var mid = el("div"); mid.appendChild(el("b", 0, P[k].pseudo));
+    var no = el("button", "btn g sm", "Retirer cette photo"); no.style.marginTop = "6px";
+    no.onclick = function () { if (!confirm("Retirer la photo de profil de " + P[k].pseudo + " ?")) return; no.disabled = true; var path = P[k].photo; sb.rpc("valider_photo_profil", { membre: k, ok: false }).then(function (r) { if (r.error) { toast("Erreur"); no.disabled = false; return; } sb.storage.from("photos").remove([path]); P[k].photo = ""; toast("Photo retirée"); renderAll(); drawPfPhoto(); }); };
+    mid.appendChild(no); c.appendChild(mid); Q2.appendChild(c);
   });
 }
 
