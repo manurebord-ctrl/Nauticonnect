@@ -400,3 +400,9 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .wa-tag.on{background:#dff5e8;color:#1f7a47}
 @media (prefers-color-scheme:dark){.wa-tag.on{background:#183a29;color:#7fe0a9}}
 #pvList .sub{margin:16px 2px 4px}
+.wa-add{font-size:13px;font-weight:800;padding:7px 12px;border-radius:16px;background:var(--ac);color:var(--acx);white-space:nowrap}
+.wa-add.done{background:var(--bg);color:var(--mu);font-weight:700}
+.sgrow{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}.sgrow::-webkit-scrollbar{display:none}
+.sg{flex:none;width:132px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px 8px 10px}
+.sg .wa-av{width:58px;height:58px;font-size:22px}.sg b{font-size:15px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sg .mu{font-size:12px}
+.sg .btn{width:100%;margin:6px 0 0}

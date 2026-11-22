@@ -534,6 +534,8 @@ function memberCard(id, extra) {
 var mbQ = "";
 $("mbSearch").oninput = function () { mbQ = this.value; renderMembers(); };
 var mbF = "tous", mbMore = false;
+/* amis d'amis : visibles via la table amities quand elle est lisible */
+function fof(f, id) { return FS.some(function (x) { return x.statut === "ok" && ((x.de === f && x.a === id) || (x.a === f && x.de === id)); }); }
 function onWater(id) { return openNow().some(function (x) { return x.id === id; }); }
 function memberRow(id) {
   var pr = P[id] || {}, r = rel(id), it = el("button", "wa-it");
@@ -542,7 +544,9 @@ function memberRow(id) {
   var sub = el("span", "wa-pv", [pr.type, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect"); mid.appendChild(sub); it.appendChild(mid);
   var rt = el("span", "wa-ir");
   if (onWater(id)) rt.appendChild(el("span", "wa-tag on", "Sur l'eau"));
-  if (r === "ami") rt.appendChild(el("span", "wa-tag", "Ami")); else if (r === "recu") rt.appendChild(el("span", "wa-tag", "Veut être ami"));
+  var fb = el("span", "wa-add" + (r === "ami" || r === "envoye" ? " done" : ""), r === "ami" ? "Ami ✓" : r === "envoye" ? "Envoyée" : r === "recu" ? "Accepter" : "+ Ajouter");
+  if (!r || r === "recu") fb.onclick = function (e) { e.stopPropagation(); fb.textContent = "…"; befriend(id); };
+  rt.appendChild(fb);
   it.appendChild(rt); it.onclick = function () { openThread(id); }; return it;
 }
 function renderMembers() {
@@ -565,6 +569,11 @@ function renderMembers() {
   res.slice(0, max).forEach(function (id) { L.appendChild(memberRow(id)); });
   if (res.length > max) { var m = el("button", "linkb", "Voir les " + res.length + " membres"); m.onclick = function () { mbMore = true; renderMembers(); }; L.appendChild(m); }
   $("rnThreads").hidden = !!words.length;
+  var S = $("mbSug"); S.textContent = "";
+  var sug = words.length ? [] : ids.filter(function (id) { return !rel(id) && ((my.port && P[id].port === my.port) || onWater(id) || friendIds().some(function (f) { return fof(f, id); })); }).slice(0, 10);
+  sug.forEach(function (id) { var pr = P[id], c = el("div", "sg"), a = avatar(id); c.appendChild(a); c.appendChild(el("b", 0, pr.pseudo)); c.appendChild(el("span", "mu", my.port && pr.port === my.port ? "Même port" : onWater(id) ? "Sur l'eau" : "Ami d'un ami"));
+    var b = el("button", "btn sm", "Ajouter"); b.onclick = function () { b.disabled = true; b.textContent = "Envoyée"; befriend(id); }; c.appendChild(b); c.onclick = function (e) { if (e.target !== b) openThread(id); }; S.appendChild(c); });
+  $("mbSugH").hidden = !sug.length;
   var R = $("mbReq"); R.textContent = ""; pendingIn().forEach(function (id) { if (P[id]) R.appendChild(memberCard(id, el("div", "okm", "veut devenir votre ami"))); });
   $("mbReqH").hidden = !R.firstChild;
 }
