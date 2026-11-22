@@ -147,7 +147,7 @@ function guestOk(retry, msgEl) {
 }
 var prevView = "accueil", lastView = "accueil";
 function route() {
-  var h = cur(); if (h !== lastView) { prevView = lastView; lastView = h; }
+  var h = cur(); if (h !== lastView) { prevView = lastView; lastView = h; if (SEL) selEnd(true); }
   if (h !== "compte" && prevView === "compte") { try { sessionStorage.removeItem("nc-why"); } catch (e) {} }
   if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h, WHYV[h]); return; }
   VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
@@ -691,7 +691,7 @@ function seenMap() { try { return JSON.parse(ls("nc-seenmap") || "{}"); } catch 
 function seenOf(id) { var m = seenMap(); return m[id] || +ls("nc-seen") || 0; }
 function markThread(id) { var m = seenMap(); m[id] = Date.now(); ls("nc-seenmap", JSON.stringify(m)); }
 function markRead() { if (openWith) markThread(openWith); }
-function threads() { var T = {}; M.forEach(function (m) { var o = m.de === uid ? m.a : m.a === uid ? m.de : null; if (!o) return; (T[o] = T[o] || []).push(m); }); return T; }
+function threads() { var T = {}, C = {}; M.forEach(function (m) { var o = m.de === uid ? m.a : m.a === uid ? m.de : null; if (!o) return; if (C[o] == null) C[o] = +ls("nc-clr-" + o) || 0; if (ts(m.t) <= C[o]) return; (T[o] = T[o] || []).push(m); }); return T; }
 function unreadOf(id, list) { var s = seenOf(id); return (list || []).filter(function (m) { return m.de === id && ts(m.t) > s; }).length; }
 function unread() { if (!uid) return 0; var T = threads(), n = 0; Object.keys(T).forEach(function (k) { if (!(cur() === "ponton" && waTab === "prive" && k === openWith)) n += unreadOf(k, T[k]); }); return n; }
 function slUnread() { var s = +ls("nc-slseen") || 0; return SL.filter(function (m) { return m.de !== uid && ts(m.t) > s; }).length; }
@@ -713,7 +713,7 @@ function drawBubbles(box, list, group) {
   list.forEach(function (m) {
     var dk = dayKey(m.t); if (dk !== lastDay) { box.appendChild(el("div", "wa-day", dayLabel(m.t))); lastDay = dk; lastDe = ""; }
     var mine = m.de === uid, cont = m.de === lastDe && ts(m.t) - lastT < 5 * 6e4;
-    var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : "")); row.id = (group ? "sl-" : "pm-") + m.id;
+    var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : "") + (isSel(m, group) ? " sel" : "")); row.id = (group ? "sl-" : "pm-") + m.id;
     if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de]) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
     var b = el("div", "wa-b");
     if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
@@ -723,7 +723,7 @@ function drawBubbles(box, list, group) {
     if (group && m.photo) b.appendChild(likeRow(m));
     if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
     var meta = el("small", "wa-meta", hhmm(m.t)); if (mine && !group) meta.appendChild(el("span", "wa-tick" + (m.lu ? " lu" : ""), " ✓✓")); b.appendChild(meta);
-    b.onclick = function () { bubbleMenu(b, m, group, mine); };
+    bindBubble(b, row, m, group, mine);
     row.appendChild(b); box.appendChild(row); lastDe = m.de; lastT = ts(m.t);
   });
   box.dataset.n = String(list.length);
@@ -769,8 +769,10 @@ function bubbleMenu(b, m, group, mine) {
   if (!me()) return;
   var M = el("div", "wa-menu"), add = function (t, f, cls) { var x = el("button", cls || 0, t); x.type = "button"; x.onclick = function (e) { e.stopPropagation(); M.remove(); f(); }; M.appendChild(x); };
   add("Répondre", function () { setReply(group ? "salon" : "prive", m); });
+  if (canSel(m, group)) add("Sélectionner", function () { selStart(m, group); });
+  if (!group && mine) add("Supprimer", function () { delMsgs([m.id], false); }, "red");
   if (group && m.de !== uid && P[m.de]) add("Message privé", function () { openThread(m.de); });
-  if (group && (mine || isAdmin)) add("Supprimer", function () { sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else { if (m.photo) sb.storage.from("photos").remove([m.photo]); load("salon"); } }); }, "red");
+  if (group && (mine || isAdmin)) add("Supprimer", function () { delMsgs([m.id], true); }, "red");
   if (group && !mine && real()) add("Signaler", function () { if (!confirm("Signaler ce message à l'admin ?")) return; sb.from("signalements").insert({ quoi: "salon", ref: String(m.id) }).then(function () { toast("Signalé, merci"); }); });
   b.appendChild(M);
 }
@@ -882,6 +884,7 @@ function renderThreads() {
 var marking = {};
 function renderConv() {
   var k = openWith, L = threads()[k] || [];
+  $("pvClr").hidden = !L.length;
   var W = $("pvWho"); W.textContent = ""; W.appendChild(avatar(k)); var t = el("span", "wa-ti"); t.appendChild(el("b", 0, (P[k] && P[k].pseudo) || "Plaisancier")); var pr = P[k] || {}; t.appendChild(el("span", 0, [pr.bateau, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); W.appendChild(t);
   var f = el("button", "wa-fr", rel(k) === "ami" ? "Ami" : rel(k) === "envoye" ? "Demande envoyée" : rel(k) === "recu" ? "Accepter en ami" : "Ajouter en ami"); f.onclick = function () { befriend(k); }; W.appendChild(f);
   drawBubbles($("pvMsgs"), L, false); markThread(k);
@@ -889,7 +892,7 @@ function renderConv() {
   var Pp = $("pvPre"); Pp.textContent = ""; Pp.hidden = L.length > 0; PRESETS.forEach(function (x) { var b = el("button", "wa-chip", x); b.onclick = function () { sendMsg(k, x); }; Pp.appendChild(b); });
 }
 /* ---- onglet Amis ---- */
-function goTab(t) { waTab = t; ls("nc-watab", t); openWith = null; ls("nc-open", ""); renderPonton(); window.scrollTo(0, 0); }
+function goTab(t) { selEnd(); waTab = t; ls("nc-watab", t); openWith = null; ls("nc-open", ""); renderPonton(); window.scrollTo(0, 0); }
 function pendingOut() { return FS.filter(function (f) { return f.statut === "attente" && f.de === uid; }).map(function (f) { return f.a; }); }
 function friendRow(id) {
   var pr = P[id] || {}, it = el("button", "wa-it"), T = threads()[id] || [], last = T[T.length - 1], p = rPos();
@@ -2175,4 +2178,55 @@ $("modClear").onclick = function () {
     SL = []; LK = []; m.className = "okm"; m.textContent = r.data + " message" + (r.data > 1 ? "s" : "") + " effacé" + (r.data > 1 ? "s" : "") + ". Le salon est vide.";
     load("salon"); load("likes"); renderAll();
   });
+};
+
+/* ================= SÉLECTION DE MESSAGES (façon WhatsApp) ================= */
+var SEL = null; /* { group: bool, ids: {id: message} } */
+function canSel(m, group) { return !!me() && (m.de === uid || (group && isAdmin)); }
+function isSel(m, group) { return !!(SEL && SEL.group === !!group && SEL.ids[m.id]); }
+function bindBubble(b, row, m, group, mine) {
+  var t = null, lp = false;
+  function cancel() { clearTimeout(t); t = null; }
+  b.addEventListener("pointerdown", function () { lp = false; cancel(); if (!canSel(m, group)) return; t = setTimeout(function () { lp = true; if (navigator.vibrate) navigator.vibrate(30); if (SEL && SEL.group === !!group) selToggle(m); else selStart(m, group); }, 480); });
+  ["pointerup", "pointerleave", "pointercancel", "pointermove"].forEach(function (ev) { b.addEventListener(ev, function (e) { if (ev === "pointermove" && e.pointerType === "mouse") return; if (ev !== "pointerup" || !lp) cancel(); }); });
+  b.addEventListener("contextmenu", function (e) { if (canSel(m, group)) e.preventDefault(); });
+  /* après un appui long ou en mode sélection, on bloque les clics sur le nom, la photo, etc. */
+  b.addEventListener("click", function (e) { if ((lp || (SEL && SEL.group === !!group)) && e.target !== b) { e.stopPropagation(); e.preventDefault(); b.onclick(e); } }, true);
+  b.onclick = function (e) {
+    if (lp) { lp = false; return; }
+    if (e.target.closest && e.target.closest(".wa-menu")) return;
+    if (SEL && SEL.group === !!group) { if (canSel(m, group)) selToggle(m); else toast(group ? "Vous ne pouvez supprimer que vos messages." : "Seuls vos propres messages peuvent être supprimés."); return; }
+    bubbleMenu(b, m, group, mine);
+  };
+}
+function selStart(m, group) { var old = document.querySelector(".wa-menu"); if (old) old.remove(); SEL = { group: !!group, ids: {} }; SEL.ids[m.id] = m; selUI(); }
+function selToggle(m) { if (SEL.ids[m.id]) delete SEL.ids[m.id]; else SEL.ids[m.id] = m; if (!Object.keys(SEL.ids).length) { selEnd(); return; } selUI(); }
+function selEnd(quiet) { SEL = null; $("selBar").hidden = true; document.documentElement.classList.remove("selecting"); if (!quiet && cur() === "ponton") renderPonton(); }
+function selUI() {
+  var n = Object.keys(SEL.ids).length;
+  $("selN").textContent = n + " sélectionné" + (n > 1 ? "s" : "");
+  $("selBar").hidden = false; document.documentElement.classList.add("selecting");
+  Array.prototype.forEach.call(document.querySelectorAll(".wa-row"), function (r) { var id = r.id.replace(/^(sl|pm)-/, ""); var on = !!SEL.ids[id] && r.id.indexOf(SEL.group ? "sl-" : "pm-") === 0; r.classList.toggle("sel", on); });
+}
+$("selX").onclick = function () { selEnd(); };
+$("selDel").onclick = function () {
+  if (!SEL) return; var ids = Object.keys(SEL.ids), n = ids.length;
+  if (!confirm("Supprimer " + n + " message" + (n > 1 ? "s" : "") + " pour tout le monde ?")) return;
+  delMsgs(ids.map(Number), SEL.group, ids.map(function (k) { return SEL.ids[k]; }));
+};
+function delMsgs(ids, group, list) {
+  if (!ids.length) return;
+  list = list || (group ? SL : M).filter(function (m) { return ids.indexOf(m.id) >= 0; });
+  sb.from(group ? "salon" : "messages").delete().in("id", ids).then(function (r) {
+    if (r.error) { toast("Suppression impossible."); return; }
+    if (group) { var ph = list.filter(function (m) { return m.photo; }).map(function (m) { return m.photo; }); if (ph.length) sb.storage.from("photos").remove(ph); SL = SL.filter(function (m) { return ids.indexOf(m.id) < 0; }); }
+    else M = M.filter(function (m) { return ids.indexOf(m.id) < 0; });
+    toast(ids.length > 1 ? ids.length + " messages supprimés" : "Message supprimé");
+    selEnd(); load(group ? "salon" : "messages");
+  });
+}
+$("pvClr").onclick = function () {
+  var k = openWith; if (!k) return;
+  if (!confirm("Effacer cette discussion de votre téléphone ? L'autre personne la garde. Vos propres messages restent visibles chez elle.")) return;
+  ls("nc-clr-" + k, String(Date.now())); toast("Discussion effacée"); renderPonton();
 };
