@@ -28,6 +28,8 @@ function preview() { return realAdmin && viewAs !== "admin"; }
 function real() { return !!uid && !guest && !(realAdmin && viewAs === "invite"); }
 
 /* ---------------- données ---------------- */
+/* sorties : mises en pause (true pour les réactiver) */
+var SORTIES_ON = false;
 var SO = [], SI = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
@@ -56,8 +58,8 @@ var Q = {
   evenements: function () { return sb.from("evenements").select("*").order("debut").limit(300); },
   amities: function () { return real() ? sb.from("amities").select("*") : null; },
   partenaires: function () { return sb.from("partenaires").select("*").order("t"); },
-  sorties: function () { return sb.from("sorties").select("*").order("jour").limit(300); },
-  sortie_inscrits: function () { return sb.from("sortie_inscrits").select("*").limit(5000); }
+  sorties: function () { return SORTIES_ON ? sb.from("sorties").select("*").order("jour").limit(300) : null; },
+  sortie_inscrits: function () { return SORTIES_ON ? sb.from("sortie_inscrits").select("*").limit(5000) : null; }
 };
 function store(t, rows) {
   rows = rows || [];
@@ -106,7 +108,7 @@ function loadAll() { loadBadges(); return Promise.all(Object.keys(Q).map(load));
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements", "sorties"];
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements"].concat(SORTIES_ON ? ["sorties"] : []);
 var NEEDS_AUTH = { profil: 1 };
 function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "accueil" : h; }
 function goAuth(ret, why) { try { sessionStorage.setItem("nc-ret", ret || cur()); sessionStorage.setItem("nc-why", why || ""); } catch (e) {} location.hash = "compte"; }
@@ -194,7 +196,7 @@ function setAuthMode(m) {
   var reset = m === "reset";
   $("auTabs").hidden = reset;
   $("auTitle").textContent = reset ? "Nouveau mot de passe" : m === "up" ? "Rejoindre l'équipage" : "Bon retour à bord";
-  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Gratuit. Il vous permet d'écrire sur le Ponton, de recevoir l'alerte vaudaire, d'aider en cas de panne, de rejoindre les sorties, de profiter des offres membres chez les restos partenaires et de partager vos bons plans. La météo, les cartes et les infos restent libres d'accès." : "Connectez-vous avec votre e-mail.";
+  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Gratuit. Il vous permet d'écrire sur le Ponton, de recevoir l'alerte vaudaire, d'aider en cas de panne, de profiter des offres membres chez les restos partenaires et de partager vos bons plans. La météo, les cartes et les infos restent libres d'accès." : "Connectez-vous avec votre e-mail.";
   var why = ""; try { why = sessionStorage.getItem("nc-why") || ""; } catch (e) {}
   var W = $("auWhy"); W.hidden = reset || !why || real(); W.textContent = why;
   $("auGo").textContent = reset ? "Enregistrer le mot de passe" : m === "up" ? "Créer mon compte" : "Me connecter";
@@ -337,7 +339,7 @@ function renderHome() {
     var st = el("div", "stack"); op.slice(0, 5).forEach(function (x, i) { var a = el("span", 0, initial(x.id)); a.style.background = AVC[i % AVC.length]; st.appendChild(a); }); N.appendChild(st);
     var t = op.slice(0, 2).map(function (x) { return (P[x.id] && P[x.id].pseudo) || "Un plaisancier"; }).join(", ");
     N.appendChild(el("p", 0, t + (op.length > 2 ? " et " + (op.length - 2) + " autre" + (op.length > 3 ? "s" : "") : "") + (op.length > 1 ? " ont" : " a") + " hissé le pavillon."));
-  } else N.appendChild(el("p", 0, "Personne n'a encore hissé le pavillon. Lancez la première sortie !"));
+  } else N.appendChild(el("p", 0, "Personne n'a encore hissé le pavillon. Soyez le premier !"));
   var c = $("ctaMain"), p = me();
   c.textContent = p ? "Hisser le pavillon" : "Rejoindre l'équipage"; c.href = p ? "#ponton" : real() ? "#profil" : "#compte";
   var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
@@ -1982,6 +1984,7 @@ function renderSorties() {
 }
 function renderHomeSorties() {
   var H = $("homeSo"); if (!H) return; H.textContent = "";
+  document.querySelector(".hso").hidden = !SORTIES_ON; if (!SORTIES_ON) return;
   var up = sb ? soUp() : [];
   up.slice(0, 2).forEach(function (x) { H.appendChild(soCard(x, true)); });
   if (!up.length) H.appendChild(el("p", "mu", "Aucune sortie prévue. Proposez la première !"));
@@ -2031,10 +2034,15 @@ function welcome(ret) {
       r.appendChild(b); s2.appendChild(r);
     });
   }
+  if (SORTIES_ON) {
   var s3 = step(L.length ? 3 : 2, "Retrouvez-vous sur l'eau", soUp().length ? soUp().length + " sortie" + (soUp().length > 1 ? "s" : "") + " prévue" + (soUp().length > 1 ? "s" : "") + " : rejoignez-en une ou proposez la vôtre." : "Proposez une sortie, ou dites bonjour sur le Ponton.");
   var r3 = el("div", "row"), a = el("button", "btn sm", "Voir les sorties"), b2 = el("button", "btn g sm", "Ouvrir le chat");
   a.onclick = function () { md.close(); location.hash = "sorties"; }; b2.onclick = function () { md.close(); location.hash = "ponton"; };
   r3.appendChild(a); r3.appendChild(b2); s3.appendChild(r3);
+  } else {
+    var s3b = step(L.length ? 3 : 2, "Dites bonjour sur le Ponton", "Le chat des plaisanciers du Léman : présentez-vous et votre bateau.");
+    var c3 = el("button", "btn sm", "Ouvrir le chat"); c3.onclick = function () { md.close(); location.hash = "ponton"; }; s3b.appendChild(c3);
+  }
   var go = el("button", "btn", "C'est parti"); go.style.marginTop = "6px"; go.onclick = function () { md.close(); location.hash = ret && ret !== "profil" ? ret : ""; }; bx.appendChild(go);
 }
 
@@ -2049,10 +2057,11 @@ function badgeList(id) {
   return [
     ["fond", "Membre fondateur", "Faire partie des 100 premiers membres", b.rang > 0 && b.rang <= 100, b.rang ? "Membre n° " + b.rang : ""],
     ["aide", b.aides >= 5 ? "Sauveteur du lac" : "Entraide", "Proposer son aide à un bateau en panne", b.aides >= 1, b.aides ? "A répondu à " + b.aides + " appel" + (b.aides > 1 ? "s" : "") + " à l'aide" : ""],
+  ].concat(SORTIES_ON ? [
     ["orga", "Capitaine de sorties", "Organiser une sortie", b.orga >= 1, b.orga ? b.orga + " sortie" + (b.orga > 1 ? "s" : "") + " organisée" + (b.orga > 1 ? "s" : "") : ""],
-    ["equi", "Équipier fidèle", "Rejoindre 3 sorties", b.rejoint >= 3, b.rejoint ? b.rejoint + " sortie" + (b.rejoint > 1 ? "s" : "") + " rejointe" + (b.rejoint > 1 ? "s" : "") : ""],
+    ["equi", "Équipier fidèle", "Rejoindre 3 sorties", b.rejoint >= 3, b.rejoint ? b.rejoint + " sortie" + (b.rejoint > 1 ? "s" : "") + " rejointe" + (b.rejoint > 1 ? "s" : "") : ""]] : [], [
     ["repo", "Reporter du lac", "Partager 3 photos du lac", b.photos >= 3, b.photos ? b.photos + " photo" + (b.photos > 1 ? "s" : "") + " partagée" + (b.photos > 1 ? "s" : "") : ""]
-  ];
+  ]);
 }
 function badgeRow(id) {
   var got = badgeList(id).filter(function (x) { return x[3]; }); if (!got.length) return null;
@@ -2099,7 +2108,7 @@ function loadDash() {
     var ch = el("div", "dchart"), W = s.semaines || [], mx = Math.max.apply(null, W.map(function (w) { return w.n; }).concat([1]));
     W.forEach(function (w) { var c = el("div", "dcol"); c.appendChild(el("small", 0, String(w.n))); var bar = el("i"); bar.style.height = Math.max(3, Math.round(w.n / mx * 90)) + "px"; c.appendChild(bar); c.appendChild(el("span", 0, w.s)); ch.appendChild(c); });
     D.appendChild(ch);
-    tiles("Activité", [["messages salon (7 j)", s.salon7], ["messages privés (7 j)", s.prives7], ["sorties à venir", s.sorties], ["inscrits aux sorties", s.inscrits], ["alertes panne (30 j)", s.alertes30]]);
+    tiles("Activité", [["messages salon (7 j)", s.salon7], ["messages privés (7 j)", s.prives7], ].concat(SORTIES_ON ? [["sorties à venir", s.sorties], ["inscrits aux sorties", s.inscrits]] : [], [["alertes panne (30 j)", s.alertes30]]));
     tiles("Visites", [["visites (7 j)", s.visites7], ["nouveaux visiteurs (7 j)", s.nouvvis7]]);
     var SRC = { direct: "Accès direct", affiche: "Affiche QR", partage: "Contenu partagé", invitation: "Invitation d'un membre" };
     var src = s.sources || {}, ks = Object.keys(src).sort(function (a, b) { return src[b] - src[a]; });
