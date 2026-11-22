@@ -101,10 +101,16 @@ setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("p
 var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements"];
 var NEEDS_AUTH = { profil: 1 };
 function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "accueil" : h; }
-function goAuth(ret) { try { sessionStorage.setItem("nc-ret", ret || cur()); } catch (e) {} location.hash = "compte"; }
-function requireProfile(msgEl) {
+function goAuth(ret, why) { try { sessionStorage.setItem("nc-ret", ret || cur()); sessionStorage.setItem("nc-why", why || ""); } catch (e) {} location.hash = "compte"; }
+/* Consulter = libre. Participer (publier, voter, aider, notifications) = compte gratuit */
+function memberOk(msgEl, why) {
   if (!sb) { if (msgEl) msgEl.textContent = "L'appli n'est pas encore configurée."; return false; }
-  if (!real()) { goAuth(); return false; }
+  if (real()) return true;
+  goAuth(cur(), why); return false;
+}
+function requireProfile(msgEl, why) {
+  if (!sb) { if (msgEl) msgEl.textContent = "L'appli n'est pas encore configurée."; return false; }
+  if (!real()) { goAuth(cur(), why); return false; }
   if (!me()) { try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "profil"; toast("Créez d'abord votre fiche bateau"); return false; }
   return true;
 }
@@ -124,6 +130,7 @@ function guestOk(retry, msgEl) {
 var prevView = "accueil", lastView = "accueil";
 function route() {
   var h = cur(); if (h !== lastView) { prevView = lastView; lastView = h; }
+  if (h !== "compte" && prevView === "compte") { try { sessionStorage.removeItem("nc-why"); } catch (e) {} }
   if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h); return; }
   VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
   Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
@@ -178,7 +185,9 @@ function setAuthMode(m) {
   var reset = m === "reset";
   $("auTabs").hidden = reset;
   $("auTitle").textContent = reset ? "Nouveau mot de passe" : m === "up" ? "Rejoindre l'équipage" : "Bon retour à bord";
-  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Un compte sert uniquement au Ponton, le chat des plaisanciers. Tout le reste de l'appli est libre d'accès." : "Connectez-vous avec votre e-mail.";
+  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Gratuit. Il vous permet d'écrire sur le Ponton, de recevoir l'alerte vaudaire, d'aider en cas de panne et de partager avis, photos et bons plans. La météo, les cartes et les infos restent libres d'accès." : "Connectez-vous avec votre e-mail.";
+  var why = ""; try { why = sessionStorage.getItem("nc-why") || ""; } catch (e) {}
+  var W = $("auWhy"); W.hidden = reset || !why || real(); W.textContent = why;
   $("auGo").textContent = reset ? "Enregistrer le mot de passe" : m === "up" ? "Créer mon compte" : "Me connecter";
   $("auPassL").textContent = m === "in" ? "Mot de passe" : "Mot de passe (8 caractères min.)";
   $("auPass").autocomplete = m === "in" ? "current-password" : "new-password";
@@ -229,7 +238,7 @@ function onSession(s, ev) {
     if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { isAdmin = !!(r.data && r.data.length); if (isAdmin) load("photos"); renderAll(); });
     subscribeAll(); loadAll().then(function () { pushRefresh();
       if (real() && cur() === "compte" && authMode !== "reset") {
-        var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
+        var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); sessionStorage.removeItem("nc-why"); } catch (e) {}
         location.hash = me() ? (ret && ret !== "compte" ? ret : "") : (ret === "ponton" ? "ponton" : "profil");
       }
     });
@@ -266,7 +275,7 @@ $("pSave").onclick = function () {
     if (r.error) { m.textContent = "Enregistrement impossible : " + r.error.message; return; }
     P[uid] = Object.assign({}, P[uid], d); m.className = "okm"; m.textContent = first ? "Bienvenue à bord, " + ps + " !" : "Fiche mise à jour.";
     renderAll();
-    var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
+    var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); sessionStorage.removeItem("nc-why"); } catch (e) {}
     if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
     else { toast("Fiche mise à jour"); $("accFiche").open = false; $("accFicheSum").textContent = [ps, bt, d.port].filter(Boolean).join(" · "); }
   }).then(function () { $("pSave").disabled = false; });
@@ -296,10 +305,20 @@ function renderChip() {
 }
 var AVC = ["#f29a5b", "#9fe3c4", "#a9c8f5", "#f5d07a", "#e9a8d0", "#c7b8f5"];
 function openNow() { var l = Date.now() - 2 * 36e5; return O.filter(function (x) { return ts(x.maj) > l; }); }
+/* visites sans compte : à partir de la 3e journée, petit bandeau d'invitation */
+(function () { var d = new Date().toISOString().slice(0, 10); if (ls("nc-vday") !== d) { ls("nc-vday", d); ls("nc-visits", String((+ls("nc-visits") || 0) + 1)); } })();
+function renderJoinBar(nm) {
+  var J = $("joinBar"); if (!J) return;
+  var later = +ls("nc-join-later") || 0;
+  J.hidden = !sb || real() || (+ls("nc-visits") || 0) < 3 || Date.now() - later < 7 * 864e5;
+  if (J.hidden) return;
+  $("joinTxt").textContent = nm >= 10 ? "Rejoignez les " + nm + " plaisanciers du Léman" : "Rejoignez les plaisanciers du Léman";
+}
 function renderHome() {
   renderChip(); var ph = document.querySelector(".p-how"); if (ph) ph.hidden = !!me();
   var op = openNow();
   var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm; $("stMembers").nextElementSibling.textContent = nm === 1 ? "membre" : "membres"; $("stOpen").textContent = sb ? op.length : "–";
+  renderJoinBar(nm);
   var HS = $("heroStat"); HS.hidden = !sb || !nm; HS.textContent = ""; HS.appendChild(el("b", 0, String(nm))); HS.appendChild(document.createTextNode(" plaisancier" + (nm > 1 ? "s" : "") + " inscrit" + (nm > 1 ? "s" : "")));
   if (op.length) { HS.appendChild(el("i")); HS.appendChild(el("b", 0, String(op.length))); HS.appendChild(document.createTextNode(" sur l\u2019eau")); }
   var N = $("pNow"); N.textContent = "";
@@ -414,12 +433,12 @@ function renderPanne() {
       var row = el("div", "row"); row.style.marginTop = "8px";
       if (!m) {
         var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? "Je ne peux plus venir" : "Je peux aider");
-        b.onclick = function () { if (!guestOk(function () { b.onclick(); })) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
+        b.onclick = function () { if (!memberOk(null, "Pour proposer votre aide, créez votre compte gratuit : la personne en panne saura qui arrive.")) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
         row.appendChild(b);
         if (P[a.auteur]) { var w2 = el("button", "btn g", "Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2); }
         var fk = "nc-faux-" + a.id, b4 = el("button", "linkb", ls(fk) ? "Signalée comme fausse alerte" : "Signaler une fausse alerte"); b4.disabled = !!ls(fk);
         b4.onclick = function () {
-          if (!real()) { toast("Connectez-vous pour signaler une alerte."); goAuth(); return; }
+          if (!real()) { goAuth(cur(), "Pour signaler une fausse alerte, créez votre compte gratuit."); return; }
           if (!confirm("Signaler une fausse alerte ? À 2 signalements de membres différents, elle est fermée.")) return;
           sb.from("signalements").insert({ quoi: "alerte", ref: String(a.id) }).then(function (r) { if (r.error) { toast("Signalement impossible."); return; } ls(fk, "1"); load("alertes"); toast("Merci, signalement envoyé."); });
         };
@@ -508,7 +527,7 @@ function renderSc() {
 }
 $("scAllBtn").onclick = function () { var L = $("scAll"); L.hidden = !L.hidden; this.textContent = L.hidden ? "Voir les 34 sections" : "Masquer les autres sections"; };
 $("scSave").onclick = function () {
-  pnMsg(); if (!guestOk(function () { $("scSave").onclick(); }, $("pnMsg"))) return;
+  pnMsg(); if (!memberOk($("pnMsg"), "Pour ajouter un numéro de sauvetage, créez votre compte gratuit.")) return;
   var n = $("scName").value.trim(), t = $("scTel").value.trim();
   if (!n || !/^[+0-9 ().\/-]{7,20}$/.test(t)) { pnMsg("Section et numéro valide requis."); return; }
   sb.from("sauvetages").upsert({ nom: n.slice(0, 40), tel: t, maj: nowIso() }).then(function (r) { if (r.error) pnMsg("Enregistrement refusé."); else { $("scTel").value = ""; load("sauvetages"); } });
@@ -800,7 +819,7 @@ function drawJoin() {
   if (!real()) {
     J.appendChild(el("b", 0, "Pour écrire, montez à bord"));
     J.appendChild(el("div", "mu", "Un compte gratuit avec votre e-mail, puis juste un prénom. Une minute en tout."));
-    var a = el("a", "btn", "Créer mon compte"); a.href = "#compte"; a.onclick = function () { try { sessionStorage.setItem("nc-ret", "ponton"); } catch (e) {} }; J.appendChild(a);
+    var a = el("a", "btn", "Créer mon compte"); a.href = "#compte"; a.onclick = function () { try { sessionStorage.setItem("nc-ret", "ponton"); sessionStorage.setItem("nc-why", ""); } catch (e) {} }; J.appendChild(a);
     var l = el("a", "linkb", "J'ai déjà un compte"); l.href = "#compte"; l.onclick = a.onclick; J.appendChild(l);
     return;
   }
@@ -921,7 +940,7 @@ function drawAvChips() {
 }
 drawAvChips();
 $("avSend").onclick = function () {
-  var m = $("avMsg"); m.className = "err"; m.textContent = ""; if (!guestOk(function () { $("avSend").onclick(); }, m)) return;
+  var m = $("avMsg"); m.className = "err"; m.textContent = ""; if (!memberOk(m, "Pour publier un avis, créez votre compte gratuit.")) return;
   var t = $("avTxt").value.trim(); if (t.length < 5) { m.textContent = "Écrivez au moins quelques mots."; return; } if (avBusy) return;
   avBusy = true; $("avSend").disabled = true;
   sb.from("avis").insert({ ty: avType, module: $("avMod").value, txt: t.slice(0, 300) }).then(function (r) {
@@ -936,7 +955,7 @@ function renderAvis() {
   if (!items.length) { L.appendChild(el("p", "mu", AV.length ? "Rien dans cette catégorie pour l'instant." : "Aucun avis pour l'instant. Le premier avis est le plus utile !")); return; }
   items.forEach(function (x) {
     var d = el("div", "avi"), on = !!mine[x.id], vb = el("button", "vote" + (on ? " on" : ""), String(c[x.id] || 0)); vb.appendChild(el("small", 0, on ? "voté" : "+1")); vb.setAttribute("aria-label", "Voter pour cet avis");
-    vb.onclick = function () { if (!guestOk(function () { vb.onclick(); })) return; vb.disabled = true; (on ? sb.from("votes").delete().eq("avis_id", x.id).eq("auteur", uid) : sb.from("votes").insert({ avis_id: x.id })).then(function () { load("votes"); }); };
+    vb.onclick = function () { if (!memberOk(null, "Pour voter, créez votre compte gratuit.")) return; vb.disabled = true; (on ? sb.from("votes").delete().eq("avis_id", x.id).eq("auteur", uid) : sb.from("votes").insert({ avis_id: x.id })).then(function () { load("votes"); }); };
     d.appendChild(vb);
     var bd = el("div", "body"), h = el("div"); h.appendChild(el("span", "pl " + x.ty, AVT[x.ty])); if (x.statut) h.appendChild(el("span", "pl st", STL[x.statut])); h.appendChild(el("span", "mu", x.module)); bd.appendChild(h);
     bd.appendChild(el("div", "txt", x.txt)); var f = el("div", "mu"); f.appendChild(document.createTextNode(nameOf(x.auteur) + " · " + ago(x.t)));
@@ -1011,7 +1030,7 @@ function modal(title) {
 }
 function pickPhoto(k, label) {
   if (!sb) return;
-  if (!real()) { toast("Créez un compte (gratuit) pour partager des photos."); try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "compte"; return; }
+  if (!real()) { goAuth(cur(), "Pour partager des photos, créez votre compte gratuit."); return; }
   var md = modal("Ajouter une photo"), bx = md.bx;
   bx.appendChild(el("div", "mu", label));
   var fi = el("input", "f"); fi.type = "file"; fi.accept = "image/jpeg,image/png,image/webp"; fi.style.marginTop = "8px"; bx.appendChild(fi);
@@ -1109,7 +1128,7 @@ function renderPorts() {
     c.appendChild(thumb("port-" + p.id, p.n, "Port : " + p.n + " (ponton visiteurs, capitainerie, état du port…)"));
     var a = el("div", "act"), mine = PL.filter(function (r) { return r.port === p.id && r.auteur === uid && ts(r.t) > Date.now() - 12 * 36e5; })[0];
     ["libre", "peu", "complet"].forEach(function (k) { var b = el("button", k + (mine && mine.s === k ? " mine" : ""), k === "libre" ? "Libre" : k === "peu" ? "Peu" : "Complet");
-      b.onclick = function () { if (!guestOk(function () { b.onclick(); })) return; b.disabled = true; (mine && mine.s === k ? sb.from("places").delete().eq("port", p.id).eq("auteur", uid) : sb.from("places").upsert({ port: p.id, auteur: uid, s: k, t: nowIso() }, { onConflict: "port,auteur" })).then(function () { load("places"); toast("Merci pour le signalement !"); }); };
+      b.onclick = function () { if (!memberOk(null, "Pour indiquer les places libres au port, créez votre compte gratuit.")) return; b.disabled = true; (mine && mine.s === k ? sb.from("places").delete().eq("port", p.id).eq("auteur", uid) : sb.from("places").upsert({ port: p.id, auteur: uid, s: k, t: nowIso() }, { onConflict: "port,auteur" })).then(function () { load("places"); toast("Merci pour le signalement !"); }); };
       a.appendChild(b); });
     var m = el("a", 0, "Carte"); m.href = mapsSearch("port " + p.n.replace(" – ", " ")); m.target = "_blank"; m.rel = "noopener"; a.appendChild(m);
     var wc = el("a", 0, "Webcam"); wc.href = "#webcams"; wc.onclick = function () { wcPort = p.id; }; a.appendChild(wc);
@@ -1398,7 +1417,7 @@ $("paDel").onclick = function () {
 };
 paFill(null);
 $("reAdd").onclick = function () {
-  var m = $("reMsg"); m.className = "err"; m.textContent = ""; if (!guestOk(function () { $("reAdd").onclick(); }, m)) return;
+  var m = $("reMsg"); m.className = "err"; m.textContent = ""; if (!memberOk(m, "Pour ajouter un restaurant, créez votre compte gratuit.")) return;
   var n = $("reN").value.trim(), l = $("reL").value.trim(); if (n.length < 2 || l.length < 2) { m.textContent = "Indiquez au moins le nom et le lieu."; return; }
   $("reAdd").disabled = true;
   sb.from("restos").insert({ nom: n, lieu: l, acces: $("reA").value, descr: $("reD").value.trim().slice(0, 140) }).then(function (r) {
@@ -1422,7 +1441,7 @@ function renderEpaves() {
 }
 $("epMap").onclick = function (e) { if ($("epForm").hidden) return; epPend = svgPoint(this, e); $("epPs").textContent = "Position choisie : " + epPend.lat.toFixed(4) + ", " + epPend.lon.toFixed(4); renderEpaves(); };
 function epOpen(w) { epEd = w ? w.id : null; $("epN").value = w ? w.nom : ""; $("epA").value = w ? w.annee || "" : ""; $("epP").value = w ? w.pm || "" : ""; $("epT").value = w ? w.note || "" : ""; $("epAp").checked = w ? !!w.approx : true; epPend = w ? { lat: w.lat, lon: w.lon } : null; $("epPs").textContent = w ? "Touchez la carte pour déplacer l’épave." : "Touchez la carte pour placer l’épave."; $("epForm").hidden = false; renderEpaves(); $("epMap").scrollIntoView({ behavior: "smooth" }); }
-$("epAdd").onclick = function () { if (!guestOk(function () { epOpen(null); }, $("epMsg"))) return; epOpen(null); };
+$("epAdd").onclick = function () { if (!memberOk($("epMsg"), "Pour ajouter une épave, créez votre compte gratuit.")) return; epOpen(null); };
 $("epCx").onclick = function () { $("epForm").hidden = true; epPend = null; renderEpaves(); };
 $("epSv").onclick = function () {
   var m = $("epMsg"); m.textContent = ""; var n = $("epN").value.trim(); if (!n) { m.textContent = "Nom requis."; return; } if (!epPend) { m.textContent = "Touchez la carte pour placer l’épave."; return; }
@@ -1512,7 +1531,7 @@ function renderAnnonces() {
   if (!L.firstChild) L.appendChild(el("p", "mu", "Aucune annonce pour l’instant. Publiez la première !"));
 }
 function anOpen(a) { anEd = a ? a.id : null; $("anTi").value = a ? a.titre : ""; $("anTy").value = a ? a.type : "Vente"; $("anPr").value = a ? a.prix || "" : ""; $("anCt").value = a ? a.cat : CATS[0]; $("anEt").value = a ? a.etat : "Bon"; $("anLo").value = a ? a.lieu || "" : ""; $("anDs").value = a ? a.descr || "" : ""; $("anForm").hidden = false; $("anForm").scrollIntoView({ behavior: "smooth" }); }
-$("anAdd").onclick = function () { anMsg(); if (!guestOk(function () { anOpen(null); }, $("anMsg"))) return; anOpen(null); };
+$("anAdd").onclick = function () { anMsg(); if (!memberOk($("anMsg"), "Pour publier une annonce, créez votre compte gratuit.")) return; anOpen(null); };
 $("anCx").onclick = function () { $("anForm").hidden = true; anEd = null; };
 $("anSv").onclick = function () {
   anMsg(); var t = $("anTi").value.trim(); if (t.length < 2) { anMsg("Titre requis."); return; }
@@ -1569,7 +1588,7 @@ function loOpen(x) {
   $("loPe").checked = x ? x.permis : true; $("loSk").checked = x ? x.skipper : false; $("loDs").value = x ? x.descr : "";
   $("loSv").textContent = x ? "Enregistrer" : "Publier"; $("loForm").hidden = false; $("loForm").scrollIntoView({ behavior: "smooth" });
 }
-$("loAdd").onclick = function () { loMsg(); if (!requireProfile($("loMsg"))) return; loOpen(null); };
+$("loAdd").onclick = function () { loMsg(); if (!requireProfile($("loMsg"), "Pour proposer votre bateau en location, créez votre compte gratuit.")) return; loOpen(null); };
 $("loCx").onclick = function () { $("loForm").hidden = true; loEd = null; };
 $("loTy").onchange = function () { if (this.value === "Bateau sans permis" || this.value === "Paddle / kayak") $("loPe").checked = false; };
 $("loSv").onclick = function () {
@@ -1626,7 +1645,7 @@ function pushSave(s, prefs) {
 }
 function pushEnable() {
   if (!pushOk) { toast("Votre navigateur ne gère pas les notifications. Installez l'appli sur l'écran d'accueil."); return; }
-  if (!requireProfile()) return; ls("nc-push-off", "");
+  if (!requireProfile(null, "Pour recevoir l'alerte vaudaire et les appels à l'aide sur votre téléphone, créez votre compte gratuit.")) return; ls("nc-push-off", "");
   Notification.requestPermission().then(function (p) {
     if (p !== "granted") { toast("Notifications refusées. Autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); notifUI(); return; }
     return swReg().then(function (r) { return r.pushManager.getSubscription().then(function (s) { return s || r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }); }); })
@@ -1804,7 +1823,7 @@ function evMsg(t, ok) { $("evMsg").className = ok ? "okm" : "err"; $("evMsg").te
 $("evAdd").onclick = function () { $("evForm").hidden = !$("evForm").hidden; evMsg(); if (!$("evForm").hidden) $("evForm").scrollIntoView({ behavior: "smooth" }); };
 $("evCx").onclick = function () { $("evForm").hidden = true; };
 $("evSv").onclick = function () {
-  evMsg(); if (!guestOk(function () { $("evSv").onclick(); }, $("evMsg"))) return;
+  evMsg(); if (!memberOk($("evMsg"), "Pour publier un événement, créez votre compte gratuit.")) return;
   var d = { titre: $("evTi").value.trim(), lieu: $("evLi").value.trim(), debut: $("evD1").value, fin: $("evD2").value || $("evD1").value, heure: $("evHe").value.trim(), descr: $("evDs").value.trim(), site: $("evSi").value.trim(), contact: $("evCt").value.trim() };
   if (d.titre.length < 3 || d.lieu.length < 2) { evMsg("Indiquez le nom de l'événement et le lieu."); return; }
   if (!d.debut) { evMsg("Choisissez la date."); return; }
@@ -1831,3 +1850,6 @@ $("evSetSv").onclick = function () {
 
 /* ================= LANGUE ================= */
 (function () { var b = $("langBtn"); if (!b) return; var de = window.NC_LANG === "de"; b.textContent = de ? "FR" : "DE"; b.title = de ? "Version française" : "Deutsche Version"; b.onclick = function () { if (window.ncSetLang) ncSetLang(de ? "fr" : "de"); }; })();
+
+if ($("joinLater")) $("joinLater").onclick = function () { ls("nc-join-later", String(Date.now())); $("joinBar").hidden = true; };
+if ($("joinGo")) $("joinGo").onclick = function () { try { sessionStorage.setItem("nc-ret", "accueil"); sessionStorage.setItem("nc-why", ""); } catch (e) {} };

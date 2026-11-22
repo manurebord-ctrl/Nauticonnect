@@ -525,3 +525,11 @@ details.kn[open] .knth{display:none}
 .knimg{margin:0 0 12px;background:#fff;border:1px solid var(--bd);border-radius:12px;padding:8px}
 .knimg img{display:block;width:100%;max-height:300px;object-fit:contain}
 .knimg figcaption{font-size:12px;color:#5a6b78;margin-top:4px;text-align:center}
+
+/* invitation à créer un compte */
+.auwhy{background:var(--card);border:2px solid var(--ac);border-radius:14px;padding:12px 14px;font-weight:700;margin:0 0 12px}
+.joinbar{background:var(--card);border:2px solid var(--ac);border-radius:20px;padding:16px;margin-top:14px;display:flex;flex-direction:column;gap:12px}
+.joinbar b{display:block;font-size:1.08rem;margin-bottom:4px}
+.joinbar span{color:var(--mu);font-size:.94rem}
+.joinbar .jb-row{display:flex;align-items:center;gap:14px}
+.joinbar .btn{flex:1;text-align:center}
