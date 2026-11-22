@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=17">
+<link rel="stylesheet" href="app.css?v=18">
 </head>
 <body>
 
@@ -22,43 +22,21 @@
 <section id="v-accueil">
 <header class="hero">
 <canvas id="heroCv" aria-hidden="true"></canvas><div class="hero-ph" id="heroPh"></div>
-<label class="phbtn" id="phBtn" hidden>📷 Photo de la bannière<input type="file" id="phIn" accept="image/*" hidden></label>
+<label class="phbtn" id="phBtn" hidden>Photo de la bannière<input type="file" id="phIn" accept="image/*" hidden></label>
 <div class="hero-in">
 <div class="hero-top"><span class="brand">Nauti<b>connect</b></span><a id="meChip" class="me new" href="#compte">Se connecter</a></div>
 <h1 class="hero-t">On se retrouve sur l'eau&nbsp;?</h1>
 <p class="hero-s">Nauticonnect, le réseau social des plaisanciers du Léman.</p>
 <div class="bubbles" aria-hidden="true">
-<div class="bb"><i style="background:#f29a5b">J</i><span>Apéro au port de Lutry ce soir&nbsp;? 🍻</span></div>
-<div class="bb r"><span>Partant&nbsp;! J'arrive dans 20 min ⛵</span><i style="background:#9fe3c4">M</i></div>
+<div class="bb"><i style="background:#f29a5b">J</i><span>Apéro au port de Lutry ce soir&nbsp;?</span></div>
+<div class="bb r"><span>Partant&nbsp;! J'arrive dans 20 min</span><i style="background:#9fe3c4">M</i></div>
 <div class="bb"><i style="background:#a9c8f5">S</i><span>Je garde une place au ponton&nbsp;!</span></div>
 </div>
 <div class="cta"><a class="cta1" id="ctaMain" href="#compte">Rejoindre l'équipage</a><a class="cta2" href="#ponton">Qui est sur l'eau&nbsp;?</a></div>
 <div class="hero-chips"><a class="hchip al" id="alertPill" href="#panne" hidden></a><a class="hchip" href="#ponton" id="msgChip" hidden>Messages<span class="dot" id="unreadHome"></span></a></div>
 </div>
 </header>
-
-<section class="ponton">
-<div class="p-hd"><b>Le Ponton</b><span class="live"><i></i>Chat en direct</span></div>
-<p class="p-sub">Le chat des plaisanciers du Léman : on s'y retrouve comme sur le ponton, pour papoter, s'entraider et se donner rendez-vous sur l'eau.</p>
-<div class="p-now" id="pNow"></div>
-<div class="p-stats"><div><b id="stMembers">–</b><span>membres</span></div><div><b id="stOpen">–</b><span>sur l'eau</span></div><div><b>31</b><span>ports du lac</span></div></div>
-<ol class="p-how">
-<li><b>Créez votre fiche bateau</b><span>Pseudo, bateau, port d'attache.</span></li>
-<li><b>Hissez le pavillon</b><span>Montrez que vous êtes ouvert à la rencontre.</span></li>
-<li><b>Chattez, amarrez-vous</b><span>Écrivez aux membres en privé, et on se retrouve au port.</span></li>
-</ol>
-<a class="p-go" href="#ponton">💬 Ouvrir le chat du Ponton</a>
-<button class="p-inv" data-invite>📣 Inviter un ami sur Nauticonnect</button>
-</section>
-
-<div class="card nbox" id="notifAsk" hidden><span class="ic">🔔</span><div><b>Ne ratez rien sur l'eau</b><span class="mu">Messages du Ponton, bateaux en panne près de vous, alertes vaudaire et coups de vent.</span><button class="btn sm" id="notifAskGo">Activer les notifications</button><button class="linkb" id="notifAskNo">Plus tard</button></div></div>
-
-<a class="card windbar" id="homeMod" href="#meteo" hidden></a>
-<a class="card windbar" id="homeWind" href="#meteo" hidden></a>
-
 <a class="sosbar" href="#panne"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.8"/><path d="M5.6 5.6l3.7 3.7M14.7 14.7l3.7 3.7M18.4 5.6l-3.7 3.7M9.3 14.7l-3.7 3.7"/></svg></span><span><b>Je suis en panne</b><span class="s">Alerter les plaisanciers proches · aider quelqu'un</span></span><span class="arr" aria-hidden="true">›</span></a>
-
-<div class="install" id="installBox" hidden><img src="icon-192.png" alt=""><div><b>Installer Nauticonnect</b>Ajoutez l'appli à votre écran d'accueil.</div><button class="btn sm" id="installBtn" style="margin:0">Installer</button></div>
 
 <h2 class="sec">Votre boîte à outils</h2>
 <h3 class="sub">Avant de partir</h3>
@@ -73,7 +51,7 @@
 <a class="tile t-lake" href="#ponton"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></span><span class="tt">Le Ponton</span><span class="ts">Le chat des plaisanciers</span></a>
 <a class="tile t-lake" href="#location"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16l2 4h14l2-4z"/><path d="M12 3v11M12 4l6 8h-6"/><path d="M9 9l-3 5h6"/></svg></span><span class="tt">Location</span><span class="ts">Louer le bateau d'un membre</span></a>
 <a class="tile t-sun" href="#annonces"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg></span><span class="tt">À vendre · Troc</span><span class="ts">Matériel nautique</span></a>
-<a class="tile t-sky evtile" href="#evenements"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg></span><span class="tt">Événements</span><span class="ts">Fêtes et rendez-vous au bord du lac</span></a>
+<a class="tile t-sky" href="#evenements"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M12 13.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z"/></svg></span><span class="tt">Événements</span><span class="ts">Fêtes et rendez-vous au bord du lac</span></a>
 </div>
 <h3 class="sub">À bord</h3>
 <div class="grid g3">
@@ -81,6 +59,29 @@
 <a class="tile t-deep" href="#noeuds"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8c4-4 8 0 8 4s4 8 8 4"/><path d="M4 16c4 4 8 0 8-4s4-8 8-4"/></svg></span><span class="tt">Nœuds</span><span class="ts">12 nœuds marins</span></a>
 <a class="tile t-deep" href="#epaves"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M8.5 11h7M5 14c.4 3.8 3.3 7 7 7s6.6-3.2 7-7"/></svg></span><span class="tt">Épaves</span><span class="ts">Carte et histoire</span></a>
 </div>
+<section class="ponton">
+<div class="p-hd"><b>Le Ponton</b><span class="live"><i></i>Chat en direct</span></div>
+<p class="p-sub">Le chat des plaisanciers du Léman : on s'y retrouve comme sur le ponton, pour papoter, s'entraider et se donner rendez-vous sur l'eau.</p>
+<div class="p-now" id="pNow"></div>
+<div class="p-stats"><div><b id="stMembers">–</b><span>membres</span></div><div><b id="stOpen">–</b><span>sur l'eau</span></div><div><b>31</b><span>ports du lac</span></div></div>
+<ol class="p-how">
+<li><b>Créez votre fiche bateau</b><span>Pseudo, bateau, port d'attache.</span></li>
+<li><b>Hissez le pavillon</b><span>Montrez que vous êtes ouvert à la rencontre.</span></li>
+<li><b>Chattez, amarrez-vous</b><span>Écrivez aux membres en privé, et on se retrouve au port.</span></li>
+</ol>
+<a class="p-go" href="#ponton">Ouvrir le chat du Ponton</a>
+<button class="p-inv" data-invite>Inviter un ami sur Nauticonnect</button>
+</section>
+
+<div class="card nbox" id="notifAsk" hidden><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><div><b>Ne ratez rien sur l'eau</b><span class="mu">Messages du Ponton, bateaux en panne près de vous, alertes vaudaire et coups de vent.</span><button class="btn sm" id="notifAskGo">Activer les notifications</button><button class="linkb" id="notifAskNo">Plus tard</button></div></div>
+
+<a class="card windbar" id="homeMod" href="#meteo" hidden></a>
+<a class="card windbar" id="homeWind" href="#meteo" hidden></a>
+
+
+
+<div class="install" id="installBox" hidden><img src="icon-192.png" alt=""><div><b>Installer Nauticonnect</b>Ajoutez l'appli à votre écran d'accueil.</div><button class="btn sm" id="installBtn" style="margin:0">Installer</button></div>
+
 <a class="idea" href="#avis"><b>Votre avis compte</b><span>Ce qui vous plaît, ce qui manque, vos idées. Proposez et votez.</span><em id="avCount">Donner mon avis ›</em></a>
 <div class="urgbox"><span>Danger pour des personnes ? Appelez d'abord</span><div class="urg"><a href="tel:117">117 Police</a><a href="tel:144">144 Ambulance</a><a href="tel:112">112 Europe</a></div><span>Radio VHF : canal 16</span></div>
 <p class="foot"><a href="confidentialite.html">Confidentialité</a> · Nauticonnect</p>
@@ -119,7 +120,7 @@
 <div class="err" id="pMsg"></div>
 </div>
 <p class="mu">N'indiquez ni adresse ni numéro de téléphone dans votre fiche.</p>
-<div class="card" id="notifCard"><b>🔔 Notifications</b><div class="mu" id="nfState" style="margin:4px 0 10px"></div>
+<div class="card" id="notifCard"><b>Notifications</b><div class="mu" id="nfState" style="margin:4px 0 10px"></div>
 <button class="btn" id="nfOn">Activer les notifications</button>
 <div id="nfPrefs" hidden>
 <label class="chk"><input type="checkbox" id="nfMsg"> Messages reçus sur Le Ponton</label>
@@ -127,7 +128,7 @@
 <label class="chk"><input type="checkbox" id="nfVent"> Alertes vaudaire et coups de vent</label>
 <div class="row"><button class="btn g sm" id="nfTest">Envoyer un test</button><button class="btn g sm" id="nfOff">Désactiver</button></div>
 </div></div>
-<div class="card"><b>📣 Faire grandir l'équipage</b><div class="mu" style="margin:4px 0 10px">Plus il y a de plaisanciers, plus l'entraide marche. Partagez l'appli à vos voisins de ponton.</div><button class="btn" data-invite>Inviter un ami</button></div>
+<div class="card"><b>Faire grandir l'équipage</b><div class="mu" style="margin:4px 0 10px">Plus il y a de plaisanciers, plus l'entraide marche. Partagez l'appli à vos voisins de ponton.</div><button class="btn" data-invite>Inviter un ami</button></div>
 <div class="card"><b>Mon compte</b><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
 <button class="btn g" id="pLogout">Se déconnecter</button>
 <button class="btn g" id="pDelete" style="margin-top:8px;color:var(--red)">Supprimer mon compte</button>
@@ -144,7 +145,7 @@
 <div id="pnForm" class="card" hidden>
 <div class="step">1. Où êtes-vous ?</div>
 <select class="f" id="pnZone"></select>
-<button class="btn g" id="pnGps">📍 Utiliser ma position GPS</button>
+<button class="btn g" id="pnGps">Utiliser ma position GPS</button>
 <div class="mu" style="margin-top:4px">Ou touchez la carte plus bas pour choisir le port le plus proche.</div>
 <div class="step">2. Quel est le problème ?</div><div class="pbs" id="pnPbs"></div>
 <div class="step">3. Détails (facultatif)</div>
@@ -156,22 +157,22 @@
 <div class="err" id="pnMsg"></div>
 <div class="card warn"><b>Danger pour des personnes ?</b> Appelez d’abord le <a href="tel:117"><b>117</b></a> (police) ou le <a href="tel:144"><b>144</b></a>, ou lancez un appel de détresse radio VHF canal 16. Cette appli est un complément, pas un service de secours.</div>
 <h2>Alertes actives</h2><div id="pnList"></div>
-<div class="card"><b>🗺️ Carte</b><div class="mu">Touchez un port pour le choisir. Rouge = alerte active.</div><svg id="pnMap" class="map" viewBox="0 0 680 410"></svg><a class="btn g" id="pnRoute" target="_blank" rel="noopener">🧭 Itinéraire</a></div>
-<div class="card"><b>🛟 Sociétés de sauvetage du lac (SISL)</b><div class="mu">Bénévoles. Numéros ajoutés par les membres : vérifiez-les sur sisl.ch.</div><div id="scList" style="margin:6px 0"></div>
+<div class="card"><b>Carte</b><div class="mu">Touchez un port pour le choisir. Rouge = alerte active.</div><svg id="pnMap" class="map" viewBox="0 0 680 410"></svg><a class="btn g" id="pnRoute" target="_blank" rel="noopener">Itinéraire</a></div>
+<div class="card"><b>Sociétés de sauvetage du lac (SISL)</b><div class="mu">Bénévoles. Numéros ajoutés par les membres : vérifiez-les sur sisl.ch.</div><div id="scList" style="margin:6px 0"></div>
 <input class="f" id="scName" list="scDl" placeholder="Section (ex. Le Bouveret)"><datalist id="scDl"></datalist><input class="f" id="scTel" type="tel" placeholder="Numéro de téléphone"><button class="btn g" id="scSave">Enregistrer le numéro</button></div>
 </section>
 
 <!-- ===================== LE PONTON ===================== -->
 <section id="v-ponton" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
-<h1 class="ph1">Le Ponton <span class="chatpill">💬 Chat</span></h1><p class="lead">Le chat des plaisanciers du Léman. Comme sur un vrai ponton : on se salue, on discute bateau, on se file un coup de main et on se donne rendez-vous sur l'eau.</p>
+<h1 class="ph1">Le Ponton <span class="chatpill">Chat</span></h1><p class="lead">Le chat des plaisanciers du Léman. Comme sur un vrai ponton : on se salue, on discute bateau, on se file un coup de main et on se donne rendez-vous sur l'eau.</p>
 <div id="rnGate" class="card gate" hidden><b>Montez à bord du Ponton</b><div class="mu" style="margin:4px 0 12px">Pour chatter avec les autres plaisanciers, créez votre compte et votre fiche bateau. C'est gratuit et ça prend une minute.</div><a class="btn" href="#compte">Rejoindre l'équipage</a></div>
 <div id="rnBody" hidden>
-<h2 style="margin-top:0">💬 Mes discussions<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
+<h2 style="margin-top:0">Mes discussions<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
 <div class="stt" id="rnStt"></div>
 <h2 id="mbReqH" hidden>Demandes d'amis</h2><div id="mbReq"></div>
 <h2>Nouvelle discussion</h2>
-<div class="card"><input class="f" id="mbSearch" type="search" maxlength="40" placeholder="🔎 À qui écrire ? Prénom, bateau ou port…" aria-label="Rechercher un plaisancier"><div class="mu" id="mbHint" style="margin-top:6px"></div></div>
+<div class="card"><input class="f" id="mbSearch" type="search" maxlength="40" placeholder="À qui écrire ? Prénom, bateau ou port…" aria-label="Rechercher un plaisancier"><div class="mu" id="mbHint" style="margin-top:6px"></div></div>
 <div id="mbList"></div>
 <div class="card warn"><b>Rencontres en sécurité.</b> Pour tous les membres, votre position est arrondie (environ 1 km). Ne donnez ni adresse ni numéro dans les messages. Retrouvez-vous dans un port ou un lieu public.</div>
 <div class="card">
@@ -179,7 +180,7 @@
 <label class="sw"><input type="checkbox" id="rnOpen"><span><b>Hisser le pavillon : ouvert à la rencontre</b><br><span class="mu">Visible de tous les membres pendant 2 h, position arrondie.</span></span></label>
 <label class="sw"><input type="checkbox" id="rnFr"><span><b>Partager avec mes amis</b><br><span class="mu">Position exacte, visible seulement par vos amis Nauticonnect.</span></span></label>
 <input id="rnCode" type="hidden">
-<button class="btn g" id="rnGps">📍 Me localiser (GPS)</button></div>
+<button class="btn g" id="rnGps">Me localiser (GPS)</button></div>
 <div class="card"><div class="lgd"><span><i style="background:#2d7ff9"></i>Moi</span><span><i style="background:var(--or)"></i>Pavillon hissé</span><span><i style="background:var(--ok)"></i>Amis</span></div>
 <svg id="rnMap" class="map" viewBox="0 0 680 410"></svg>
 <div class="mu">Sans GPS, touchez la carte pour indiquer où vous êtes.</div></div>
@@ -236,7 +237,7 @@
 <div class="card">
 <div class="mu" style="margin-bottom:8px">Partagez à quoi ressemble le lac là où vous êtes. Les photos des dernières 48 heures s'affichent ici.</div>
 <select id="mZone" class="f" aria-label="Zone du lac"></select>
-<button class="btn" id="mAdd">📷 Partager l'état du lac</button>
+<button class="btn" id="mAdd">Partager l'état du lac</button>
 </div>
 <div id="phMod" hidden></div>
 <div id="mFeed"></div>
@@ -278,7 +279,7 @@
 <div class="mapbox"><svg id="reMap" class="map" viewBox="0 0 600 360" role="img" aria-label="Carte des restaurants" style="margin:0"></svg></div>
 <div id="reList" style="margin-top:10px"></div>
 <div id="paAdmin" hidden>
-<h2>⭐ Restos partenaires <small class="mu">(admin)</small></h2>
+<h2>Restos partenaires <small class="mu">(admin)</small></h2>
 <div class="card">
 <div class="mu" style="margin-bottom:8px">Les partenaires apparaissent en tête de liste, mis en valeur, avec leur offre, un bouton « Appeler » et leur site. Ils disparaissent automatiquement après la date de fin.</div>
 <input class="f" id="paN" maxlength="60" placeholder="Nom du restaurant" aria-label="Nom du partenaire">
@@ -320,7 +321,7 @@
 <div class="row"><div><label class="l" for="epA">Année du naufrage</label><input class="f" id="epA" inputmode="numeric" maxlength="4"></div><div><label class="l" for="epP">Profondeur max (m)</label><input class="f" id="epP" type="number"></div></div>
 <label class="l" for="epT">Description et source</label><textarea class="f" id="epT" rows="3" maxlength="600"></textarea>
 <label class="sw"><input type="checkbox" id="epAp" checked><span>Position approximative</span></label>
-<div class="mu" id="epPs" style="margin:6px 0">📍 Touchez la carte pour placer l’épave.</div>
+<div class="mu" id="epPs" style="margin:6px 0">Touchez la carte pour placer l’épave.</div>
 <div class="row"><button class="btn g" id="epCx">Annuler</button><button class="btn" id="epSv">Enregistrer</button></div></div>
 <h2>Épaves répertoriées</h2><div id="epList"></div>
 </section>
@@ -438,9 +439,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=17"></script>
+<script src="config.js?v=18"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=17"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

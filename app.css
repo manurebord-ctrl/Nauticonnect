@@ -306,3 +306,20 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .lact{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 12px}
 .lact b{display:block;font-size:24px;font-weight:800}.lact span{font-size:13px;color:var(--mu)}
 .lacn{margin-top:8px}
+
+/* ===== Mise en forme v2 : gros boutons encadrés ===== */
+.grid,.grid.g3{grid-template-columns:1fr 1fr;gap:10px}
+.tile,.g3 .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:112px;padding:14px 10px;border:2px solid var(--bd);border-radius:20px;box-shadow:0 2px 0 var(--bd)}
+.tile:active{transform:translateY(2px);box-shadow:none}
+.tile .ti{width:54px;height:54px;border-radius:16px;margin:0}
+.tile svg{width:30px;height:30px;stroke-width:1.9}
+.tile .tt,.g3 .tile .tt{font-size:17px;margin:0;line-height:1.15}
+.tile .ts{display:none}
+.grid>.tile:last-child:nth-child(odd){grid-column:1/-1;flex-direction:row;min-height:84px;gap:14px}
+.t-sky{border-color:var(--sky)}.t-lake{border-color:var(--lakeT)}.t-sun{border-color:var(--sunT)}.t-deep{border-color:var(--deepT)}
+.sec{margin:22px 0 4px}.sub{font-size:13px;color:var(--mu);margin:14px 0 8px}
+.sosbar{margin-top:14px}
+.ponton{margin-top:22px}
+.p-how[hidden]{display:none}
+.windbar .ic svg,.nbox .ic svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.windbar .ic,.nbox .ic{display:flex;color:var(--ac)}

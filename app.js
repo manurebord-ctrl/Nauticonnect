@@ -264,9 +264,9 @@ function renderChip() {
 var AVC = ["#f29a5b", "#9fe3c4", "#a9c8f5", "#f5d07a", "#e9a8d0", "#c7b8f5"];
 function openNow() { var l = Date.now() - 2 * 36e5; return O.filter(function (x) { return ts(x.maj) > l; }); }
 function renderHome() {
-  renderChip();
+  renderChip(); var ph = document.querySelector(".p-how"); if (ph) ph.hidden = !!me();
   var op = openNow();
-  var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm; $("stMembers").nextElementSibling.textContent = nm > 1 ? "membres" : "membre"; $("stOpen").textContent = sb ? op.length : "–";
+  var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm; $("stMembers").nextElementSibling.textContent = nm === 1 ? "membre" : "membres"; $("stOpen").textContent = sb ? op.length : "–";
   var N = $("pNow"); N.textContent = "";
   if (op.length) {
     var st = el("div", "stack"); op.slice(0, 5).forEach(function (x, i) { var a = el("span", 0, initial(x.id)); a.style.background = AVC[i % AVC.length]; st.appendChild(a); }); N.appendChild(st);
@@ -275,12 +275,12 @@ function renderHome() {
   } else N.appendChild(el("p", 0, "Personne n'a encore hissé le pavillon. Lancez la première sortie !"));
   var c = $("ctaMain"), p = me();
   c.textContent = p ? "Hisser le pavillon" : "Rejoindre l'équipage"; c.href = p ? "#ponton" : real() ? "#profil" : "#compte";
-  var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = "⚠ " + n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
+  var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
   var u = unread() + pendingIn().length; $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
   $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
   $("phBtn").hidden = !isAdmin;
   var pq = isAdmin ? PH.filter(function (p) { return !pub(p); }).length : 0, hm = $("homeMod");
-  hm.hidden = !pq; hm.textContent = "📷 " + pq + " photo" + (pq > 1 ? "s" : "") + " à vérifier ›";
+  hm.hidden = !pq; hm.textContent = pq + " photo" + (pq > 1 ? "s" : "") + " à vérifier ›";
 }
 /* bannière animée */
 var heroRunning = false;
@@ -319,7 +319,7 @@ $("phIn").onchange = function () {
       if (r.error) throw r.error; var old = REG.banniere;
       return sb.from("reglages").upsert({ k: "banniere", v: path }).then(function (r2) { if (r2.error) throw r2.error; REG.banniere = path; applyBanner(); if (old && old.indexOf(uid + "/") === 0) sb.storage.from("photos").remove([old]); });
     });
-  }).then(function () { lb.firstChild.textContent = "📷 Photo de la bannière"; }, function () { lb.firstChild.textContent = "Échec, réessayer"; }).then(function () { inp.value = ""; });
+  }).then(function () { lb.firstChild.textContent = "Photo de la bannière"; }, function () { lb.firstChild.textContent = "Échec, réessayer"; }).then(function () { inp.value = ""; });
 };
 /* installation */
 var deferredInstall = null;
@@ -338,9 +338,9 @@ function pnMsg(t) { $("pnMsg").textContent = t || ""; }
 $("pnZone").onchange = function () { gp = null; ls("nc-zone", this.value); renderPanne(); };
 $("pnGps").onclick = function () {
   pnMsg(); if (!navigator.geolocation) { pnMsg("GPS indisponible : choisissez une zone."); return; }
-  $("pnGps").textContent = "📍 Recherche de la position…";
-  navigator.geolocation.getCurrentPosition(function (p) { gp = { nom: "Position GPS", lat: p.coords.latitude, lon: p.coords.longitude }; $("pnGps").textContent = "📍 Position GPS utilisée"; renderPanne(); },
-    function () { $("pnGps").textContent = "📍 Utiliser ma position GPS"; pnMsg("Position GPS refusée ou indisponible : choisissez une zone ou touchez la carte."); }, { timeout: 10000, enableHighAccuracy: true });
+  $("pnGps").textContent = "Recherche de la position…";
+  navigator.geolocation.getCurrentPosition(function (p) { gp = { nom: "Position GPS", lat: p.coords.latitude, lon: p.coords.longitude }; $("pnGps").textContent = "Position GPS utilisée"; renderPanne(); },
+    function () { $("pnGps").textContent = "Utiliser ma position GPS"; pnMsg("Position GPS refusée ou indisponible : choisissez une zone ou touchez la carte."); }, { timeout: 10000, enableHighAccuracy: true });
 };
 $("pnSos").onclick = function () { pnMsg(); var f = $("pnForm"); f.hidden = !f.hidden; if (!f.hidden) f.scrollIntoView({ behavior: "smooth" }); };
 $("pnGo").onclick = function () {
@@ -371,27 +371,27 @@ function renderPanne() {
       if (!m) { var w = el("div"); w.style.margin = "6px 0"; w.appendChild(badge(a.auteur, a.par)); c.appendChild(w); }
       c.appendChild(el("div", "mu", a.zone + " · à " + o.d.toFixed(1) + " km · " + ago(a.maj)));
       if (a.detail) c.appendChild(el("div", 0, a.detail));
-      if (a.faux && (isAdmin || m)) c.appendChild(el("div", "err", "⚠ Signalée comme fausse alerte par " + a.faux + " membre" + (a.faux > 1 ? "s" : "")));
-      if (a.tel && !m) { var t = el("div"); t.appendChild(document.createTextNode("📞 ")); var tl = el("a", 0, a.tel); tl.href = "tel:" + a.tel.replace(/[^0-9+]/g, ""); tl.style.cssText = "color:var(--ac);font-weight:700"; t.appendChild(tl); c.appendChild(t); }
+      if (a.faux && (isAdmin || m)) c.appendChild(el("div", "err", "Signalée comme fausse alerte par " + a.faux + " membre" + (a.faux > 1 ? "s" : "")));
+      if (a.tel && !m) { var t = el("div"); t.appendChild(document.createTextNode("Tél. ")); var tl = el("a", 0, a.tel); tl.href = "tel:" + a.tel.replace(/[^0-9+]/g, ""); tl.style.cssText = "color:var(--ac);font-weight:700"; t.appendChild(tl); c.appendChild(t); }
       var ai = a.aides || [];
-      if (ai.length) c.appendChild(el("div", "okm", "🤝 Viennent aider : " + ai.map(function (x) { return nameOf(x); }).join(", ")));
+      if (ai.length) c.appendChild(el("div", "okm", "Viennent aider : " + ai.map(function (x) { return nameOf(x); }).join(", ")));
       else if (m) c.appendChild(el("div", "mu", "En attente d’un plaisancier… Si personne ne répond, appelez le 117. L’alerte se désactive seule après 6 heures."));
       var row = el("div", "row"); row.style.marginTop = "8px";
       if (!m) {
-        var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? "Je ne peux plus venir" : "🤝 Je peux aider");
+        var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? "Je ne peux plus venir" : "Je peux aider");
         b.onclick = function () { if (!guestOk(function () { b.onclick(); })) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
         row.appendChild(b);
-        if (P[a.auteur]) { var w2 = el("button", "btn g", "💬 Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2); }
-        var fk = "nc-faux-" + a.id, b4 = el("button", "linkb", ls(fk) ? "Signalée comme fausse alerte" : "⚠ Signaler une fausse alerte"); b4.disabled = !!ls(fk);
+        if (P[a.auteur]) { var w2 = el("button", "btn g", "Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2); }
+        var fk = "nc-faux-" + a.id, b4 = el("button", "linkb", ls(fk) ? "Signalée comme fausse alerte" : "Signaler une fausse alerte"); b4.disabled = !!ls(fk);
         b4.onclick = function () {
           if (!real()) { toast("Connectez-vous pour signaler une alerte."); goAuth(); return; }
           if (!confirm("Signaler une fausse alerte ? À 2 signalements de membres différents, elle est fermée.")) return;
           sb.from("signalements").insert({ quoi: "alerte", ref: String(a.id) }).then(function (r) { if (r.error) { toast("Signalement impossible."); return; } ls(fk, "1"); load("alertes"); toast("Merci, signalement envoyé."); });
         };
         c.appendChild(row); row = el("div"); row.style.marginTop = "6px"; row.appendChild(b4);
-        if (isAdmin) { var b3 = el("button", "btn g", "🔒 Clôturer (admin)"); b3.onclick = function () { if (!confirm("Clôturer cette alerte ? Elle disparaîtra pour tout le monde.")) return; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) toast("Clôture impossible."); else { load("alertes"); toast("Alerte clôturée"); } }); }; c.appendChild(row); row = el("div", "row"); row.style.marginTop = "8px"; row.appendChild(b3); }
+        if (isAdmin) { var b3 = el("button", "btn g", "Clôturer (admin)"); b3.onclick = function () { if (!confirm("Clôturer cette alerte ? Elle disparaîtra pour tout le monde.")) return; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) toast("Clôture impossible."); else { load("alertes"); toast("Alerte clôturée"); } }); }; c.appendChild(row); row = el("div", "row"); row.style.marginTop = "8px"; row.appendChild(b3); }
       } else {
-        var b2 = el("button", "btn", "✅ Problème résolu · désactiver l'alerte"); b2.onclick = function () { b2.disabled = true; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) { b2.disabled = false; toast("Impossible de désactiver. Réessayez."); return; } load("alertes"); toast("Alerte désactivée. Bon retour au port !"); }); }; row.appendChild(b2);
+        var b2 = el("button", "btn", "Problème résolu · désactiver l'alerte"); b2.onclick = function () { b2.disabled = true; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) { b2.disabled = false; toast("Impossible de désactiver. Réessayez."); return; } load("alertes"); toast("Alerte désactivée. Bon retour au port !"); }); }; row.appendChild(b2);
       }
       c.appendChild(row); L.appendChild(c);
     });
@@ -405,7 +405,7 @@ function drawPanneMap() {
   var z = Z[sel] || Z[0], zx = X(z[2]);
   if (gp) mk("circle", { cx: X(gp.lon), cy: Y(gp.lat), r: 8 }, "fill:#2d7ff9;stroke:#fff;stroke-width:3");
   else { var t = mk("text", { x: zx, y: Y(z[1]) - 16, "text-anchor": zx > 520 ? "end" : zx < 120 ? "start" : "middle", "font-size": 20 }, "fill:var(--tx);font-weight:600"); t.textContent = z[0]; }
-  var r = $("pnRoute"); r.href = "https://www.google.com/maps/dir/?api=1&destination=" + z[1] + "," + z[2]; r.textContent = "🧭 Itinéraire jusqu’à " + z[0];
+  var r = $("pnRoute"); r.href = "https://www.google.com/maps/dir/?api=1&destination=" + z[1] + "," + z[2]; r.textContent = "Itinéraire jusqu’à " + z[0];
 }
 ["Clarens","Coppet","Cully","La Tour-de-Peilz","Le Bouveret","Lutry","Montreux","Morges","Nyon","Ouchy","Pully","Rivaz","Rolle","St-Prex","St-Saphorin","Territet","Vevey-Sentinelle","Vevey-Vétéran","Villeneuve","Villette"].forEach(function (n) { var o = el("option"); o.value = n; $("scDl").appendChild(o); });
 function renderSc() {
@@ -459,16 +459,16 @@ function befriend(id) {
   var q = r === "recu" ? sb.from("amities").update({ statut: "ok" }).eq("de", id).eq("a", uid)
     : r ? sb.from("amities").delete().or("and(de.eq." + uid + ",a.eq." + id + "),and(de.eq." + id + ",a.eq." + uid + ")")
     : sb.from("amities").insert({ a: id });
-  q.then(function (x) { if (x.error) { toast("Action impossible. Réessayez."); return; } toast(r === "recu" ? "Vous êtes maintenant amis ⚓" : r ? "Retiré" : "Demande d'ami envoyée"); load("amities").then(loadFriends); });
+  q.then(function (x) { if (x.error) { toast("Action impossible. Réessayez."); return; } toast(r === "recu" ? "Vous êtes maintenant amis" : r ? "Retiré" : "Demande d'ami envoyée"); load("amities").then(loadFriends); });
 }
 function memberCard(id, extra) {
   var pr = P[id] || {}, c = el("div", "card mcard"), r = rel(id); c.appendChild(badge(id));
-  var info = [pr.type, pr.port ? "⚓ " + pr.port : ""].filter(Boolean).join(" · "); if (info) c.appendChild(el("div", "mu", info));
+  var info = [pr.type, pr.port ? pr.port : ""].filter(Boolean).join(" · "); if (info) c.appendChild(el("div", "mu", info));
   if (extra) c.appendChild(extra);
   var row = el("div", "row"); row.style.marginTop = "8px";
-  var w = el("button", "btn sm", "💬 Écrire"); w.onclick = function () { openThread(id); }; row.appendChild(w);
-  if (r === "recu") { var ok = el("button", "btn sm", "✅ Accepter"); ok.onclick = function () { befriend(id); }; row.appendChild(ok); var no = el("button", "btn g sm", "Refuser"); no.onclick = function () { sb.from("amities").delete().eq("de", id).eq("a", uid).then(function () { load("amities"); }); }; row.appendChild(no); }
-  else { var f = el("button", "btn g sm", r === "ami" ? "✓ Ami · retirer" : r === "envoye" ? "⏳ Demande envoyée · annuler" : "➕ Ajouter en ami"); f.onclick = function () { befriend(id); }; row.appendChild(f); }
+  var w = el("button", "btn sm", "Écrire"); w.onclick = function () { openThread(id); }; row.appendChild(w);
+  if (r === "recu") { var ok = el("button", "btn sm", "Accepter"); ok.onclick = function () { befriend(id); }; row.appendChild(ok); var no = el("button", "btn g sm", "Refuser"); no.onclick = function () { sb.from("amities").delete().eq("de", id).eq("a", uid).then(function () { load("amities"); }); }; row.appendChild(no); }
+  else { var f = el("button", "btn g sm", r === "ami" ? "✓ Ami · retirer" : r === "envoye" ? "Demande envoyée · annuler" : "Ajouter en ami"); f.onclick = function () { befriend(id); }; row.appendChild(f); }
   c.appendChild(row); return c;
 }
 var mbQ = "";
@@ -487,7 +487,7 @@ $("rnMsgTxt").onchange = function () { ls("nc-msg", this.value.trim()); push(); 
 $("rnGps").onclick = function () {
   rErr(); if (!navigator.geolocation) { rErr("GPS indisponible : touchez la carte pour vous placer."); return; }
   if (watchId != null) return;
-  watchId = navigator.geolocation.watchPosition(function (p) { rgp = { lat: p.coords.latitude, lon: p.coords.longitude }; $("rnGps").textContent = "📍 Position GPS active"; if (Date.now() - lastPush > 20000) { lastPush = Date.now(); push(); } renderPonton(); },
+  watchId = navigator.geolocation.watchPosition(function (p) { rgp = { lat: p.coords.latitude, lon: p.coords.longitude }; $("rnGps").textContent = "Position GPS active"; if (Date.now() - lastPush > 20000) { lastPush = Date.now(); push(); } renderPonton(); },
     function () { watchId = null; rErr("GPS refusé ou indisponible : touchez la carte pour vous placer."); }, { enableHighAccuracy: true });
 };
 $("rnMap").onclick = function (e) { if (rgp) return; rman = svgPoint(this, e); ls("nc-man", JSON.stringify(rman)); push(); renderPonton(); };
@@ -505,9 +505,9 @@ function personCard(id, x) {
   var info = [pr.type, pr.port ? "port d'attache : " + pr.port : ""].filter(Boolean).join(" · "); if (info) c.appendChild(el("div", "mu", info));
   if (x && x.msg) c.appendChild(el("div", 0, "« " + x.msg + " »"));
   if (x) c.appendChild(el("div", "mu", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position arrondie · " + ago(x.maj)));
-  var b = el("button", "btn sm", "💬 Écrire"); b.onclick = function () { openThread(id); }; c.appendChild(b); return c;
+  var b = el("button", "btn sm", "Écrire"); b.onclick = function () { openThread(id); }; c.appendChild(b); return c;
 }
-var PRESETS = ["👋 Salut !", "🍻 Un apéro au port ?", "⚓ On se retrouve au port ?", "🛟 Besoin d'aide ?"];
+var PRESETS = ["Salut !", "Un apéro au port ?", "On se retrouve au port ?", "Besoin d'aide ?"];
 function threads() { var T = {}; M.forEach(function (m) { var o = m.de === uid ? m.a : m.a === uid ? m.de : null; if (!o) return; (T[o] = T[o] || []).push(m); }); return T; }
 function unread() { if (!uid) return 0; var seen = +ls("nc-seen") || 0; return M.filter(function (m) { return m.a === uid && ts(m.t) > seen; }).length; }
 function markRead() { ls("nc-seen", String(Date.now())); }
@@ -553,8 +553,8 @@ function renderPonton() {
   var Fr = $("rnFriends"); Fr.textContent = ""; var p = rPos();
   friendIds().filter(function (id) { return P[id]; }).forEach(function (id) {
     var x = FR.filter(function (f) { return f.auteur === id; })[0], ex = null;
-    if (x) { ex = el("div"); ex.appendChild(el("div", "okm", "📍 " + (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position partagée " + ago(x.maj)));
-      var a = el("a", "btn g sm", "🧭 Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a); }
+    if (x) { ex = el("div"); ex.appendChild(el("div", "okm", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position partagée " + ago(x.maj)));
+      var a = el("a", "btn g sm", "Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a); }
     Fr.appendChild(memberCard(id, ex)); });
   if (!Fr.firstChild) Fr.appendChild(el("p", "mu", "Pas encore d'amis. Cherchez un plaisancier ci-dessus et touchez « Ajouter en ami »."));
   var L = $("rnOpenList"); L.textContent = ""; openOthers().sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).forEach(function (x) { L.appendChild(personCard(x.id, x)); });
@@ -563,11 +563,11 @@ function renderPonton() {
 
 /* ================= BOÎTE À IDÉES ================= */
 var avType = "fix", avFilt = "tout", avBusy = false;
-var AVT = { like: "👍 J'aime", fix: "🔧 À améliorer", idea: "💡 Idée" }, STL = { prevu: "Prévu", encours: "En cours", fait: "Fait ✓", non: "Pas retenu" };
+var AVT = { like: "J'aime", fix: "À améliorer", idea: "Idée" }, STL = { prevu: "Prévu", encours: "En cours", fait: "Fait ✓", non: "Pas retenu" };
 var MODS = ["Général", "Le Ponton (chat)", "Panne / SOS", "Météo", "Webcams", "Ports", "Escales gourmandes", "À vendre · Troc", "Location", "Vitesse", "Nœuds", "Épaves"];
 MODS.forEach(function (m) { $("avMod").appendChild(el("option", 0, m)); });
 Object.keys(AVT).forEach(function (k) { var b = el("button", 0, AVT[k]); b.dataset.k = k; b.onclick = function () { avType = k; drawAvChips(); }; $("avType").appendChild(b); });
-[["tout", "Tout"], ["like", "👍 J'aime"], ["fix", "🔧 À améliorer"], ["idea", "💡 Idées"]].forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { avFilt = f[0]; renderAvis(); }; $("avFilt").appendChild(b); });
+[["tout", "Tout"], ["like", "J'aime"], ["fix", "À améliorer"], ["idea", "Idées"]].forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { avFilt = f[0]; renderAvis(); }; $("avFilt").appendChild(b); });
 function drawAvChips() {
   Array.prototype.forEach.call($("avType").children, function (b) { b.classList.toggle("on", b.dataset.k === avType); });
   $("avTxt").placeholder = avType === "like" ? "Ex. : la carte des webcams est top, je la regarde avant chaque sortie." : avType === "idea" ? "Ex. : ajouter les horaires des bateaux CGN." : "Ex. : la carte est difficile à lire sur mon téléphone.";
@@ -668,7 +668,7 @@ function gallery(title, k, label) {
   var md = modal(title), bx = md.bx;
   function draw() {
     while (bx.children.length > 1) bx.lastChild.remove();
-    var add = el("button", "btn", "📷 Ajouter une photo"); add.onclick = function () { md.close(); pickPhoto(k, label || title); }; bx.appendChild(add);
+    var add = el("button", "btn", "Ajouter une photo"); add.onclick = function () { md.close(); pickPhoto(k, label || title); }; bx.appendChild(add);
     var ps = photosOf(k); if (!ps.length) bx.appendChild(el("div", "mu", "Pas encore de photo. Soyez le premier à documenter !"));
     var wrap = el("div"); wrap.style.marginTop = "12px"; bx.appendChild(wrap);
     ps.slice(0, 20).forEach(function (p) {
@@ -685,7 +685,7 @@ function gallery(title, k, label) {
 function thumb(k, title, label) {
   var w = el("div", "ph-thumb"), ps = photosOf(k);
   if (ps.length) { var i = el("img"); i.alt = ""; i.src = photoUrl(ps[0].chemin); w.appendChild(i); }
-  w.appendChild(el("span", 0, ps.length ? "📷 " + ps.length + " photo" + (ps.length > 1 ? "s" : "") + " · dernière " + ago(ps[0].t) : "📷 Ajouter la première photo"));
+  w.appendChild(el("span", 0, ps.length ? ps.length + " photo" + (ps.length > 1 ? "s" : "") + " · dernière " + ago(ps[0].t) : "Ajouter la première photo"));
   w.onclick = function (e) { e.stopPropagation(); ps.length ? gallery(title, k, label) : pickPhoto(k, label || title); };
   return w;
 }
@@ -746,7 +746,7 @@ var WINDS = [
   { n: "Vaudaire", d: "SE", dirs: ["SE", "S", "E"], t: "Foehn qui sort de la vallée du Rhône et balaie le Haut-Lac (Villeneuve, Montreux, Le Bouveret). Chaud et très rafaleux.", w: "Rafales violentes" },
   { n: "Séchard", d: "E", dirs: ["E", "NE"], t: "Petit vent d'est de beau temps, plutôt sur le Haut-Lac. Agréable pour naviguer.", w: "" },
   { n: "Brises thermiques", d: "variable", dirs: [], t: "Par beau temps calme, des brises locales se lèvent l'après-midi (du lac vers la terre) et le soir (de la terre vers le lac). Elles restent faibles.", w: "" }];
-WINDS.forEach(function (w, i) { var c = el("div", "card wind"); c.id = "w" + i; c.appendChild(el("span", "dir", w.d)); c.appendChild(el("b", 0, w.n)); c.appendChild(el("div", "mu", w.t)); if (w.w) c.appendChild(el("span", "wwarn", "⚠ " + w.w)); $("mWinds").appendChild(c); });
+WINDS.forEach(function (w, i) { var c = el("div", "card wind"); c.id = "w" + i; c.appendChild(el("span", "dir", w.d)); c.appendChild(el("b", 0, w.n)); c.appendChild(el("div", "mu", w.t)); if (w.w) c.appendChild(el("span", "wwarn", w.w)); $("mWinds").appendChild(c); });
 ["N", "NE", "E", "SE", "S", "SO", "O", "NO"].forEach(function (d) {
   var b = el("button", 0, d); b.onclick = function () {
     Array.prototype.forEach.call($("mRose").children, function (x) { x.classList.toggle("on", x === b); });
@@ -841,12 +841,12 @@ function wxRender() {
   var A = wxAlertsCalc();
   /* bandeau accueil */
   hb.textContent = "";
-  if (A.length) { hb.hidden = false; hb.className = "card windbar" + (A[0].lv === 2 ? " red" : ""); hb.appendChild(el("span", "ic", "💨")); var d = el("div"); d.appendChild(el("b", 0, A[0].t)); d.appendChild(el("span", "mu", A.length > 1 ? "+ " + (A.length - 1) + " autre" + (A.length > 2 ? "s" : "") + " alerte" + (A.length > 2 ? "s" : "") + " · voir les balises ›" : "Voir les balises vent ›")); hb.appendChild(d); }
+  if (A.length) { hb.hidden = false; hb.className = "card windbar" + (A[0].lv === 2 ? " red" : ""); var hi = el("span", "ic"); hi.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h8"/></svg>'; hb.appendChild(hi); var d = el("div"); d.appendChild(el("b", 0, A[0].t)); d.appendChild(el("span", "mu", A.length > 1 ? "+ " + (A.length - 1) + " autre" + (A.length > 2 ? "s" : "") + " alerte" + (A.length > 2 ? "s" : "") + " · voir les balises ›" : "Voir les balises vent ›")); hb.appendChild(d); }
   else hb.hidden = true;
   if (!AL) return;
   AL.textContent = "";
   if (!A.length) { var c0 = el("div", "card wxal ok"); c0.appendChild(el("b", 0, "Pas d'alerte vent")); c0.appendChild(el("div", "mu", "Aucun vent fort prévu sur le lac dans les 12 prochaines heures.")); AL.appendChild(c0); }
-  A.forEach(function (a) { var c = el("div", "card wxal" + (a.lv === 2 ? " red" : "")); c.appendChild(el("b", 0, (a.lv === 2 ? "⛔ " : "⚠ ") + a.t)); c.appendChild(el("div", "mu", a.d)); AL.appendChild(c); });
+  A.forEach(function (a) { var c = el("div", "card wxal" + (a.lv === 2 ? " red" : "")); c.appendChild(el("b", 0, a.t)); c.appendChild(el("div", "mu", a.d)); AL.appendChild(c); });
   /* échéances */
   var W = $("wxWhen"); W.textContent = "";
   [0, 3, 6, 9, 12].forEach(function (h) { var b = el("button", h === wxH ? "on" : "", h ? "+" + h + " h · " + hourTxt(wxAt(0, h).t) : "Maintenant"); b.onclick = function () { wxH = h; wxRender(); }; W.appendChild(b); });
@@ -928,7 +928,7 @@ var RESTOS = [
   { id: "sechex", n: "Le Léman", l: "Port de Séchex, Margencel", r: "FR", a: "ponton", la: 46.381, lo: 6.425, d: "Pêche du jour au gré des filets. Ponton privé pour les bateaux, débarcadère CGN à 300 m." },
   { id: "pecheurs", n: "Restaurant-Plage Les Pêcheurs", l: "Sciez", r: "FR", a: "ponton", la: 46.352, lo: 6.395, d: "Une institution depuis 1964, les pieds dans l'eau sous les platanes. Deux pontons privés ; réservation conseillée." },
   { id: "chaletport", n: "Le Chalet du Port", l: "Sciez", r: "FR", a: "port", la: 46.346, lo: 6.380, d: "Sur le port de Sciez : féra, perche et terrasse avec vue sur le lac. Aire de jeux pour les enfants." }];
-var ACC = { ponton: ["⚓ Ponton du restaurant", "pt"], port: ["⚓ Au port", "pt"], non: ["Pas d'accès bateau", ""] };
+var ACC = { ponton: ["Ponton du restaurant", "pt"], port: ["Au port", "pt"], non: ["Pas d'accès bateau", ""] };
 var RF = [["tous", "Tous"], ["bateau", "Accès en bateau"], ["CH", "Rive suisse"], ["FR", "Rive française"], ["user", "Ajouts des membres"]], reFilt = "tous", reCur = null;
 RF.forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { reFilt = f[0]; renderRestos(); }; $("reChips").appendChild(b); });
 var PLACES = [["geneve",46.21,6.16,"CH"],["versoix",46.283,6.17,"CH"],["coppet",46.316,6.192,"CH"],["nyon",46.382,6.24,"CH"],["rolle",46.458,6.337,"CH"],["prex",46.48,6.455,"CH"],["morges",46.506,6.497,"CH"],["lausanne",46.507,6.627,"CH"],["ouchy",46.505,6.627,"CH"],["pully",46.507,6.66,"CH"],["lutry",46.502,6.685,"CH"],["cully",46.488,6.73,"CH"],["vevey",46.461,6.842,"CH"],["peilz",46.453,6.858,"CH"],["montreux",46.432,6.91,"CH"],["clarens",46.44,6.893,"CH"],["villeneuve",46.4,6.925,"CH"],["bouveret",46.386,6.856,"CH"],["gingolph",46.392,6.805,"CH"],["evian",46.402,6.59,"FR"],["thonon",46.376,6.48,"FR"],["yvoire",46.372,6.327,"FR"],["sciez",46.35,6.39,"FR"],["excenevex",46.347,6.358,"FR"],["hermance",46.302,6.243,"CH"],["meillerie",46.408,6.722,"FR"]];
@@ -952,15 +952,15 @@ function renderRestos() {
   if (!S.length) L.appendChild(el("p", "mu", reFilt === "user" ? "Aucune adresse ajoutée pour l'instant. Soyez le premier !" : "Aucune adresse."));
   S.forEach(function (x) {
     var c = el("div", "card rcard" + (x.pa ? " partner" : "") + (x.id === reCur ? " on" : "")); c.id = "r-" + x.id;
-    if (x.pa) c.appendChild(el("div", "pbadge", paActive(x.pa) ? "⭐ Partenaire Nauticonnect" : "⏸ Partenariat expiré (visible par l'admin seulement)"));
+    if (x.pa) c.appendChild(el("div", "pbadge", paActive(x.pa) ? "Partenaire Nauticonnect" : "Partenariat expiré (visible par l'admin seulement)"));
     c.appendChild(el("h3", 0, x.n)); c.appendChild(el("div", "where", x.l + (x.r ? " · " + (x.r === "CH" ? "Suisse" : "France") : "")));
     var T = el("div", "tags"), ac = ACC[x.a]; if (ac) T.appendChild(el("span", "tag " + ac[1], ac[0])); if (x.u) T.appendChild(el("span", "tag us", "Ajouté par " + ((P[x.u] && P[x.u].pseudo) || "un membre"))); c.appendChild(T);
-    if (x.pa && x.pa.offre) c.appendChild(el("div", "poffre", "🎁 " + x.pa.offre));
+    if (x.pa && x.pa.offre) c.appendChild(el("div", "poffre", x.pa.offre));
     if (x.d) c.appendChild(el("div", 0, x.d));
     c.appendChild(thumb("resto-" + x.id, x.n, "Escale : " + x.n + " (plats, terrasse, ponton…)"));
     var A2 = el("div", "acts"), go = el("a", "p", "Y aller"); go.href = mapsSearch(x.n + " " + x.l); go.target = "_blank"; go.rel = "noopener"; A2.appendChild(go);
-    if (x.pa && x.pa.tel) { var tl = el("a", 0, "📞 Appeler"); tl.href = "tel:" + x.pa.tel.replace(/[^0-9+]/g, ""); A2.appendChild(tl); }
-    if (x.pa && /^https?:\/\//.test(x.pa.site)) { var st = el("a", 0, "🌐 Site"); st.href = x.pa.site; st.target = "_blank"; st.rel = "noopener"; A2.appendChild(st); }
+    if (x.pa && x.pa.tel) { var tl = el("a", 0, "Appeler"); tl.href = "tel:" + x.pa.tel.replace(/[^0-9+]/g, ""); A2.appendChild(tl); }
+    if (x.pa && /^https?:\/\//.test(x.pa.site)) { var st = el("a", 0, "Site"); st.href = x.pa.site; st.target = "_blank"; st.rel = "noopener"; A2.appendChild(st); }
     if (x.pa && isAdmin) { var ed = el("button", 0, "Modifier"); ed.onclick = function () { paFill(x.pa); }; A2.appendChild(ed); }
     if (x.u && (x.u === uid || isAdmin)) { var rm = el("button", 0, "Retirer"); rm.onclick = function () { sb.from("restos").delete().eq("id", x.dbid).then(function () { load("restos"); }); }; A2.appendChild(rm); }
     if (x.pa && isAdmin) c.appendChild(el("div", "mu", "Partenaire jusqu'au " + x.pa.jusqu.split("-").reverse().join(".")));
@@ -1018,14 +1018,14 @@ function renderEpaves() {
   EP.forEach(function (w) { var x = X(w.lon), y = Y(w.lat); mk("circle", { cx: x, cy: y, r: epSel === w.id ? 12 : 9 }, "fill:" + epCol(+w.pm || 0) + ";stroke:#fff;stroke-width:3"); var h = mk("circle", { cx: x, cy: y, r: 16 }, "fill:transparent;cursor:pointer"); h.onclick = function (e) { e.stopPropagation(); epSel = w.id; renderEpaves(); }; });
   if (epPend) mk("circle", { cx: X(epPend.lon), cy: Y(epPend.lat), r: 11 }, "fill:none;stroke:#2d7ff9;stroke-width:4");
   var D = $("epDet"), L = $("epList"); D.textContent = ""; L.textContent = "";
-  function card(w) { var c = el("div", "card"); c.appendChild(el("b", 0, "⚓ " + w.nom + (w.annee ? " · " + w.annee : ""))); c.appendChild(el("div", "mu", "Profondeur max : " + (w.pm ? w.pm + " m" : "inconnue") + " · 📍 " + (w.approx ? "position approximative" : "position précise"))); if (w.note) c.appendChild(el("div", 0, w.note));
-    if (uid && (w.auteur === uid || isAdmin)) { var b = el("button", "btn g sm", "✏️ Modifier"); b.onclick = function () { epOpen(w); }; c.appendChild(b); } return c; }
+  function card(w) { var c = el("div", "card"); c.appendChild(el("b", 0, w.nom + (w.annee ? " · " + w.annee : ""))); c.appendChild(el("div", "mu", "Profondeur max : " + (w.pm ? w.pm + " m" : "inconnue") + " · " + (w.approx ? "position approximative" : "position précise"))); if (w.note) c.appendChild(el("div", 0, w.note));
+    if (uid && (w.auteur === uid || isAdmin)) { var b = el("button", "btn g sm", "Modifier"); b.onclick = function () { epOpen(w); }; c.appendChild(b); } return c; }
   EP.filter(function (w) { return w.id === epSel; }).forEach(function (w) { D.appendChild(card(w)); });
   EP.slice().sort(function (a, b) { return (+a.pm || 0) - (+b.pm || 0); }).forEach(function (w) { L.appendChild(card(w)); });
   if (!EP.length) L.appendChild(el("p", "mu", "Aucune épave pour l’instant."));
 }
-$("epMap").onclick = function (e) { if ($("epForm").hidden) return; epPend = svgPoint(this, e); $("epPs").textContent = "📍 Position choisie : " + epPend.lat.toFixed(4) + ", " + epPend.lon.toFixed(4); renderEpaves(); };
-function epOpen(w) { epEd = w ? w.id : null; $("epN").value = w ? w.nom : ""; $("epA").value = w ? w.annee || "" : ""; $("epP").value = w ? w.pm || "" : ""; $("epT").value = w ? w.note || "" : ""; $("epAp").checked = w ? !!w.approx : true; epPend = w ? { lat: w.lat, lon: w.lon } : null; $("epPs").textContent = w ? "📍 Touchez la carte pour déplacer l’épave." : "📍 Touchez la carte pour placer l’épave."; $("epForm").hidden = false; renderEpaves(); $("epMap").scrollIntoView({ behavior: "smooth" }); }
+$("epMap").onclick = function (e) { if ($("epForm").hidden) return; epPend = svgPoint(this, e); $("epPs").textContent = "Position choisie : " + epPend.lat.toFixed(4) + ", " + epPend.lon.toFixed(4); renderEpaves(); };
+function epOpen(w) { epEd = w ? w.id : null; $("epN").value = w ? w.nom : ""; $("epA").value = w ? w.annee || "" : ""; $("epP").value = w ? w.pm || "" : ""; $("epT").value = w ? w.note || "" : ""; $("epAp").checked = w ? !!w.approx : true; epPend = w ? { lat: w.lat, lon: w.lon } : null; $("epPs").textContent = w ? "Touchez la carte pour déplacer l’épave." : "Touchez la carte pour placer l’épave."; $("epForm").hidden = false; renderEpaves(); $("epMap").scrollIntoView({ behavior: "smooth" }); }
 $("epAdd").onclick = function () { if (!guestOk(function () { epOpen(null); }, $("epMsg"))) return; epOpen(null); };
 $("epCx").onclick = function () { $("epForm").hidden = true; epPend = null; renderEpaves(); };
 $("epSv").onclick = function () {
@@ -1052,7 +1052,7 @@ function gOk(p) {
 function gStop() { gRun = false; gEl += Date.now() - gSt; if (gWid != null) navigator.geolocation.clearWatch(gWid); gWid = null; clearInterval(gTk); try { if (gWl) gWl.release(); } catch (e) {} gWl = null; $("gGo").textContent = "▶ Reprendre"; $("gGo").classList.remove("r"); $("gV").textContent = "0.0"; $("gK").textContent = "0.0 km/h"; }
 $("gGo").onclick = function () {
   gMsg(); if (gRun) { gStop(); return; } if (!navigator.geolocation) { gMsg("GPS indisponible sur cet appareil."); return; }
-  gRun = true; gSt = Date.now(); glp = null; gls = null; $("gGo").textContent = "⏹ Arrêter"; $("gGo").classList.add("r");
+  gRun = true; gSt = Date.now(); glp = null; gls = null; $("gGo").textContent = "Arrêter"; $("gGo").classList.add("r");
   gWid = navigator.geolocation.watchPosition(gOk, function (e) { gMsg(e.code === 1 ? "GPS refusé : autorisez la position pour Nauticonnect." : "Position indisponible, réessayez en extérieur."); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
   gTk = setInterval(gTimer, 1000); try { navigator.wakeLock.request("screen").then(function (w) { gWl = w; }).catch(function () {}); } catch (e) {}
 };
@@ -1105,7 +1105,7 @@ function renderAnnonces() {
       var e = el("button", "btn g sm", "Modifier"); e.onclick = function () { anOpen(a); }; c.appendChild(e);
       var d = el("button", "btn g sm", "Retirer (vendu / donné)"); d.onclick = function () { sb.from("annonces").delete().eq("id", a.id).then(function () { load("annonces"); }); }; c.appendChild(d);
     } else {
-      var k = el("button", "btn sm", "💬 Contacter"); k.onclick = function () { openThread(a.auteur, "Bonjour, votre annonce « " + a.titre + " » m'intéresse. "); }; c.appendChild(k);
+      var k = el("button", "btn sm", "Contacter"); k.onclick = function () { openThread(a.auteur, "Bonjour, votre annonce « " + a.titre + " » m'intéresse. "); }; c.appendChild(k);
       var r = el("button", "btn g sm", "Signaler"); r.onclick = function () { if (!guestOk(function () { r.onclick(); })) return; sb.from("signalements").insert({ quoi: "annonce", ref: String(a.id) }).then(function () { r.textContent = "Signalée"; r.disabled = true; }); }; c.appendChild(r);
     }
     L.appendChild(c);
@@ -1133,7 +1133,7 @@ function loCard(x, mod) {
   c.appendChild(el("b", 0, x.nom)); c.lastChild.style.cssText = "font-size:18px;display:block";
   c.appendChild(el("div", "mu", x.type + (x.port ? " · " + x.port : "") + " · " + x.places + " pers. max."));
   var tg = el("div", "tags"); tg.appendChild(el("span", "pill", x.permis ? "Permis requis" : "Sans permis")); if (x.skipper) tg.appendChild(el("span", "pill", "Skipper possible")); if (+x.caution) tg.appendChild(el("span", "pill", "Caution " + chf(x.caution)));
-  if (x.signale) tg.appendChild(el("span", "pill", "⚠ Signalée, en vérification")); else if (!x.actif) tg.appendChild(el("span", "pill", "En pause")); c.appendChild(tg);
+  if (x.signale) tg.appendChild(el("span", "pill", "Signalée, en vérification")); else if (!x.actif) tg.appendChild(el("span", "pill", "En pause")); c.appendChild(tg);
   var pr = [+x.prix_demi ? "½ journée " + chf(x.prix_demi) : "", +x.prix_jour ? "journée " + chf(x.prix_jour) : ""].filter(Boolean).join(" · ");
   c.appendChild(el("div", "price", pr || "Prix à discuter"));
   if (x.descr) c.appendChild(el("div", 0, x.descr));
@@ -1148,7 +1148,7 @@ function loCard(x, mod) {
       var pa = el("button", "btn g sm", x.actif ? "Mettre en pause" : "Réactiver"); pa.onclick = function () { sb.from("locations").update({ actif: !x.actif }).eq("id", x.id).then(function () { load("locations"); }); }; A.appendChild(pa); }
     var d = el("button", "btn g sm", "Supprimer"); d.onclick = function () { if (confirm("Supprimer cette annonce de location ?")) sb.from("locations").delete().eq("id", x.id).then(function () { load("locations"); toast("Annonce supprimée"); }); }; A.appendChild(d);
   } else {
-    var k = el("button", "btn sm", "📅 Demander une location"); k.onclick = function () { loAsk(x); }; A.appendChild(k);
+    var k = el("button", "btn sm", "Demander une location"); k.onclick = function () { loAsk(x); }; A.appendChild(k);
     var r = el("button", "btn g sm", "Signaler"); r.onclick = function () { if (!confirm("Signaler cette annonce ? Elle sera masquée et vérifiée.")) return; if (!guestOk(function () { r.onclick(); })) return; sb.from("signalements").insert({ quoi: "location", ref: String(x.id) }).then(function () { LO = LO.filter(function (y) { return y.id !== x.id; }); renderLoc(); toast("Annonce signalée. Merci !"); }); }; A.appendChild(r);
   }
   c.appendChild(A); return c;
@@ -1197,7 +1197,7 @@ function loAsk(x) {
   var go = el("button", "btn", "Préparer le message"); bx.appendChild(go);
   go.onclick = function () {
     var dt = d.value ? new Date(d.value + "T12:00").toLocaleDateString("fr-CH", { weekday: "short", day: "numeric", month: "short" }) : "?";
-    var t = "📅 Location « " + x.nom.slice(0, 30) + " » : " + dt + ", " + du.value + ", " + (+pe.value || 1) + " pers." + (skc.checked ? ", avec skipper" : "") + ". Dispo ? ";
+    var t = "Location « " + x.nom.slice(0, 30) + " » : " + dt + ", " + du.value + ", " + (+pe.value || 1) + " pers." + (skc.checked ? ", avec skipper" : "") + ". Dispo ? ";
     md.close(); openThread(x.auteur, t.slice(0, 190));
   };
 }
@@ -1230,7 +1230,7 @@ function pushEnable() {
   Notification.requestPermission().then(function (p) {
     if (p !== "granted") { toast("Notifications refusées. Autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); notifUI(); return; }
     return swReg().then(function (r) { return r.pushManager.getSubscription().then(function (s) { return s || r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }); }); })
-      .then(function (s) { return pushSave(s); }).then(function () { toast("🔔 Notifications activées !"); });
+      .then(function (s) { return pushSave(s); }).then(function () { toast("Notifications activées !"); });
   }).catch(function () { toast("Activation impossible. Réessayez."); });
 }
 function pushDisable() {
@@ -1252,7 +1252,7 @@ $("nfTest").onclick = function () { sb.rpc("push_test").then(function (r) { toas
 
 /* ================= INVITER UN AMI ================= */
 function invite() {
-  var url = location.origin + location.pathname, txt = "Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac ⛵";
+  var url = location.origin + location.pathname, txt = "Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac";
   if (navigator.share) { navigator.share({ title: "Nauticonnect", text: txt, url: url }).catch(function () {}); return; }
   var md = modal("Inviter un ami"), bx = md.bx;
   var wa = el("a", "btn", "Partager sur WhatsApp"); wa.href = "https://wa.me/?text=" + encodeURIComponent(txt + " " + url); wa.target = "_blank"; wa.rel = "noopener"; bx.appendChild(wa);
@@ -1273,12 +1273,12 @@ function renderLac() {
   if (LAC.err || (!LAC.temp.length && !LAC.niveau)) { B.appendChild(el("p", "mu", "Données du lac indisponibles pour le moment.")); return; }
   if (LAC.temp.length) {
     var g = el("div", "lacg");
-    LAC.temp.forEach(function (t) { var c = el("div", "lact"); c.appendChild(el("b", 0, "🌡 " + String(t.t).replace(".", ",") + " °C")); c.appendChild(el("span", 0, t.n)); g.appendChild(c); });
+    LAC.temp.forEach(function (t) { var c = el("div", "lact"); c.appendChild(el("b", 0, String(t.t).replace(".", ",") + " °C")); c.appendChild(el("span", 0, t.n)); g.appendChild(c); });
     B.appendChild(g);
   }
   if (LAC.niveau) {
     var n = LAC.niveau, d = Math.round((n.m - n.moy) * 100), c = el("div", "card lacn");
-    c.appendChild(el("b", 0, "📏 Niveau du lac : " + n.m.toFixed(2).replace(".", ",") + " m"));
+    c.appendChild(el("b", 0, "Niveau du lac : " + n.m.toFixed(2).replace(".", ",") + " m"));
     c.appendChild(el("div", "mu", (d === 0 ? "Pile dans la moyenne" : Math.abs(d) + " cm " + (d > 0 ? "au-dessus" : "au-dessous") + " de la moyenne") + " · mesuré à Saint-Prex " + ago(n.at)));
     B.appendChild(c);
   }
@@ -1312,22 +1312,22 @@ var MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", 
 function dFr(d) { var x = new Date(d + "T12:00:00"); return JOURS[x.getDay()] + " " + x.getDate() + " " + MOIS[x.getMonth()]; }
 function evDates(e) { return e.debut === e.fin ? dFr(e.debut) : "du " + dFr(e.debut) + " au " + dFr(e.fin); }
 function evPrice() { return REG.ev_prix || "30"; }
-var STE = { attente: "⏳ En attente de paiement / validation", publie: "✅ Publié", refuse: "❌ Refusé" };
+var STE = { attente: "En attente de paiement / validation", publie: "Publié", refuse: "Refusé" };
 function evCard(e, adm) {
   var c = el("div", "card evcard"), x = new Date(e.debut + "T12:00:00");
   var dt = el("div", "evdate"); dt.appendChild(el("b", 0, String(x.getDate()))); dt.appendChild(el("span", 0, MOIS[x.getMonth()])); c.appendChild(dt);
   var b = el("div", "evbody"); b.appendChild(el("h3", 0, e.titre));
-  b.appendChild(el("div", "mu", "📅 " + evDates(e) + (e.heure ? " · " + e.heure : "") + " · 📍 " + e.lieu));
+  b.appendChild(el("div", "mu", evDates(e) + (e.heure ? " · " + e.heure : "") + " · " + e.lieu));
   if (e.descr) b.appendChild(el("div", 0, e.descr));
   if (e.statut !== "publie" || adm) b.appendChild(el("div", e.statut === "publie" ? "okm" : "err", STE[e.statut]));
   var A = el("div", "lacts");
-  if (/^https?:\/\//.test(e.site)) { var a = el("a", "p", "🌐 Infos"); a.href = e.site; a.target = "_blank"; a.rel = "noopener"; A.appendChild(a); }
-  var go = el("a", 0, "🧭 Y aller"); go.href = mapsSearch(e.lieu); go.target = "_blank"; go.rel = "noopener"; A.appendChild(go);
-  if (e.contact) { var ct = el("a", 0, "✉️ Contact"); ct.href = /@/.test(e.contact) ? "mailto:" + e.contact : "tel:" + e.contact.replace(/[^0-9+]/g, ""); A.appendChild(ct); }
+  if (/^https?:\/\//.test(e.site)) { var a = el("a", "p", "Infos"); a.href = e.site; a.target = "_blank"; a.rel = "noopener"; A.appendChild(a); }
+  var go = el("a", 0, "Y aller"); go.href = mapsSearch(e.lieu); go.target = "_blank"; go.rel = "noopener"; A.appendChild(go);
+  if (e.contact) { var ct = el("a", 0, "Contact"); ct.href = /@/.test(e.contact) ? "mailto:" + e.contact : "tel:" + e.contact.replace(/[^0-9+]/g, ""); A.appendChild(ct); }
   b.appendChild(A);
   if (adm && isAdmin) {
     var R = el("div", "row"); R.style.marginTop = "8px";
-    if (e.statut !== "publie") { var ok = el("button", "btn sm", "✅ Publier (payé)"); ok.onclick = function () { evSet(e.id, "publie"); }; R.appendChild(ok); }
+    if (e.statut !== "publie") { var ok = el("button", "btn sm", "Publier (payé)"); ok.onclick = function () { evSet(e.id, "publie"); }; R.appendChild(ok); }
     if (e.statut !== "refuse") { var no = el("button", "btn g sm", "Refuser"); no.onclick = function () { evSet(e.id, "refuse"); }; R.appendChild(no); }
     var del = el("button", "btn g sm", "Supprimer"); del.onclick = function () { if (del.dataset.ok !== "1") { del.dataset.ok = "1"; del.textContent = "Confirmer"; return; } sb.from("evenements").delete().eq("id", e.id).then(function () { load("evenements"); }); }; R.appendChild(del);
     if (e.contact) R.appendChild(el("div", "mu", "Contact : " + e.contact));
@@ -1342,7 +1342,7 @@ function payBox() {
   var w = $("evPay"); w.textContent = "";
   w.appendChild(el("div", 0, "Publication : " + evPrice() + " CHF par événement."));
   var pay = REG.ev_paiement || "";
-  if (/^https?:\/\//.test(pay)) { var a = el("a", "btn", "💳 Payer " + evPrice() + " CHF"); a.href = pay; a.target = "_blank"; a.rel = "noopener"; a.style.marginTop = "8px"; w.appendChild(a); }
+  if (/^https?:\/\//.test(pay)) { var a = el("a", "btn", "Payer " + evPrice() + " CHF"); a.href = pay; a.target = "_blank"; a.rel = "noopener"; a.style.marginTop = "8px"; w.appendChild(a); }
   else if (pay) w.appendChild(el("div", "okm", pay));
   else w.appendChild(el("div", "mu", "Les infos de paiement vous seront envoyées par l'équipe Nauticonnect au contact indiqué."));
   w.appendChild(el("div", "mu", "Votre événement est publié dès réception du paiement."));
