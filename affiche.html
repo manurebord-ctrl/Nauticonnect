@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Affiche Nauticonnect</title>
+<link rel="icon" href="favicon-64.png">
+<style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#e8eef3;color:#0d2a3d}
+.tools{max-width:620px;margin:16px auto;padding:16px;background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.tools b{display:block;margin-bottom:8px}
+.tools input{width:100%;font-size:17px;padding:12px;border:1px solid #b9c7d2;border-radius:12px;margin-bottom:12px}
+.tools button{width:100%;font-size:17px;font-weight:700;padding:14px;border:0;border-radius:14px;background:#0f6fa3;color:#fff}
+.tools p{color:#5a6f7e;font-size:14px;margin:10px 0 0}
+.sheet{width:210mm;min-height:297mm;margin:0 auto 24px;background:#fff;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.top{width:100%;background:linear-gradient(160deg,#0b3954,#0f6fa3);color:#fff;padding:22mm 16mm 16mm}
+.brand{font-size:15mm;font-weight:800;letter-spacing:-.5px}.brand b{color:#8fd3ff}
+.port{margin-top:4mm;font-size:7mm;opacity:.9}
+h1{font-size:13mm;line-height:1.1;margin:14mm 14mm 6mm}
+.qr{width:95mm;height:95mm;border:3mm solid #0f6fa3;border-radius:8mm;padding:4mm}
+.qr img{width:100%;height:100%;display:block}
+.scan{font-size:6.5mm;font-weight:700;margin-top:6mm;color:#0f6fa3}
+ul{list-style:none;padding:0;margin:10mm 20mm 0;display:grid;grid-template-columns:1fr 1fr;gap:4mm 8mm;text-align:left;font-size:5mm}
+li{border-left:2mm solid #0f6fa3;padding:1mm 0 1mm 4mm}
+.foot{margin-top:auto;padding:10mm;font-size:4.5mm;color:#5a6f7e}
+.wrap{overflow-x:auto}
+@media print{body{background:#fff}.tools{display:none}.sheet{margin:0;box-shadow:none;zoom:1!important}}
+</style>
+</head>
+<body>
+<div class="tools">
+<b>Affiche à imprimer pour votre port</b>
+<input id="portIn" placeholder="Nom du port (ex. Le Bouveret)" maxlength="40">
+<button onclick="window.print()">Imprimer ou enregistrer en PDF</button>
+<p>Affichez-la à la capitainerie, au ponton ou au restaurant du port. Les plaisanciers scannent le QR code et arrivent directement sur Nauticonnect.</p>
+</div>
+<div class="wrap"><div class="sheet">
+<div class="top"><div class="brand">Nauti<b>connect</b></div><div class="port" id="portOut">Les plaisanciers du Léman</div></div>
+<h1>On se retrouve sur l'eau ?</h1>
+<div class="qr"><img id="qr" alt="QR code vers Nauticonnect"></div>
+<div class="scan">Scannez avec l'appareil photo de votre téléphone</div>
+<ul>
+<li>Vent, balises et alerte vaudaire</li>
+<li>Entraide en cas de panne</li>
+<li>Le Ponton : le chat du lac</li>
+<li>Ports, escales et webcams</li>
+</ul>
+<div class="foot">Gratuit · <span id="urlOut"></span></div>
+</div></div>
+<script>
+var base = location.origin + location.pathname.replace(/affiche\.html$/, "");
+var url = base + "?src=affiche";
+document.getElementById("qr").src = "https://api.qrserver.com/v1/create-qr-code/?size=700x700&margin=0&data=" + encodeURIComponent(url);
+document.getElementById("urlOut").textContent = base.replace(/^https?:\/\//, "").replace(/\/$/, "");
+var pi = document.getElementById("portIn"), po = document.getElementById("portOut");
+function fit() { var sh = document.querySelector(".sheet"); sh.style.zoom = innerWidth < 800 ? String((innerWidth - 8) / 794) : ""; }
+fit(); addEventListener("resize", fit);
+pi.oninput = function () { po.textContent = pi.value.trim() || "Les plaisanciers du Léman"; };
+</script>
+</body>
+</html>

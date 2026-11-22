@@ -1376,6 +1376,7 @@ function renderRestos() {
     var A2 = el("div", "acts"), go = el("a", "p", "Y aller"); go.href = mapsSearch(x.n + " " + x.l); go.target = "_blank"; go.rel = "noopener"; A2.appendChild(go);
     if (x.pa && x.pa.tel) { var tl = el("a", 0, "Appeler"); tl.href = "tel:" + x.pa.tel.replace(/[^0-9+]/g, ""); A2.appendChild(tl); }
     if (x.pa && /^https?:\/\//.test(x.pa.site)) { var st = el("a", 0, "Site"); st.href = x.pa.site; st.target = "_blank"; st.rel = "noopener"; A2.appendChild(st); }
+    var sh = el("button", 0, "Partager"); sh.onclick = function () { shareIt(x.n + " (" + x.l + ") : une escale à découvrir sur le Léman, repérée sur Nauticonnect.", "restos", "Partager cette escale"); }; A2.appendChild(sh);
     if (x.pa && isAdmin) { var ed = el("button", 0, "Modifier"); ed.onclick = function () { paFill(x.pa); }; A2.appendChild(ed); }
     if (x.u && (x.u === uid || isAdmin)) { var rm = el("button", 0, "Retirer"); rm.onclick = function () { sb.from("restos").delete().eq("id", x.dbid).then(function () { load("restos"); }); }; A2.appendChild(rm); }
     if (x.pa && isAdmin) c.appendChild(el("div", "mu", "Partenaire jusqu'au " + x.pa.jusqu.split("-").reverse().join(".")));
@@ -1703,10 +1704,11 @@ $("nfFix").onclick = function () {
 $("nfTest").onclick = function () { sb.rpc("push_test").then(function (r) { toast(r.error ? "Test impossible." : "Notification de test envoyée…"); }); };
 
 /* ================= INVITER UN AMI ================= */
-function invite() {
-  var url = location.origin + location.pathname, txt = "Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac";
+function invite() { shareIt("Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac", "", "Inviter un ami"); }
+function shareIt(txt, hash, title) {
+  var url = location.origin + location.pathname + (hash ? "#" + hash : "");
   if (navigator.share) { navigator.share({ title: "Nauticonnect", text: txt, url: url }).catch(function () {}); return; }
-  var md = modal("Inviter un ami"), bx = md.bx;
+  var md = modal(title || "Partager"), bx = md.bx;
   var wa = el("a", "btn", "Partager sur WhatsApp"); wa.href = "https://wa.me/?text=" + encodeURIComponent(txt + " " + url); wa.target = "_blank"; wa.rel = "noopener"; bx.appendChild(wa);
   var sm = el("a", "btn g", "Envoyer par SMS"); sm.href = "sms:?&body=" + encodeURIComponent(txt + " " + url); sm.style.marginTop = "8px"; bx.appendChild(sm);
   var cp = el("button", "btn g", "Copier le lien"); cp.style.marginTop = "8px"; cp.onclick = function () { (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast("Lien copié"); }, function () { prompt("Copiez le lien :", url); }); }; bx.appendChild(cp);
@@ -1738,8 +1740,35 @@ function renderLac() {
 }
 
 /* ================= RENDU GLOBAL & DÉMARRAGE ================= */
+/* ================= FIL « SUR LE LAC » ================= */
+function feedItems() {
+  var I = [], wk = Date.now() - 7 * 864e5, today = new Date().toISOString().slice(0, 10);
+  openNow().forEach(function (x) { I.push({ t: ts(x.maj), who: x.id, txt: ((P[x.id] && P[x.id].pseudo) || "Un plaisancier") + " a hissé le pavillon" + (x.msg ? " : « " + x.msg + " »" : ""), go: "ponton", k: "on" }); });
+  PH.filter(function (x) { return pub(x) && ts(x.t) > wk; }).slice(0, 4).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: ((P[x.auteur] && P[x.auteur].pseudo) || "Un membre") + " a partagé une photo du lac" + (x.c ? " : " + x.c : ""), go: "meteo", img: photoUrl(x.chemin), k: "ph" }); });
+  RU.filter(function (x) { return ts(x.t) > wk; }).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: "Nouvelle escale : " + x.nom + (x.lieu ? " (" + x.lieu + ")" : ""), go: "restos", k: "re" }); });
+  EV.filter(function (e) { return e.statut === "publie" && e.fin >= today && e.debut <= new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10); }).forEach(function (e) { I.push({ t: Date.now() - 1, txt: e.titre + " · " + evDates(e) + " · " + e.lieu, go: "evenements", k: "ev" }); });
+  AN.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Petite annonce : " + x.titre + (x.prix ? " · " + x.prix + " CHF" : ""), go: "annonces", k: "an" }); });
+  LO.filter(function (x) { return x.actif !== false && ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Bateau à louer : " + x.nom + (x.port ? " à " + x.port : ""), go: "location", k: "lo" }); });
+  EP.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 2).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Épave ajoutée sur la carte : " + x.nom, go: "epaves", k: "ep" }); });
+  var n = SL.filter(function (m) { return Date.now() - ts(m.t) < 864e5; }).length;
+  if (n) I.push({ t: Math.max.apply(null, SL.map(function (m) { return ts(m.t); })), txt: n + " message" + (n > 1 ? "s" : "") + " sur le Ponton ces dernières 24 h", go: "ponton", k: "sl" });
+  return I.sort(function (a, b) { return b.t - a.t; }).slice(0, 6);
+}
+function renderFeed() {
+  var F = $("feed"); if (!F) return; F.textContent = "";
+  var I = sb ? feedItems() : [];
+  $("feedBox").hidden = !I.length;
+  I.forEach(function (x) {
+    var a = el("a", "fd-it fd-" + x.k); a.href = "#" + x.go;
+    if (x.img) { var im = el("span", "fd-img"); im.style.backgroundImage = "url(\"" + x.img + "\")"; a.appendChild(im); }
+    else if (x.who && P[x.who]) a.appendChild(putPhoto(el("span", "av", initial(x.who)), x.who));
+    else a.appendChild(el("span", "fd-dot"));
+    var b = el("span", "fd-tx"); b.appendChild(el("span", 0, x.txt)); if (x.k !== "ev") b.appendChild(el("small", 0, ago(new Date(x.t).toISOString()))); a.appendChild(b);
+    F.appendChild(a);
+  });
+}
 function renderAll() {
-  renderHome();
+  renderHome(); renderFeed();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
@@ -1775,6 +1804,7 @@ function evCard(e, adm) {
   var A = el("div", "lacts");
   if (/^https?:\/\//.test(e.site)) { var a = el("a", "p", "Infos"); a.href = e.site; a.target = "_blank"; a.rel = "noopener"; A.appendChild(a); }
   var go = el("a", 0, "Y aller"); go.href = mapsSearch(e.lieu); go.target = "_blank"; go.rel = "noopener"; A.appendChild(go);
+  if (e.statut === "publie") { var sh = el("button", 0, "Partager"); sh.onclick = function () { shareIt(e.titre + ", " + evDates(e) + (e.heure ? " · " + e.heure : "") + " · " + e.lieu + ". On y va en bateau ?", "evenements", "Partager l'événement"); }; A.appendChild(sh); }
   if (e.contact) { var ct = el("a", 0, "Contact"); ct.href = /@/.test(e.contact) ? "mailto:" + e.contact : "tel:" + e.contact.replace(/[^0-9+]/g, ""); A.appendChild(ct); }
   b.appendChild(A);
   if (adm && isAdmin) {

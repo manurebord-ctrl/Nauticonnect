@@ -65,6 +65,11 @@
 <button class="p-inv" data-invite>Inviter un ami sur Nauticonnect</button>
 </section>
 
+<section class="feed" id="feedBox" hidden>
+<h2 class="sec">Sur le lac en ce moment</h2>
+<div id="feed"></div>
+</section>
+
 <div class="card nbox" id="notifAsk" hidden><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span><div><b>Ne ratez rien sur l'eau</b><span class="mu">Messages du Ponton, bateaux en panne près de vous, alertes vaudaire et coups de vent.</span><button class="btn sm" id="notifAskGo">Activer les notifications</button><button class="linkb" id="notifAskNo">Plus tard</button></div></div>
 
 <a class="card windbar" id="homeMod" href="#meteo" hidden></a>
@@ -125,6 +130,7 @@
 </div>
 <button class="linkb" id="nfFix">Réparer les notifications</button><div class="mu" id="nfDiag" style="white-space:pre-line;font-size:12px"></div></details>
 <button class="btn g pfinv" data-invite>Inviter un ami sur Nauticonnect</button>
+<a class="btn g pfinv" href="affiche.html" target="_blank" rel="noopener">Affiche à imprimer pour votre port (QR code)</a>
 <details class="card acc"><summary><b>Mon compte</b><span class="mu">Déconnexion, suppression</span></summary><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
 <button class="btn g" id="pLogout">Se déconnecter</button>
 <button class="btn g" id="pDelete" style="margin-top:8px;color:var(--red)">Supprimer mon compte</button>
