@@ -164,7 +164,7 @@
 <!-- ===================== LE PONTON ===================== -->
 <section id="v-ponton" hidden>
 <div class="wa-top"><a class="back" href="#" aria-label="Accueil">←</a><div class="wa-ti"><b>Le Ponton</b><span id="waSub">Le chat des plaisanciers du Léman</span></div></div>
-<div class="wa-tabs" role="tablist"><button data-t="salon" class="on">Salon<span class="dot" id="unreadSl" hidden></span></button><button data-t="prive">Privé<span class="dot" id="unreadRn" hidden></span></button><button data-t="eau">Sur l'eau</button></div>
+<div class="wa-tabs" role="tablist"><button data-t="salon" class="on">Salon<span class="dot" id="unreadSl" hidden></span></button><button data-t="prive">Privé<span class="dot" id="unreadRn" hidden></span></button><button data-t="amis">Amis<span class="dot" id="unreadAm" hidden></span></button><button data-t="eau">Sur l'eau</button></div>
 <div id="waJoin" class="card wa-join" hidden></div>
 <div id="waNotif" class="wa-notif" hidden><span>Soyez prévenu quand on vous écrit</span><button class="btn sm" id="waNotifGo">Activer</button></div>
 <div class="wa-pane" id="paneSalon">
@@ -191,6 +191,14 @@
 <div class="wa-re" id="pvRe" hidden></div>
 <form class="wa-bar" id="pvBar"><input id="pvIn" maxlength="200" autocomplete="off" placeholder="Message…" aria-label="Message privé"><button class="wa-send" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button></form>
 </div>
+</div>
+<div class="wa-pane" id="paneAmis" hidden>
+<div class="am-sum" id="amSum"></div>
+<h3 class="sub" id="amReqH" hidden>Demandes reçues</h3><div id="amReq"></div>
+<h3 class="sub" id="amOnH" hidden>Sur l'eau en ce moment</h3><div id="amOn" class="wa-list"></div>
+<h3 class="sub" id="amAllH">Mes amis</h3><div id="amList" class="wa-list"></div>
+<h3 class="sub" id="amSentH" hidden>Demandes envoyées</h3><div id="amSent" class="wa-list"></div>
+<div class="am-act"><button class="btn" id="amFind">Trouver des amis</button><button class="btn g" data-invite>Inviter un ami sur Nauticonnect</button></div>
 </div>
 <div class="wa-pane" id="paneEau" hidden>
 <div class="stt" id="rnStt"></div>

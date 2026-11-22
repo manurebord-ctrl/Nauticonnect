@@ -600,8 +600,9 @@ function renderMembers() {
   sug.forEach(function (id) { var pr = P[id], c = el("div", "sg"), a = avatar(id); c.appendChild(a); c.appendChild(el("b", 0, pr.pseudo)); c.appendChild(el("span", "mu", my.port && pr.port === my.port ? "Même port" : onWater(id) ? "Sur l'eau" : "Ami d'un ami"));
     var b = el("button", "btn sm", "Ajouter"); b.onclick = function () { b.disabled = true; b.textContent = "Envoyée"; befriend(id); }; c.appendChild(b); c.onclick = function (e) { if (e.target !== b) openThread(id); }; S.appendChild(c); });
   $("mbSugH").hidden = !sug.length;
-  var R = $("mbReq"); R.textContent = ""; pendingIn().forEach(function (id) { if (P[id]) R.appendChild(memberCard(id, el("div", "okm", "veut devenir votre ami"))); });
-  $("mbReqH").hidden = !R.firstChild;
+  var R = $("mbReq"); R.textContent = ""; $("mbReqH").hidden = true;
+  var nq = pendingIn().filter(function (id) { return P[id]; }).length;
+  if (nq) { var lk = el("button", "wa-reqlink", nq + (nq > 1 ? " demandes d'amis" : " demande d'ami") + " en attente ›"); lk.onclick = function () { goTab("amis"); }; R.appendChild(lk); }
 }
 Array.prototype.forEach.call(document.querySelectorAll("#mbChips button"), function (b) { b.onclick = function () { mbF = b.dataset.f; mbMore = false; renderMembers(); }; });
 $("rnMsgTxt").onchange = function () { ls("nc-msg", this.value.trim()); push(); };
@@ -646,7 +647,7 @@ function unreadOf(id, list) { var s = seenOf(id); return (list || []).filter(fun
 function unread() { if (!uid) return 0; var T = threads(), n = 0; Object.keys(T).forEach(function (k) { if (!(cur() === "ponton" && waTab === "prive" && k === openWith)) n += unreadOf(k, T[k]); }); return n; }
 function slUnread() { var s = +ls("nc-slseen") || 0; return SL.filter(function (m) { return m.de !== uid && ts(m.t) > s; }).length; }
 /* onglets */
-var waTab = ls("nc-watab") || "salon"; openWith = null; ls("nc-open", ""); if (["salon", "prive", "eau"].indexOf(waTab) < 0) waTab = "salon";
+var waTab = ls("nc-watab") || "salon"; openWith = null; ls("nc-open", ""); if (["salon", "prive", "amis", "eau"].indexOf(waTab) < 0) waTab = "salon";
 Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.onclick = function () { waTab = b.dataset.t; ls("nc-watab", waTab); openWith = null; ls("nc-open", ""); renderPonton(); if (waTab === "salon") slBottom(true); }; });
 function openThread(id, txt) {
   if (!id || id === uid) return;
@@ -827,10 +828,47 @@ function renderConv() {
   if (L.some(function (m) { return m.de === k && !m.lu; }) && !document.hidden && !marking[k]) { marking[k] = 1; sb.rpc("marquer_lus", { autre: k }).then(function () { marking[k] = 0; L.forEach(function (m) { if (m.de === k) m.lu = m.lu || nowIso(); }); }); }
   var Pp = $("pvPre"); Pp.textContent = ""; Pp.hidden = L.length > 0; PRESETS.forEach(function (x) { var b = el("button", "wa-chip", x); b.onclick = function () { sendMsg(k, x); }; Pp.appendChild(b); });
 }
+/* ---- onglet Amis ---- */
+function goTab(t) { waTab = t; ls("nc-watab", t); openWith = null; ls("nc-open", ""); renderPonton(); window.scrollTo(0, 0); }
+function pendingOut() { return FS.filter(function (f) { return f.statut === "attente" && f.de === uid; }).map(function (f) { return f.a; }); }
+function friendRow(id) {
+  var pr = P[id] || {}, it = el("button", "wa-it"), T = threads()[id] || [], last = T[T.length - 1], p = rPos();
+  it.appendChild(avatar(id));
+  var mid = el("span", "wa-im"); mid.appendChild(el("b", 0, pr.pseudo + (pr.bateau ? " · " + pr.bateau : "")));
+  var x = FR.filter(function (f) { return f.auteur === id; })[0];
+  var info = x ? (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position partagée " + ago(x.maj)
+    : last ? (last.de === uid ? "Vous : " : "") + last.txt
+    : [pr.type, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect";
+  mid.appendChild(el("span", x ? "wa-pv am-pos" : "wa-pv", info)); it.appendChild(mid);
+  var rt = el("span", "wa-ir");
+  if (onWater(id) || x) rt.appendChild(el("span", "wa-tag on", "Sur l'eau"));
+  else if (last) rt.appendChild(el("small", 0, listTime(last.t)));
+  var n = unreadOf(id, T); if (n) rt.appendChild(el("span", "wa-n", String(n)));
+  it.appendChild(rt); it.onclick = function () { openThread(id); }; return it;
+}
+function renderAmis() {
+  var ids = friendIds().filter(function (id) { return P[id]; });
+  var live = function (id) { return onWater(id) || FR.some(function (f) { return f.auteur === id; }); };
+  var lastT = function (id) { var T = threads()[id] || []; return T.length ? ts(T[T.length - 1].t) : 0; };
+  ids.sort(function (a, b) { return lastT(b) - lastT(a) || norm(P[a].pseudo).localeCompare(norm(P[b].pseudo)); });
+  var on = ids.filter(live), off = ids.filter(function (id) { return !live(id); });
+  $("amSum").textContent = ids.length ? ids.length + (ids.length > 1 ? " amis" : " ami") + (on.length ? " · " + on.length + " sur l'eau" : "") : "";
+  var R = $("amReq"); R.textContent = ""; pendingIn().forEach(function (id) { if (P[id]) R.appendChild(memberCard(id, el("div", "okm", "veut devenir votre ami"))); });
+  $("amReqH").hidden = !R.firstChild;
+  var O = $("amOn"); O.textContent = ""; on.forEach(function (id) { O.appendChild(friendRow(id)); }); $("amOnH").hidden = !on.length;
+  var L = $("amList"); L.textContent = ""; off.forEach(function (id) { L.appendChild(friendRow(id)); });
+  $("amAllH").textContent = on.length ? "Mes autres amis" : "Mes amis"; $("amAllH").hidden = !!on.length && !off.length;
+  if (!ids.length) L.appendChild(el("p", "mu", "Pas encore d'amis. Touchez « Trouver des amis » pour chercher un plaisancier par prénom, bateau ou port."));
+  var S = $("amSent"); S.textContent = "";
+  pendingOut().forEach(function (id) { if (!P[id]) return; var r = el("div", "wa-it"); r.appendChild(avatar(id)); var m = el("span", "wa-im"); m.appendChild(el("b", 0, P[id].pseudo)); m.appendChild(el("span", "wa-pv", "En attente de réponse")); r.appendChild(m);
+    var c = el("button", "btn g sm", "Annuler"); c.onclick = function () { c.disabled = true; befriend(id); }; r.appendChild(c); S.appendChild(r); });
+  $("amSentH").hidden = !S.firstChild;
+}
+$("amFind").onclick = function () { goTab("prive"); setTimeout(function () { var i = $("mbSearch"); if (i) i.focus(); }, 100); };
 function renderPonton() {
   var ok = !!me();
   Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.classList.toggle("on", b.dataset.t === waTab); });
-  $("paneSalon").hidden = waTab !== "salon"; $("panePrive").hidden = waTab !== "prive"; $("paneEau").hidden = waTab !== "eau";
+  $("paneSalon").hidden = waTab !== "salon"; $("panePrive").hidden = waTab !== "prive"; $("paneAmis").hidden = waTab !== "amis" || !ok; $("paneEau").hidden = waTab !== "eau";
   var nm = Object.keys(P).length; $("waSub").textContent = nm ? nm + " membre" + (nm > 1 ? "s" : "") + " · " + openNow().length + " sur l'eau" : "Le chat des plaisanciers du Léman";
   $("waJoin").hidden = ok; if (!ok) drawJoin();
   $("waNotif").hidden = !(ok && pushOk && !(mySub && myAbo) && Notification.permission !== "denied");
@@ -842,7 +880,9 @@ function renderPonton() {
   var conv = waTab === "prive" && ok && openWith && openWith !== uid;
   $("pvList").hidden = conv || !ok; $("pvConv").hidden = !conv;
   if (ok) { if (conv) { renderConv(); slBottom(false); } else { renderThreads(); renderMembers(); } }
-  var u = unread() + pendingIn().length; $("unreadRn").hidden = !u || (waTab === "prive" && !conv); $("unreadRn").textContent = u;
+  var u = unread(); $("unreadRn").hidden = !u || (waTab === "prive" && !conv); $("unreadRn").textContent = u;
+  var ua = ok ? pendingIn().filter(function (id) { return P[id]; }).length : 0; $("unreadAm").hidden = !ua; $("unreadAm").textContent = ua;
+  if (waTab === "amis" && ok) renderAmis();
   /* sur l'eau */
   if (waTab === "eau") {
     if (!ok) { $("paneEau").hidden = true; return; }

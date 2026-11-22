@@ -577,6 +577,12 @@
     "Soyez prévenu quand on vous écrit": "Lassen Sie sich benachrichtigen, wenn man Ihnen schreibt",
     "Activer": "Aktivieren",
     "Demandes d'amis": "Freundschaftsanfragen",
+    "Demandes reçues": "Erhaltene Anfragen",
+    "Demandes envoyées": "Gesendete Anfragen",
+    "Mes autres amis": "Meine anderen Freunde",
+    "Trouver des amis": "Freunde finden",
+    "En attente de réponse": "Wartet auf Antwort",
+    "Pas encore d'amis. Touchez « Trouver des amis » pour chercher un plaisancier par prénom, bateau ou port.": "Noch keine Freunde. Tippen Sie auf «Freunde finden», um einen Bootsfahrer nach Vorname, Boot oder Hafen zu suchen.",
     "Vous connaissez peut-être": "Sie kennen vielleicht",
     "Mon port": "Mein Hafen",
     "Amis": "Freunde",
@@ -821,7 +827,9 @@
     ["Envoi impossible : ", "Senden nicht möglich: "], [" plaisanciers inscrits", " Bootsfahrer angemeldet"], [" plaisancier inscrit", " Bootsfahrer angemeldet"],
     [" sur l'eau", " auf dem Wasser"], [" vous a cité dans le salon", " hat Sie im Salon erwähnt"], [" sur Le Ponton", " im Ponton"],
     [" alertes actives", " aktive Alarme"], [" alerte active", " aktiver Alarm"], [" photos à vérifier ›", " Fotos zu prüfen ›"], [" photo à vérifier ›", " Foto zu prüfen ›"],
-    [" photos · dernière ", " Fotos · letztes "], [" photo · dernière ", " Foto · letztes "]
+    [" photos · dernière ", " Fotos · letztes "], [" photo · dernière ", " Foto · letztes "],
+    [" demandes d'amis en attente ›", " Freundschaftsanfragen offen ›"], [" demande d'ami en attente ›", " Freundschaftsanfrage offen ›"],
+    [" amis ", " Freunde "], [" ami ", " Freund "]
   ];
   var W = [["Voilier", "Segelboot"], ["Bateau à moteur", "Motorboot"], ["Jet / semi-rigide", "Jet / Festrumpf"], ["Planche / paddle", "Brett / Paddle"],
     ["janv.", "Jan."], ["févr.", "Feb."], ["mars", "März"], ["avr.", "Apr."], ["mai", "Mai"], ["juin", "Juni"], ["juil.", "Juli"], ["août", "Aug."], ["sept.", "Sept."], ["oct.", "Okt."], ["nov.", "Nov."], ["déc.", "Dez."]];

@@ -483,3 +483,11 @@ details.acc[hidden]{display:none}
 .hero-stat{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.14);backdrop-filter:blur(4px);font-size:14px}
 .hero-stat[hidden]{display:none}.hero-stat b{font-weight:800}.hero-stat i{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.6;margin:0 4px}
 .langb{flex:none;margin-right:8px;height:34px;min-width:44px;padding:0 10px;border-radius:17px;border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.1);color:#fff;font:800 13px var(--fb);letter-spacing:.5px}
+
+/* onglet Amis */
+.am-sum{font-weight:700;color:var(--mu);margin:12px 4px 2px}
+.am-sum:empty{display:none}
+.am-pos{color:#1f7a47}
+.am-act{display:flex;flex-direction:column;gap:8px;margin:18px 0 8px}
+.wa-reqlink{display:block;width:100%;text-align:left;background:#fff4e8;border:0;border-radius:12px;padding:12px 14px;margin:8px 0;font:700 14px var(--fb);color:#b0571a}
+@media (prefers-color-scheme:dark){.wa-reqlink{background:#3a2a1a;color:#f6b27a}.am-pos{color:#7fe0a9}}
