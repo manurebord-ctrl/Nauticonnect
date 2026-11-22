@@ -266,7 +266,7 @@ function openNow() { var l = Date.now() - 2 * 36e5; return O.filter(function (x)
 function renderHome() {
   renderChip();
   var op = openNow();
-  var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm < 25 ? "🆕" : nm; $("stMembers").nextElementSibling.textContent = sb && nm < 25 ? "réseau tout neuf" : "membres"; $("stOpen").textContent = sb ? op.length : "–";
+  var nm = Object.keys(P).length; $("stMembers").textContent = !sb ? "–" : nm; $("stMembers").nextElementSibling.textContent = nm > 1 ? "membres" : "membre"; $("stOpen").textContent = sb ? op.length : "–";
   var N = $("pNow"); N.textContent = "";
   if (op.length) {
     var st = el("div", "stack"); op.slice(0, 5).forEach(function (x, i) { var a = el("span", 0, initial(x.id)); a.style.background = AVC[i % AVC.length]; st.appendChild(a); }); N.appendChild(st);
