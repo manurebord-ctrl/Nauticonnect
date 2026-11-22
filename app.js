@@ -1660,22 +1660,23 @@ var pushOk = "serviceWorker" in navigator && "PushManager" in window && "Notific
 var mySub = null, myAbo = null;
 function b64u(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; var r = atob(s), a = new Uint8Array(r.length); for (var i = 0; i < r.length; i++) a[i] = r.charCodeAt(i); return a; }
 function swReg() { return navigator.serviceWorker.getRegistration().then(function (r) { return r || navigator.serviceWorker.register("sw.js"); }).then(function () { return navigator.serviceWorker.ready; }); }
+var pushKnown = false;
 function pushRefresh() {
-  if (!pushOk || !real()) { mySub = null; myAbo = null; notifUI(); return Promise.resolve(); }
+  if (!pushOk || !real()) { mySub = null; myAbo = null; pushKnown = true; notifUI(); return Promise.resolve(); }
   var r; return swReg().then(function (x) { r = x; return r.pushManager.getSubscription(); }).then(function (s) {
     if (!s && Notification.permission === "granted" && !ls("nc-push-off")) return r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }).then(function (n) { return pushSave(n); }); /* déjà autorisé : on réabonne sans rien demander */
-    mySub = s; if (!s) { myAbo = null; notifUI(); return; }
+    mySub = s; if (!s) { myAbo = null; pushKnown = true; notifUI(); return; }
     return sb.from("push_abos").select("*").eq("endpoint", s.endpoint).maybeSingle().then(function (r) {
-      myAbo = r.data || null;
+      myAbo = r.data || null; pushKnown = true;
       if (!myAbo && Notification.permission === "granted" && !ls("nc-push-off")) return pushSave(s); /* réabonner ce compte sur cet appareil */
       notifUI();
     });
-  }).catch(function () { notifUI(); });
+  }).catch(function () { pushKnown = true; notifUI(); });
 }
 function pushSave(s, prefs) {
   var j = s.toJSON(), o = { endpoint: s.endpoint, uid: uid, p256dh: j.keys.p256dh, auth: j.keys.auth, maj: nowIso() };
   if (prefs) for (var k in prefs) o[k] = prefs[k];
-  return sb.from("push_abos").upsert(o, { onConflict: "endpoint" }).select().maybeSingle().then(function (r) { if (r.error) throw r.error; myAbo = r.data; mySub = s; notifUI(); });
+  return sb.from("push_abos").upsert(o, { onConflict: "endpoint" }).select().maybeSingle().then(function (r) { if (r.error) throw r.error; myAbo = r.data; mySub = s; pushKnown = true; notifUI(); });
 }
 function pushEnable(prefs) {
   if (!pushOk) { toast("Votre navigateur ne gère pas les notifications. Installez l'appli sur l'écran d'accueil."); return; }
@@ -2138,7 +2139,9 @@ function vaudaireOn() {
   pushEnable({ vent: true });
 }
 function renderVd() {
-  var on = vdOn();
+  /* tant que l'état des notifications n'est pas connu, on garde le dernier affichage : pas de clignotement */
+  var on = pushKnown || preview() ? vdOn() : ls("nc-vdon") === "1";
+  if (pushKnown && !preview()) ls("nc-vdon", on ? "1" : "");
   ["vdHome", "vdMeteo"].forEach(function (id) { var c = $(id); if (!c) return; c.classList.toggle("on", on); c.hidden = on && id === "vdHome"; });
 }
 Array.prototype.forEach.call(document.querySelectorAll(".vdGo"), function (b) { b.onclick = vaudaireOn; });
