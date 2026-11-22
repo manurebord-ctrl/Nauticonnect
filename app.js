@@ -627,8 +627,8 @@ function unreadOf(id, list) { var s = seenOf(id); return (list || []).filter(fun
 function unread() { if (!uid) return 0; var T = threads(), n = 0; Object.keys(T).forEach(function (k) { if (!(cur() === "ponton" && waTab === "prive" && k === openWith)) n += unreadOf(k, T[k]); }); return n; }
 function slUnread() { var s = +ls("nc-slseen") || 0; return SL.filter(function (m) { return m.de !== uid && ts(m.t) > s; }).length; }
 /* onglets */
-var waTab = ls("nc-watab") || "salon"; if (["salon", "prive", "eau"].indexOf(waTab) < 0) waTab = "salon";
-Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.onclick = function () { waTab = b.dataset.t; ls("nc-watab", waTab); if (waTab !== "prive") { openWith = null; ls("nc-open", ""); } renderPonton(); if (waTab === "salon") slBottom(true); }; });
+var waTab = ls("nc-watab") || "salon"; openWith = null; ls("nc-open", ""); if (["salon", "prive", "eau"].indexOf(waTab) < 0) waTab = "salon";
+Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.onclick = function () { waTab = b.dataset.t; ls("nc-watab", waTab); openWith = null; ls("nc-open", ""); renderPonton(); if (waTab === "salon") slBottom(true); }; });
 function openThread(id, txt) {
   if (!id || id === uid) return;
   openWith = id; ls("nc-open", id); waTab = "prive"; ls("nc-watab", "prive");
@@ -721,12 +721,12 @@ function drawJoin() {
 }
 function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
-  var keys = Object.keys(T).sort(function (a, b) { return ts(T[b][T[b].length - 1].t) - ts(T[a][T[a].length - 1].t); });
+  var keys = Object.keys(T).sort(function (a, b) { var ua = unreadOf(a, T[a]) ? 1 : 0, ub = unreadOf(b, T[b]) ? 1 : 0; return ub - ua || ts(T[b][T[b].length - 1].t) - ts(T[a][T[a].length - 1].t); });
   if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Touchez un membre juste en dessous pour lui écrire.")); return; }
   keys.forEach(function (k) {
     var L = T[k], last = L[L.length - 1], n = unreadOf(k, L), it = el("button", "wa-it" + (n ? " unr" : ""));
     it.appendChild(avatar(k));
-    var mid = el("span", "wa-im"); mid.appendChild(el("b", 0, nameOf(k))); mid.appendChild(el("span", "wa-pv", (last.de === uid ? "Vous : " : "") + last.txt)); it.appendChild(mid);
+    var mid = el("span", "wa-im"), nb = el("b", 0, nameOf(k)); if (n) nb.appendChild(el("span", "wa-new", n > 1 ? n + " nouveaux" : "Nouveau")); mid.appendChild(nb); mid.appendChild(el("span", "wa-pv", (last.de === uid ? "Vous : " : "") + last.txt)); it.appendChild(mid);
     var rt = el("span", "wa-ir"); rt.appendChild(el("small", 0, listTime(last.t))); if (n) rt.appendChild(el("span", "wa-n", String(n))); it.appendChild(rt);
     it.onclick = function () { openThread(k); }; W.appendChild(it);
   });
