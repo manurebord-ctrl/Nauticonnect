@@ -77,9 +77,23 @@ function subscribeAll() {
   if (!sb) return;
   if (channel) sb.removeChannel(channel);
   channel = sb.channel("nauticonnect-" + Date.now());
-  Object.keys(Q).forEach(function (t) { channel.on("postgres_changes", { event: "*", schema: "public", table: t }, function () { reload(t); }); });
-  channel.subscribe();
+  Object.keys(Q).forEach(function (t) { channel.on("postgres_changes", { event: "*", schema: "public", table: t === "likes" ? "salon_likes" : t }, function () { reload(t); }); });
+  var me_ = channel;
+  channel.subscribe(function (st) {
+    if (me_ !== channel) return;
+    if (st === "CHANNEL_ERROR" || st === "TIMED_OUT" || st === "CLOSED") { clearTimeout(resubT); resubT = setTimeout(function () { if (me_ === channel) subscribeAll(); }, 4000); }
+  });
 }
+/* le téléphone coupe la connexion en veille : à chaque retour dans l'appli, on rattrape et on se reconnecte */
+var resubT = null;
+function catchUp() {
+  if (!sb || document.hidden) return;
+  ["salon", "likes", "messages", "amities", "alertes"].forEach(function (t) { load(t); });
+  if (!channel || channel.state !== "joined") subscribeAll();
+}
+document.addEventListener("visibilitychange", catchUp); window.addEventListener("focus", catchUp); window.addEventListener("online", catchUp); window.addEventListener("pageshow", catchUp);
+/* filet de sécurité : sur le chat, on vérifie toutes les 15 s */
+setInterval(function () { if (sb && !document.hidden && cur() === "ponton") { load("salon"); load("messages"); load("likes"); } }, 15000);
 function loadAll() { return Promise.all(Object.keys(Q).map(load)); }
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
@@ -636,7 +650,7 @@ function openThread(id, txt) {
   if (cur() !== "ponton") location.hash = "ponton"; else renderPonton();
   setTimeout(function () { pvBottom(true); var i = $("pvIn"); if (txt) i.value = txt; if (me()) i.focus(); }, 150);
 }
-$("pvBack").onclick = function () { openWith = null; ls("nc-open", ""); renderPonton(); };
+$("pvBack").onclick = function () { setReply("prive", null); openWith = null; ls("nc-open", ""); renderPonton(); };
 /* rendu des bulles, commun au salon et au privé */
 function drawBubbles(box, list, group) {
   var atBottom = box.dataset.n !== String(list.length) ? null : true;
@@ -645,17 +659,17 @@ function drawBubbles(box, list, group) {
   list.forEach(function (m) {
     var dk = dayKey(m.t); if (dk !== lastDay) { box.appendChild(el("div", "wa-day", dayLabel(m.t))); lastDay = dk; lastDe = ""; }
     var mine = m.de === uid, cont = m.de === lastDe && ts(m.t) - lastT < 5 * 6e4;
-    var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : ""));
+    var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : "")); row.id = (group ? "sl-" : "pm-") + m.id;
     if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de]) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
     var b = el("div", "wa-b");
     if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
+    if (m.reponse) { var q = list.filter(function (x) { return x.id === m.reponse; })[0]; b.appendChild(quoteBlock(q, box)); }
     if (group && m.photo) b.appendChild(photoBlock(m));
     if (m.txt) b.appendChild(mentionText(m));
     if (group && m.photo) b.appendChild(likeRow(m));
     if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
     var meta = el("small", "wa-meta", hhmm(m.t)); if (mine && !group) meta.appendChild(el("span", "wa-tick" + (m.lu ? " lu" : ""), " ✓✓")); b.appendChild(meta);
-    if (group && (mine || isAdmin)) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Supprimer"); d.onclick = function (e) { e.stopPropagation(); sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else { if (m.photo) sb.storage.from("photos").remove([m.photo]); load("salon"); } }); }; b.appendChild(d); }; }
-    else if (group && m.photo && real()) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Signaler cette photo"); d.onclick = function (e) { e.stopPropagation(); if (!confirm("Signaler cette photo à l'admin ?")) return; sb.from("signalements").insert({ quoi: "salon", ref: String(m.id) }).then(function () { d.textContent = "Signalée, merci"; d.disabled = true; }); }; b.appendChild(d); }; }
+    b.onclick = function () { bubbleMenu(b, m, group, mine); };
     row.appendChild(b); box.appendChild(row); lastDe = m.de; lastT = ts(m.t);
   });
   box.dataset.n = String(list.length);
@@ -667,17 +681,46 @@ var pvBottom = slBottom;
 var sending = false;
 function sendMsg(to, txt) {
   txt = (txt || "").trim().slice(0, 200); if (!txt || sending || !uid) return; sending = true;
-  sb.from("messages").insert({ a: to, txt: txt }).then(function (r) { if (r.error) toast("Message non envoyé."); else { openWith = to; markThread(to); load("messages").then(function () { pvBottom(true); }); } }).then(function () { sending = false; });
+  sb.from("messages").insert({ a: to, txt: txt, reponse: replyTo.prive && replyTo.prive.de !== undefined ? replyTo.prive.id : null }).then(function (r) { if (r.error) toast("Message non envoyé."); else { setReply("prive", null); openWith = to; markThread(to); load("messages").then(function () { pvBottom(true); }); } }).then(function () { sending = false; });
 }
 $("pvBar").onsubmit = function (e) { e.preventDefault(); var i = $("pvIn"), v = i.value; if (!openWith || !v.trim()) return; i.value = ""; sendMsg(openWith, v); };
 $("slBar").onsubmit = function (e) {
   e.preventDefault(); var i = $("slIn"), v = i.value.trim().slice(0, 300); if (!v || sending) return; sending = true;
-  sb.from("salon").insert({ txt: v, cites: citesOf(v) }).then(function (r) {
+  sb.from("salon").insert({ txt: v, cites: citesOf(v), reponse: replyTo.salon ? replyTo.salon.id : null }).then(function (r) {
     sending = false;
     if (r.error) { toast(/rapide/.test(r.error.message || "") ? "Doucement, un message toutes les 3 secondes." : "Message non envoyé."); return; }
-    i.value = ""; slTags = {}; $("slSug").hidden = true; load("salon").then(function () { slBottom(true); });
+    i.value = ""; slTags = {}; setReply("salon", null); $("slSug").hidden = true; load("salon").then(function () { slBottom(true); });
   });
 };
+/* répondre à un message */
+var replyTo = { salon: null, prive: null };
+function snippet(m) { return m ? (m.txt ? m.txt.slice(0, 90) : m.photo ? "Photo" : "") : "Message supprimé"; }
+function quoteBlock(q, box) {
+  var d = el("div", "wa-q"); if (q) d.style.borderLeftColor = ncol(q.de);
+  var n = el("b", 0, q ? (q.de === uid ? "Vous" : (P[q.de] && P[q.de].pseudo) || "Plaisancier") : ""); if (q) n.style.color = ncol(q.de); d.appendChild(n);
+  d.appendChild(el("span", 0, snippet(q)));
+  if (q) d.onclick = function (e) { e.stopPropagation(); var r = box.querySelector("#" + (box.id === "slMsgs" ? "sl-" : "pm-") + q.id); if (r) { r.scrollIntoView({ behavior: "smooth", block: "center" }); r.classList.add("flash"); setTimeout(function () { r.classList.remove("flash"); }, 1200); } };
+  return d;
+}
+function setReply(kind, m) {
+  replyTo[kind] = m; var R = $(kind === "salon" ? "slRe" : "pvRe"); R.textContent = "";
+  if (!m) { R.hidden = true; return; }
+  var q = quoteBlock(m, $(kind === "salon" ? "slMsgs" : "pvMsgs")); R.appendChild(q);
+  var x = el("button", "wa-rex", "✕"); x.type = "button"; x.setAttribute("aria-label", "Annuler la réponse"); x.onclick = function () { setReply(kind, null); }; R.appendChild(x);
+  R.hidden = false; var i = $(kind === "salon" ? "slIn" : "pvIn");
+  i.focus();
+}
+function bubbleMenu(b, m, group, mine) {
+  var old = document.querySelector(".wa-menu"); if (old) { var was = old.parentNode === b; old.remove(); if (was) return; }
+  if (!me()) return;
+  var M = el("div", "wa-menu"), add = function (t, f, cls) { var x = el("button", cls || 0, t); x.type = "button"; x.onclick = function (e) { e.stopPropagation(); M.remove(); f(); }; M.appendChild(x); };
+  add("Répondre", function () { setReply(group ? "salon" : "prive", m); });
+  if (group && m.de !== uid && P[m.de]) add("Message privé", function () { openThread(m.de); });
+  if (group && (mine || isAdmin)) add("Supprimer", function () { sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else { if (m.photo) sb.storage.from("photos").remove([m.photo]); load("salon"); } }); }, "red");
+  if (group && !mine && real()) add("Signaler", function () { if (!confirm("Signaler ce message à l'admin ?")) return; sb.from("signalements").insert({ quoi: "salon", ref: String(m.id) }).then(function () { toast("Signalé, merci"); }); });
+  b.appendChild(M);
+}
+
 /* photos du salon façon Instagram */
 var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3.2 4.5 6.9 4.5c2.1 0 3.6 1.2 5.1 3 1.5-1.8 3-3 5.1-3 3.7 0 6 3.7 4.5 7.2C19.5 16.4 12 21 12 21z"/></svg>';
 function likesOf(id) { return LK.filter(function (l) { return l.salon_id === id; }); }
@@ -709,7 +752,7 @@ $("slPhIn").onchange = function () {
   var f = this.files && this.files[0]; this.value = ""; if (!f || !me()) return;
   var i = $("slIn"), cap = i.value.trim().slice(0, 300), path = uid + "/salon-" + Date.now() + ".jpg"; toast("Envoi de la photo…");
   shrink(f, 1400).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
-    .then(function (r) { if (r.error) throw r.error; return sb.from("salon").insert({ txt: cap, photo: path, cites: citesOf(cap) }); })
+    .then(function (r) { if (r.error) throw r.error; return sb.from("salon").insert({ txt: cap, photo: path, cites: citesOf(cap), reponse: replyTo.salon ? replyTo.salon.id : null }); })
     .then(function (r) { if (r.error) throw r.error; i.value = ""; slTags = {}; load("salon").then(function () { slBottom(true); }); })
     .catch(function (e) { toast(/rapide/.test((e && e.message) || "") ? "Doucement, une publication toutes les 3 secondes." : "Envoi impossible. Réessayez."); });
 };
@@ -720,7 +763,7 @@ function tagUser(id) {
   if (!me()) return; var i = $("slIn"), ps = P[id].pseudo; slTags[ps] = id;
   var v = i.value.replace(/@([^\s@]*)$/, ""); i.value = (v && !/\s$/.test(v) ? v + " " : v) + "@" + ps + " "; $("slSug").hidden = true; i.focus();
 }
-function citesOf(v) { var out = []; Object.keys(slTags).forEach(function (ps) { if (v.indexOf("@" + ps) >= 0 && out.indexOf(slTags[ps]) < 0 && slTags[ps] !== uid) out.push(slTags[ps]); }); return out.slice(0, 5); }
+function citesOf(v) { var out = []; if (replyTo.salon && replyTo.salon.de !== uid) out.push(replyTo.salon.de); Object.keys(slTags).forEach(function (ps) { if (v.indexOf("@" + ps) >= 0 && out.indexOf(slTags[ps]) < 0 && slTags[ps] !== uid) out.push(slTags[ps]); }); return out.slice(0, 5); }
 function mentionText(m) {
   var sp = el("span", "wa-tx"), names = (m.cites || []).map(function (id) { return P[id] && P[id].pseudo; }).filter(Boolean);
   if (!names.length) { sp.textContent = m.txt; return sp; }
