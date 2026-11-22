@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=26">
+<link rel="stylesheet" href="app.css?v=27">
 </head>
 <body>
 
@@ -118,7 +118,8 @@
 <label class="chk"><input type="checkbox" id="nfSos"> Bateau en panne sur le lac (SOS)</label>
 <label class="chk"><input type="checkbox" id="nfVent"> Alertes vaudaire et coups de vent</label>
 <div class="row"><button class="btn g sm" id="nfTest">Envoyer un test</button><button class="btn g sm" id="nfOff">Désactiver</button></div>
-</div></div>
+</div>
+<button class="linkb" id="nfFix">Réparer les notifications</button><div class="mu" id="nfDiag" style="white-space:pre-line;font-size:12px"></div></div>
 <div class="card"><b>Faire grandir l'équipage</b><div class="mu" style="margin:4px 0 10px">Plus il y a de plaisanciers, plus l'entraide marche. Partagez l'appli à vos voisins de ponton.</div><button class="btn" data-invite>Inviter un ami</button></div>
 <div class="card"><b>Mon compte</b><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
 <button class="btn g" id="pLogout">Se déconnecter</button>
@@ -454,9 +455,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=26"></script>
+<script src="config.js?v=27"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=26"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>

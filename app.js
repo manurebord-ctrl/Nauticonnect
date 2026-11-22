@@ -1474,6 +1474,33 @@ function notifUI() {
 $("nfOn").onclick = pushEnable; $("notifAskGo").onclick = pushEnable; $("waNotifGo").onclick = pushEnable;
 $("notifAskNo").onclick = function () { ls("nc-notif-later", "1"); $("notifAsk").hidden = true; };
 $("nfOff").onclick = function () { ls("nc-push-off", "1"); pushDisable().then(function () { toast("Notifications désactivées"); }); };
+/* diagnostic : chaque étape est affichée et envoyée à l'admin */
+$("nfFix").onclick = function () {
+  var D = $("nfDiag"), log = [], step = function (t) { log.push(t); D.textContent = log.join("\n"); };
+  var send = function () { if (sb && real()) sb.from("push_diag").insert({ info: { log: log, ua: navigator.userAgent, standalone: matchMedia("(display-mode: standalone)").matches } }).then(function () {}); };
+  ls("nc-push-off", ""); D.textContent = "";
+  step("Navigateur compatible : " + (pushOk ? "oui" : "non")); if (!pushOk) { send(); return; }
+  step("Autorisation : " + Notification.permission);
+  if (!requireProfile()) { step("Pas connecté"); return; }
+  Notification.requestPermission().then(function (p) {
+    step("Autorisation après demande : " + p); if (p !== "granted") throw new Error("autorisation refusée");
+    return swReg();
+  }).then(function (r) {
+    step("Service worker : " + (r.active ? "actif (" + (r.active.scriptURL.split("/").pop()) + ")" : "inactif"));
+    return r.pushManager.getSubscription().then(function (s) { step("Ancien abonnement : " + (s ? "oui, supprimé" : "aucun")); return s ? s.unsubscribe().then(function () { return r; }) : r; });
+  }).then(function (r) {
+    return r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) });
+  }).then(function (s) {
+    step("Nouvel abonnement : " + s.endpoint.split("/")[2]);
+    return pushSave(s);
+  }).then(function () {
+    step("Enregistré dans la base : oui");
+    return sb.rpc("push_test");
+  }).then(function (r) {
+    step(r && r.error ? "Test : erreur " + r.error.message : "Test envoyé. Une notification doit arriver dans quelques secondes.");
+    send(); toast("Diagnostic terminé");
+  }).catch(function (e) { step("ERREUR : " + (e && (e.name + " " + e.message) || e)); send(); });
+};
 $("nfTest").onclick = function () { sb.rpc("push_test").then(function (r) { toast(r.error ? "Test impossible." : "Notification de test envoyée…"); }); };
 
 /* ================= INVITER UN AMI ================= */

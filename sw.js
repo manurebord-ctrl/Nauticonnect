@@ -1,5 +1,5 @@
 /* Nauticonnect – service worker : l'appli s'ouvre même avec peu de réseau */
-const CACHE = "nauticonnect-v26";
+const CACHE = "nauticonnect-v27";
 const SHELL = ["./", "index.html", "app.css", "app.js", "config.js", "manifest.webmanifest", "confidentialite.html",
   "icon-192.png", "icon-512.png", "maskable-512.png", "apple-180.png", "favicon-64.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
@@ -15,7 +15,7 @@ self.addEventListener("fetch", e => {
 self.addEventListener("push", e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data && e.data.text() }; }
   e.waitUntil(self.registration.showNotification(d.title || "Nauticonnect", {
-    body: d.body || "", icon: "icon-192.png", badge: "favicon-64.png", tag: d.tag || undefined, renotify: !!d.tag,
+    body: d.body || "", icon: "icon-192.png", badge: "favicon-64.png", tag: d.tag || "nc", renotify: true,
     data: { url: d.url || "#" }, vibrate: [120, 60, 120] }));
 });
 self.addEventListener("notificationclick", e => {
