@@ -3,7 +3,8 @@
    Les messages et contenus écrits par les membres ne sont jamais traduits. */
 (function () {
   var LANG = "fr";
-  try { LANG = localStorage.getItem("nc-lang") === "de" ? "de" : "fr"; } catch (e) {}
+  /* version allemande mise en pause : l'appli reste en français pour tout le monde */
+  try { localStorage.removeItem("nc-lang"); } catch (e) {}
   window.NC_LANG = LANG;
   window.ncSetLang = function (l) { try { localStorage.setItem("nc-lang", l); } catch (e) {} location.reload(); };
   if (LANG !== "de") return;
