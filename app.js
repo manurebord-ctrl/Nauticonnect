@@ -1771,3 +1771,6 @@ $("evSetSv").onclick = function () {
   if (!/^\d{1,4}$/.test(pr)) { toast("Prix invalide"); return; }
   sb.from("reglages").upsert([{ k: "ev_prix", v: pr }, { k: "ev_paiement", v: lk }]).then(function (r) { toast(r.error ? "Enregistrement impossible" : "Réglages enregistrés"); load("reglages"); });
 };
+
+/* ================= LANGUE ================= */
+(function () { var b = $("langBtn"); if (!b) return; var de = window.NC_LANG === "de"; b.textContent = de ? "FR" : "DE"; b.title = de ? "Version française" : "Deutsche Version"; b.onclick = function () { if (window.ncSetLang) ncSetLang(de ? "fr" : "de"); }; })();

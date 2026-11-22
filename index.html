@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=37">
+<link rel="stylesheet" href="app.css?v=39">
 </head>
 <body>
 
@@ -24,7 +24,7 @@
 <canvas id="heroCv" aria-hidden="true"></canvas><div class="hero-ph" id="heroPh" style="background-image:url(fond-accueil.svg?v=1)"></div>
 <label class="phbtn" id="phBtn" hidden>Photo de la bannière<input type="file" id="phIn" accept="image/jpeg,image/png,image/webp" hidden></label>
 <div class="hero-in">
-<div class="hero-top"><span class="brand">Nauti<b>connect</b></span><a id="meChip" class="me new" href="#compte">Se connecter</a></div>
+<div class="hero-top"><span class="brand">Nauti<b>connect</b></span><button class="langb" id="langBtn" data-nt aria-label="Sprache / Langue">DE</button><a id="meChip" class="me new" href="#compte">Se connecter</a></div>
 <h1 class="hero-t">On se retrouve sur l'eau&nbsp;?</h1>
 <p class="hero-s">Nauticonnect, le réseau social des plaisanciers du Léman.</p>
 <div class="hero-stat" id="heroStat" hidden></div>
@@ -459,9 +459,10 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=37"></script>
+<script src="i18n.js?v=2"></script>
+<script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=37"></script>
+<script src="app.js?v=39"></script>
 </body>
 </html>
