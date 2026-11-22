@@ -73,7 +73,7 @@ function store(t, rows) {
   else if (t === "amities") FS = rows;
   else if (t === "evenements") EV = rows;
   else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
-  else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); }
+  else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); if ($("modWel") && document.activeElement !== $("modWel")) $("modWel").value = welText(); }
 }
 var pending = {}, reloadT = {};
 function load(t) {
@@ -709,6 +709,7 @@ $("pvBack").onclick = function () { setReply("prive", null); openWith = null; ls
 function drawBubbles(box, list, group) {
   var atBottom = box.dataset.n !== String(list.length) ? null : true;
   box.textContent = ""; var lastDay = "", lastDe = "", lastT = 0;
+  if (group) box.appendChild(pinBlock());
   if (!list.length) { box.appendChild(el("div", "wa-empty", group ? "Le salon est calme. Lancez la conversation !" : "Dites bonjour !")); }
   list.forEach(function (m) {
     var dk = dayKey(m.t); if (dk !== lastDay) { box.appendChild(el("div", "wa-day", dayLabel(m.t))); lastDay = dk; lastDe = ""; }
@@ -2230,3 +2231,33 @@ $("pvClr").onclick = function () {
   if (!confirm("Effacer cette discussion de votre téléphone ? L'autre personne la garde. Vos propres messages restent visibles chez elle.")) return;
   ls("nc-clr-" + k, String(Date.now())); toast("Discussion effacée"); renderPonton();
 };
+
+/* ================= MESSAGE DE BIENVENUE ÉPINGLÉ (salon) ================= */
+var WEL_DEF = "Bienvenue sur Le Ponton, le chat des plaisanciers du Léman !\n\n" +
+  "• Écrivez ici pour discuter avec tous les membres : météo, bons plans, rendez-vous au port ou sur l'eau.\n" +
+  "• Touchez un message pour y répondre, écrire en privé à son auteur ou le signaler.\n" +
+  "• Appui long sur un de vos messages pour le sélectionner et le supprimer.\n" +
+  "• Tapez @ suivi d'un prénom pour interpeller un membre : il reçoit une notification.\n" +
+  "• L'appareil photo à gauche permet de partager une photo du lac.\n" +
+  "• Onglet Privé : vos discussions personnelles. Onglet Amis : vos amis. Onglet Sur l'eau : hissez le pavillon pour montrer que vous naviguez.\n" +
+  "• En panne sur le lac ? Bouton rouge SOS : les plaisanciers proches sont alertés. En cas de danger, appelez d'abord le 117.\n\n" +
+  "Restons courtois et bienveillants : les messages déplacés sont supprimés.\n\nBon vent ! L'équipe Nauticonnect";
+function welText() { return (REG.salon_bienvenue || "").trim() || WEL_DEF; }
+function welKey(t) { var h = 0; for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return String(h); }
+function pinBlock() {
+  var t = welText(), k = welKey(t), small = ls("nc-pin-min") === k;
+  var c = el("div", "wa-pin" + (small ? " min" : ""));
+  var hd = el("button", "wa-pin-h"); hd.type = "button";
+  hd.appendChild(el("span", "wa-pin-ic", "N")); var tt = el("span", "wa-pin-t"); tt.appendChild(el("b", 0, "Nauticonnect")); tt.appendChild(el("small", 0, "Message épinglé · comment ça marche")); hd.appendChild(tt);
+  hd.appendChild(el("span", "wa-pin-tg", small ? "Afficher" : "Réduire"));
+  hd.onclick = function () { ls("nc-pin-min", small ? "" : k); renderPonton(); };
+  c.appendChild(hd);
+  if (!small) { var b = el("div", "wa-pin-b"); b.textContent = t; c.appendChild(b); }
+  return c;
+}
+$("modWelSave").onclick = function () {
+  if (!isAdmin) return; var v = $("modWel").value.trim();
+  sb.from("reglages").upsert({ k: "salon_bienvenue", v: v === WEL_DEF ? "" : v }).then(function (r) { toast(r.error ? "Enregistrement impossible" : "Message de bienvenue mis à jour"); load("reglages"); });
+};
+$("modWelReset").onclick = function () { $("modWel").value = WEL_DEF; };
+$("modWel").value = welText();
