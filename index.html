@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=33">
+<link rel="stylesheet" href="app.css?v=34">
 </head>
 <body>
 
@@ -97,11 +97,10 @@
 <section id="v-profil" hidden>
 <div class="hd pfhd"><a class="back" href="#">← Accueil</a><button class="pfx" id="pfClose" aria-label="Fermer">✕</button></div>
 <h1 class="ph1" id="pfTitle">Ma fiche bateau</h1>
-<p class="lead">Elle vous identifie dans Le Ponton et dans les alertes de panne. Elle est visible par les membres.</p>
+<p class="lead" id="pfLead">Elle vous identifie dans Le Ponton et dans les alertes de panne. Elle est visible par les membres.</p>
 <div class="card pfph"><span class="pfav" id="pfAv">?</span><div><b>Photo de profil</b><div class="mu" id="pfPhSt"></div>
 <div class="pfbtns" id="pfPhLb"><label class="btn">Galerie<input type="file" id="pfPhIn" accept="image/jpeg,image/png,image/webp" hidden></label><label class="btn g">Appareil photo<input type="file" id="pfPhCam" accept="image/*" capture="user" hidden></label></div><button class="linkb" id="pfPhRm" hidden>Retirer ma photo</button></div></div></div>
-<div class="card" id="pfQueueBox" hidden><b>Photos de profil des membres (admin)</b><div class="mu">En cas d'abus, vous pouvez retirer une photo.</div><div id="pfQueue"></div></div>
-<div class="card">
+<details class="card acc" id="accFiche"><summary><b>Ma fiche bateau</b><span class="mu" id="accFicheSum">Pseudo, bateau, port d'attache</span></summary>
 <label class="l" for="pPseudo">Prénom ou pseudo *</label><input class="f" id="pPseudo" maxlength="24" placeholder="ex. Manu">
 <label class="l" for="pBoat">Nom du bateau</label><input class="f" id="pBoat" maxlength="30" placeholder="ex. Mistral">
 <div class="row"><div><label class="l" for="pType">Type</label><select class="f" id="pType"><option>Voilier</option><option>Bateau à moteur</option><option>Jet / semi-rigide</option><option>Planche / paddle</option><option>Autre</option></select></div>
@@ -109,9 +108,9 @@
 <label class="l" for="pImm">Immatriculation (facultatif)</label><input class="f" id="pImm" maxlength="16" placeholder="ex. VS 1234">
 <button class="btn" id="pSave">Enregistrer</button>
 <div class="err" id="pMsg"></div>
-</div>
-<p class="mu">N'indiquez ni adresse ni numéro de téléphone dans votre fiche.</p>
-<div class="card" id="notifCard"><b>Notifications</b><div class="mu" id="nfState" style="margin:4px 0 10px"></div>
+<p class="mu" style="margin:8px 0 0">N'indiquez ni adresse ni numéro de téléphone dans votre fiche.</p>
+</details>
+<details class="card acc" id="notifCard"><summary><b>Notifications</b><span class="mu" id="nfSum"></span></summary><div class="mu" id="nfState" style="margin:4px 0 10px"></div>
 <button class="btn" id="nfOn">Activer les notifications</button>
 <div id="nfPrefs" hidden>
 <label class="chk"><input type="checkbox" id="nfMsg"> Messages reçus sur Le Ponton</label>
@@ -119,12 +118,13 @@
 <label class="chk"><input type="checkbox" id="nfVent"> Alertes vaudaire et coups de vent</label>
 <div class="row"><button class="btn g sm" id="nfTest">Envoyer un test</button><button class="btn g sm" id="nfOff">Désactiver</button></div>
 </div>
-<button class="linkb" id="nfFix">Réparer les notifications</button><div class="mu" id="nfDiag" style="white-space:pre-line;font-size:12px"></div></div>
-<div class="card"><b>Faire grandir l'équipage</b><div class="mu" style="margin:4px 0 10px">Plus il y a de plaisanciers, plus l'entraide marche. Partagez l'appli à vos voisins de ponton.</div><button class="btn" data-invite>Inviter un ami</button></div>
-<div class="card"><b>Mon compte</b><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
+<button class="linkb" id="nfFix">Réparer les notifications</button><div class="mu" id="nfDiag" style="white-space:pre-line;font-size:12px"></div></details>
+<button class="btn g pfinv" data-invite>Inviter un ami sur Nauticonnect</button>
+<details class="card acc"><summary><b>Mon compte</b><span class="mu">Déconnexion, suppression</span></summary><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
 <button class="btn g" id="pLogout">Se déconnecter</button>
 <button class="btn g" id="pDelete" style="margin-top:8px;color:var(--red)">Supprimer mon compte</button>
-<div class="err" id="pDelMsg"></div></div>
+<div class="err" id="pDelMsg"></div></details>
+<details class="card acc" id="pfQueueBox" hidden><summary><b>Photos de profil des membres</b><span class="mu">Admin · retirer en cas d'abus</span></summary><div id="pfQueue"></div></details>
 </section>
 
 <!-- ===================== PANNE ===================== -->
@@ -458,9 +458,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=33"></script>
+<script src="config.js?v=34"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=33"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>

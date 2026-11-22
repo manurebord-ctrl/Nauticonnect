@@ -467,3 +467,13 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .wa-menu button.red{color:var(--red)}
 .wa-row.flash .wa-b{animation:flash 1.2s}
 @keyframes flash{0%,60%{box-shadow:0 0 0 3px #f5c542}100%{box-shadow:0 1px 1px rgba(0,0,0,.12)}}
+/* profil en sections repliables */
+details.acc{padding:0}
+details.acc>summary{list-style:none;display:flex;flex-direction:column;gap:2px;padding:14px 44px 14px 16px;cursor:pointer;position:relative}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::after{content:"";position:absolute;right:18px;top:50%;width:9px;height:9px;border-right:2px solid var(--mu);border-bottom:2px solid var(--mu);transform:translateY(-70%) rotate(45deg);transition:transform .2s}
+details.acc[open]>summary::after{transform:translateY(-30%) rotate(-135deg)}
+details.acc>summary .mu{font-size:13px}
+details.acc[open]{padding-bottom:14px}details.acc[open]>:not(summary){margin-left:16px;margin-right:16px}
+details.acc[hidden]{display:none}
+.pfinv{margin:12px 0}

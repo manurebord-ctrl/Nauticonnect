@@ -236,7 +236,9 @@ function pfClose() { if (prevView && prevView !== "profil" && prevView !== "comp
 $("pfClose").onclick = pfClose;
 function fillProfile() {
   drawPfPhoto();
-  var p = me(); $("pfTitle").textContent = p ? "Ma fiche bateau" : "Créez votre fiche bateau";
+  var pp = me(); $("accFiche").open = !pp; $("pfLead").hidden = !!pp;
+  $("accFicheSum").textContent = pp ? [pp.pseudo, pp.bateau, pp.port].filter(Boolean).join(" · ") : "À remplir pour rejoindre le chat";
+  var p = me(); $("pfTitle").textContent = p ? "Mon profil" : "Créez votre fiche bateau";
   $("pSave").textContent = p ? "Mettre à jour" : "Rejoindre l'équipage";
   if (p) { $("pPseudo").value = p.pseudo || ""; $("pBoat").value = p.bateau || ""; $("pType").value = p.type || "Voilier"; $("pPort").value = p.port || ""; $("pImm").value = p.immat || ""; }
   $("pEmail").textContent = session ? "Connecté avec " + session.user.email : "";
@@ -258,7 +260,7 @@ $("pSave").onclick = function () {
     renderAll();
     var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
     if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
-    else { toast("Fiche mise à jour"); setTimeout(pfClose, 600); }
+    else { toast("Fiche mise à jour"); $("accFiche").open = false; $("accFicheSum").textContent = [ps, bt, d.port].filter(Boolean).join(" · "); }
   }).then(function () { $("pSave").disabled = false; });
 };
 $("pLogout").onclick = function () { (mySub ? sb.from("push_abos").delete().eq("endpoint", mySub.endpoint).then(function () { mySub = null; myAbo = null; }) : Promise.resolve()).catch(function () {}).then(function () { return sb.auth.signOut(); }).then(function () { location.hash = ""; toast("Déconnecté. À bientôt sur l'eau !"); }); };
@@ -1579,6 +1581,7 @@ function pushDisable() {
 function notifUI() {
   var on = !!(mySub && myAbo), den = pushOk && Notification.permission === "denied";
   $("nfState").textContent = !pushOk ? "Pas disponible sur ce navigateur. Installez l'appli sur l'écran d'accueil (Chrome)." : den ? "Bloquées sur ce téléphone : autorisez-les dans les réglages (Applications › Chrome › Notifications)." : on ? "Activées sur ce téléphone." : "Désactivées.";
+  if ($("nfSum")) $("nfSum").textContent = on ? "Activées" : den ? "Bloquées" : "Désactivées";
   $("nfOn").hidden = on || !pushOk || den; $("nfPrefs").hidden = !on;
   if (on) { $("nfMsg").checked = myAbo.msg; $("nfSos").checked = myAbo.sos; $("nfVent").checked = myAbo.vent; }
   var ask = $("notifAsk"); ask.hidden = !(pushOk && me() && !on && !den && !ls("nc-notif-later"));
