@@ -24,7 +24,7 @@ var session = null, uid = null, isAdmin = false, guest = false;
 function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
-var LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
@@ -34,6 +34,7 @@ var Q = {
   profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat").limit(5000); },
   alertes: function () { return sb.from("alertes").select("*").gte("maj", iso(12 * 36e5)); },
   ouverts: function () { return sb.from("ouverts").select("*").gte("maj", iso(2 * 36e5)); },
+  salon: function () { return sb.from("salon").select("*").order("t", { ascending: false }).limit(200); },
   messages: function () { return uid ? sb.from("messages").select("*").gte("t", iso(7 * 864e5)).order("t").limit(800) : null; },
   avis: function () { return sb.from("avis").select("*").order("t", { ascending: false }).limit(300); },
   votes: function () { return sb.from("votes").select("*").limit(5000); },
@@ -52,7 +53,7 @@ var Q = {
 function store(t, rows) {
   rows = rows || [];
   if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
-  else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows;
+  else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse();
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
@@ -203,7 +204,7 @@ function onSession(s, ev) {
     subscribeAll(); loadAll().then(function () { pushRefresh();
       if (real() && cur() === "compte" && authMode !== "reset") {
         var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
-        location.hash = me() ? (ret && ret !== "compte" ? ret : "") : "profil";
+        location.hash = me() ? (ret && ret !== "compte" ? ret : "") : (ret === "ponton" ? "ponton" : "profil");
       }
     });
   }
@@ -567,57 +568,139 @@ function personCard(id, x) {
   var b = el("button", "btn sm", "Écrire"); b.onclick = function () { openThread(id); }; c.appendChild(b); return c;
 }
 var PRESETS = ["Salut !", "Un apéro au port ?", "On se retrouve au port ?", "Besoin d'aide ?"];
+var NCOL = ["#d9534f", "#0b6fa4", "#1f8a5b", "#b4521c", "#7a3fb0", "#b8860b", "#c2185b", "#00838f"];
+function ncol(id) { var h = 0; for (var i = 0; i < (id || "").length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return NCOL[h % NCOL.length]; }
+function hhmm(v) { var d = new Date(ts(v)); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
+function dayKey(v) { var d = new Date(ts(v)); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }
+function dayLabel(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) === dayKey(n)) return "Aujourd'hui"; n.setDate(n.getDate() - 1); if (dayKey(d) === dayKey(n)) return "Hier"; return d.toLocaleDateString("fr-CH", { weekday: "long", day: "numeric", month: "long" }); }
+function listTime(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) === dayKey(n)) return hhmm(v); n.setDate(n.getDate() - 1); if (dayKey(d) === dayKey(n)) return "Hier"; return ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2); }
+function avatar(id) { var a = el("span", "wa-av", initial(id)); a.style.background = ncol(id); return a; }
+/* lu / non lu par discussion */
+function seenMap() { try { return JSON.parse(ls("nc-seenmap") || "{}"); } catch (e) { return {}; } }
+function seenOf(id) { var m = seenMap(); return m[id] || +ls("nc-seen") || 0; }
+function markThread(id) { var m = seenMap(); m[id] = Date.now(); ls("nc-seenmap", JSON.stringify(m)); }
+function markRead() { if (openWith) markThread(openWith); }
 function threads() { var T = {}; M.forEach(function (m) { var o = m.de === uid ? m.a : m.a === uid ? m.de : null; if (!o) return; (T[o] = T[o] || []).push(m); }); return T; }
-function unread() { if (!uid) return 0; var seen = +ls("nc-seen") || 0; return M.filter(function (m) { return m.a === uid && ts(m.t) > seen; }).length; }
-function markRead() { ls("nc-seen", String(Date.now())); }
+function unreadOf(id, list) { var s = seenOf(id); return (list || []).filter(function (m) { return m.de === id && ts(m.t) > s; }).length; }
+function unread() { if (!uid) return 0; var T = threads(), n = 0; Object.keys(T).forEach(function (k) { if (!(cur() === "ponton" && waTab === "prive" && k === openWith)) n += unreadOf(k, T[k]); }); return n; }
+function slUnread() { var s = +ls("nc-slseen") || 0; return SL.filter(function (m) { return m.de !== uid && ts(m.t) > s; }).length; }
+/* onglets */
+var waTab = ls("nc-watab") || "salon"; if (["salon", "prive", "eau"].indexOf(waTab) < 0) waTab = "salon";
+Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.onclick = function () { waTab = b.dataset.t; ls("nc-watab", waTab); if (waTab !== "prive") { openWith = null; ls("nc-open", ""); } renderPonton(); if (waTab === "salon") slBottom(true); }; });
 function openThread(id, txt) {
-  if (!id || id === uid) return; if (!requireProfile()) return;
-  openWith = id; ls("nc-open", id); setClosed(id, false);
+  if (!id || id === uid) return;
+  openWith = id; ls("nc-open", id); waTab = "prive"; ls("nc-watab", "prive");
   if (cur() !== "ponton") location.hash = "ponton"; else renderPonton();
-  setTimeout(function () { var t = $("th-" + id); if (t) t.scrollIntoView({ behavior: "smooth", block: "center" }); var i = $("in-" + id); if (i) { if (txt) i.value = txt; i.focus(); } }, 200);
+  setTimeout(function () { pvBottom(true); var i = $("pvIn"); if (txt) i.value = txt; if (me()) i.focus(); }, 150);
 }
+$("pvBack").onclick = function () { openWith = null; ls("nc-open", ""); renderPonton(); };
+/* rendu des bulles, commun au salon et au privé */
+function drawBubbles(box, list, group) {
+  var atBottom = box.dataset.n !== String(list.length) ? null : true;
+  box.textContent = ""; var lastDay = "", lastDe = "", lastT = 0;
+  if (!list.length) { box.appendChild(el("div", "wa-empty", group ? "Le salon est calme. Lancez la conversation !" : "Dites bonjour !")); }
+  list.forEach(function (m) {
+    var dk = dayKey(m.t); if (dk !== lastDay) { box.appendChild(el("div", "wa-day", dayLabel(m.t))); lastDay = dk; lastDe = ""; }
+    var mine = m.de === uid, cont = m.de === lastDe && ts(m.t) - lastT < 5 * 6e4;
+    var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : ""));
+    if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; row.appendChild(av); }
+    var b = el("div", "wa-b");
+    if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function () { openThread(m.de); }; } b.appendChild(nm); }
+    b.appendChild(el("span", "wa-tx", m.txt));
+    var meta = el("small", "wa-meta", hhmm(m.t) + (mine && !group ? " ✓✓" : "")); b.appendChild(meta);
+    if (group && (mine || isAdmin)) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Supprimer"); d.onclick = function (e) { e.stopPropagation(); sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else load("salon"); }); }; b.appendChild(d); }; }
+    row.appendChild(b); box.appendChild(row); lastDe = m.de; lastT = ts(m.t);
+  });
+  box.dataset.n = String(list.length);
+}
+function nearBottom() { return window.innerHeight + window.scrollY >= document.body.scrollHeight - 160; }
+function slBottom(force) { if (force || nearBottom()) setTimeout(function () { window.scrollTo(0, document.body.scrollHeight); }, 30); }
+var pvBottom = slBottom;
+/* envoi */
 var sending = false;
 function sendMsg(to, txt) {
   txt = (txt || "").trim().slice(0, 200); if (!txt || sending || !uid) return; sending = true;
-  sb.from("messages").insert({ a: to, txt: txt }).then(function (r) { if (r.error) rErr("Message non envoyé."); else { openWith = to; markRead(); load("messages"); } }).then(function () { sending = false; });
+  sb.from("messages").insert({ a: to, txt: txt }).then(function (r) { if (r.error) toast("Message non envoyé."); else { openWith = to; markThread(to); load("messages").then(function () { pvBottom(true); }); } }).then(function () { sending = false; });
 }
-/* discussions fermées : masquées jusqu'au prochain message reçu ou envoyé */
-function closedMap() { try { return JSON.parse(ls("nc-closed-" + uid) || "{}"); } catch (e) { return {}; } }
-function setClosed(id, on) { var c = closedMap(); if (on) c[id] = Date.now(); else delete c[id]; ls("nc-closed-" + uid, JSON.stringify(c)); }
-function closeThread(id) { setClosed(id, true); if (openWith === id) { openWith = null; ls("nc-open", ""); } renderPonton(); toast("Discussion fermée. Elle reviendra au prochain message."); }
+$("pvBar").onsubmit = function (e) { e.preventDefault(); var i = $("pvIn"), v = i.value; if (!openWith || !v.trim()) return; i.value = ""; sendMsg(openWith, v); };
+$("slBar").onsubmit = function (e) {
+  e.preventDefault(); var i = $("slIn"), v = i.value.trim().slice(0, 300); if (!v || sending) return; sending = true;
+  sb.from("salon").insert({ txt: v }).then(function (r) {
+    sending = false;
+    if (r.error) { toast(/rapide/.test(r.error.message || "") ? "Doucement, un message toutes les 3 secondes." : "Message non envoyé."); return; }
+    i.value = ""; load("salon").then(function () { slBottom(true); });
+  });
+};
+/* rejoindre : compte puis juste un pseudo */
+function drawJoin() {
+  var J = $("waJoin"); J.textContent = "";
+  if (!real()) {
+    J.appendChild(el("b", 0, "Pour écrire, montez à bord"));
+    J.appendChild(el("div", "mu", "Un compte gratuit avec votre e-mail, puis juste un prénom. Une minute en tout."));
+    var a = el("a", "btn", "Créer mon compte"); a.href = "#compte"; a.onclick = function () { try { sessionStorage.setItem("nc-ret", "ponton"); } catch (e) {} }; J.appendChild(a);
+    var l = el("a", "linkb", "J'ai déjà un compte"); l.href = "#compte"; l.onclick = a.onclick; J.appendChild(l);
+    return;
+  }
+  J.appendChild(el("b", 0, "Comment vous appelle-t-on sur le Ponton ?"));
+  J.appendChild(el("div", "mu", "Votre prénom ou un pseudo. Le reste de votre fiche (bateau, port) peut attendre."));
+  var f = el("form", "wa-jf"), i = el("input", "f"); i.maxLength = 24; i.placeholder = "ex. Manu"; i.setAttribute("aria-label", "Prénom ou pseudo");
+  var b = el("button", "btn", "Entrer"); f.appendChild(i); f.appendChild(b); J.appendChild(f);
+  var m = el("div", "err"); J.appendChild(m);
+  f.onsubmit = function (e) {
+    e.preventDefault(); var ps = i.value.trim().slice(0, 24); if (ps.length < 2) { m.textContent = "Au moins 2 lettres."; return; }
+    b.disabled = true; var d = { id: uid, pseudo: ps, maj: nowIso() };
+    sb.from("profils").upsert(d).then(function (r) { b.disabled = false; if (r.error) { m.textContent = "Enregistrement impossible, réessayez."; return; } P[uid] = d; toast("Bienvenue à bord, " + ps + " !"); renderAll(); slBottom(true); });
+  };
+}
 function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
-  if (openWith && !T[openWith] && openWith !== uid && P[openWith]) T[openWith] = [];
-  var C = closedMap(), nClosed = 0;
-  Object.keys(T).forEach(function (k) { var last = T[k].length ? ts(T[k][T[k].length - 1].t) : Date.now(); if (C[k] && last <= C[k] && k !== openWith) { delete T[k]; nClosed++; } else if (C[k] && last > C[k]) setClosed(k, false); });
-  if (nClosed) { var ro = el("button", "linkb", nClosed + " discussion" + (nClosed > 1 ? "s" : "") + " fermée" + (nClosed > 1 ? "s" : "") + " · tout rouvrir"); ro.onclick = function () { ls("nc-closed-" + uid, "{}"); renderPonton(); }; W.appendChild(ro); }
-  var keys = Object.keys(T).sort(function (a, b) { var la = T[a].length ? ts(T[a][T[a].length - 1].t) : Date.now(), lb = T[b].length ? ts(T[b][T[b].length - 1].t) : Date.now(); return lb - la; });
-  if (!keys.length) { if (nClosed) return; W.appendChild(el("p", "mu", "Pas encore de discussion. Cherchez un plaisancier juste en dessous et touchez « Écrire » pour lancer le chat.")); return; }
+  var keys = Object.keys(T).sort(function (a, b) { return ts(T[b][T[b].length - 1].t) - ts(T[a][T[a].length - 1].t); });
+  if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Cherchez un plaisancier ci-dessus, ou touchez un nom dans le salon.")); return; }
   keys.forEach(function (k) {
-    var th = el("div", "thread"); th.id = "th-" + k; var hd = el("div", "thd"); hd.appendChild(badge(k)); var x = el("button", "thx", "✕ Fermer"); x.setAttribute("aria-label", "Fermer la discussion"); x.onclick = function () { closeThread(k); }; hd.appendChild(x); th.appendChild(hd);
-    T[k].slice(-10).forEach(function (m) { var b = el("div", "bub " + (m.de === uid ? "out" : "in"), m.txt); b.appendChild(el("small", 0, ago(m.t))); th.appendChild(b); });
-    var pr = el("div"); PRESETS.forEach(function (t) { var b = el("button", "btn g sm", t); b.onclick = function () { sendMsg(k, t); }; pr.appendChild(b); }); th.appendChild(pr);
-    var f = el("form", "send"), i = el("input", "f"); i.id = "in-" + k; i.maxLength = 200; i.placeholder = "Votre message…"; i.setAttribute("aria-label", "Message"); var s = el("button", "btn", "Envoyer");
-    f.appendChild(i); f.appendChild(s); f.onsubmit = function (e) { e.preventDefault(); var v = i.value; i.value = ""; sendMsg(k, v); }; th.appendChild(f); W.appendChild(th);
+    var L = T[k], last = L[L.length - 1], n = unreadOf(k, L), it = el("button", "wa-it" + (n ? " unr" : ""));
+    it.appendChild(avatar(k));
+    var mid = el("span", "wa-im"); mid.appendChild(el("b", 0, nameOf(k))); mid.appendChild(el("span", "wa-pv", (last.de === uid ? "Vous : " : "") + last.txt)); it.appendChild(mid);
+    var rt = el("span", "wa-ir"); rt.appendChild(el("small", 0, listTime(last.t))); if (n) rt.appendChild(el("span", "wa-n", String(n))); it.appendChild(rt);
+    it.onclick = function () { openThread(k); }; W.appendChild(it);
   });
 }
+function renderConv() {
+  var k = openWith, L = threads()[k] || [];
+  var W = $("pvWho"); W.textContent = ""; W.appendChild(avatar(k)); var t = el("span", "wa-ti"); t.appendChild(el("b", 0, (P[k] && P[k].pseudo) || "Plaisancier")); var pr = P[k] || {}; t.appendChild(el("span", 0, [pr.bateau, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); W.appendChild(t);
+  var f = el("button", "wa-fr", rel(k) === "ami" ? "Ami" : rel(k) === "envoye" ? "Demande envoyée" : rel(k) === "recu" ? "Accepter en ami" : "Ajouter en ami"); f.onclick = function () { befriend(k); }; W.appendChild(f);
+  drawBubbles($("pvMsgs"), L, false); markThread(k);
+  var Pp = $("pvPre"); Pp.textContent = ""; Pp.hidden = L.length > 0; PRESETS.forEach(function (x) { var b = el("button", "wa-chip", x); b.onclick = function () { sendMsg(k, x); }; Pp.appendChild(b); });
+}
 function renderPonton() {
-  var ok = !!me(); $("rnGate").hidden = ok; $("rnBody").hidden = !ok; if (!ok) return;
-  stat(); drawRnMap();
-  var ae = document.activeElement, aid = ae && ae.id && ae.id.indexOf("in-") === 0 ? ae.id : null, val = aid ? ae.value : "";
-  renderThreads(); if (aid && $(aid)) { $(aid).value = val; $(aid).focus(); }
-  var u = unread() + pendingIn().length; $("unreadRn").hidden = !u; $("unreadRn").textContent = u;
-  var D = $("rnDet"); D.textContent = ""; openOthers().forEach(function (x) { if (x.id === sel) D.appendChild(personCard(x.id, x)); });
-  renderMembers();
-  var Fr = $("rnFriends"); Fr.textContent = ""; var p = rPos();
-  friendIds().filter(function (id) { return P[id]; }).forEach(function (id) {
-    var x = FR.filter(function (f) { return f.auteur === id; })[0], ex = null;
-    if (x) { ex = el("div"); ex.appendChild(el("div", "okm", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position partagée " + ago(x.maj)));
-      var a = el("a", "btn g sm", "Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a); }
-    Fr.appendChild(memberCard(id, ex)); });
-  if (!Fr.firstChild) Fr.appendChild(el("p", "mu", "Pas encore d'amis. Cherchez un plaisancier ci-dessus et touchez « Ajouter en ami »."));
-  var L = $("rnOpenList"); L.textContent = ""; openOthers().sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).forEach(function (x) { L.appendChild(personCard(x.id, x)); });
-  if (!L.firstChild) L.appendChild(el("p", "mu", "Personne n'a hissé le pavillon pour l'instant."));
+  var ok = !!me();
+  Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.classList.toggle("on", b.dataset.t === waTab); });
+  $("paneSalon").hidden = waTab !== "salon"; $("panePrive").hidden = waTab !== "prive"; $("paneEau").hidden = waTab !== "eau";
+  var nm = Object.keys(P).length; $("waSub").textContent = nm ? nm + " membre" + (nm > 1 ? "s" : "") + " · " + openNow().length + " sur l'eau" : "Le chat des plaisanciers du Léman";
+  $("waJoin").hidden = ok; if (!ok) drawJoin();
+  /* salon : lisible par tous */
+  drawBubbles($("slMsgs"), SL, true); $("slBar").hidden = !ok;
+  if (waTab === "salon") { if (SL.length) ls("nc-slseen", String(ts(SL[SL.length - 1].t))); slBottom(false); }
+  var su = slUnread(); $("unreadSl").hidden = !su || waTab === "salon"; $("unreadSl").textContent = su;
+  /* privé */
+  var conv = waTab === "prive" && ok && openWith && openWith !== uid;
+  $("pvList").hidden = conv || !ok; $("pvConv").hidden = !conv;
+  if (ok) { if (conv) { renderConv(); slBottom(false); } else { renderThreads(); renderMembers(); } }
+  var u = unread() + pendingIn().length; $("unreadRn").hidden = !u || (waTab === "prive" && !conv); $("unreadRn").textContent = u;
+  /* sur l'eau */
+  if (waTab === "eau") {
+    if (!ok) { $("paneEau").hidden = true; return; }
+    stat(); drawRnMap();
+    var D = $("rnDet"); D.textContent = ""; openOthers().forEach(function (x) { if (x.id === sel) D.appendChild(personCard(x.id, x)); });
+    var Fr = $("rnFriends"); Fr.textContent = ""; var p = rPos();
+    friendIds().filter(function (id) { return P[id]; }).forEach(function (id) {
+      var x = FR.filter(function (f) { return f.auteur === id; })[0], ex = null;
+      if (x) { ex = el("div"); ex.appendChild(el("div", "okm", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position partagée " + ago(x.maj)));
+        var a = el("a", "btn g sm", "Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a); }
+      Fr.appendChild(memberCard(id, ex)); });
+    if (!Fr.firstChild) Fr.appendChild(el("p", "mu", "Pas encore d'amis. Ouvrez une discussion privée et touchez « Ajouter en ami »."));
+    var Lo = $("rnOpenList"); Lo.textContent = ""; openOthers().sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).forEach(function (x) { Lo.appendChild(personCard(x.id, x)); });
+    if (!Lo.firstChild) Lo.appendChild(el("p", "mu", "Personne n'a hissé le pavillon pour l'instant."));
+  }
 }
 
 /* ================= BOÎTE À IDÉES ================= */
@@ -1348,7 +1431,7 @@ function renderLac() {
 function renderAll() {
   renderHome();
   var v = cur();
-  if (v === "panne") renderPanne(); else if (v === "ponton") { renderPonton(); if (unread()) markRead(); }
+  if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
   else if (v === "profil") notifUI();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();

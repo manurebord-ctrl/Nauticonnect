@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=19">
+<link rel="stylesheet" href="app.css?v=20">
 </head>
 <body>
 
@@ -158,16 +158,29 @@
 
 <!-- ===================== LE PONTON ===================== -->
 <section id="v-ponton" hidden>
-<div class="hd"><a class="back" href="#">← Accueil</a></div>
-<h1 class="ph1">Le Ponton <span class="chatpill">Chat</span></h1><p class="lead">Le chat des plaisanciers du Léman. Comme sur un vrai ponton : on se salue, on discute bateau, on se file un coup de main et on se donne rendez-vous sur l'eau.</p>
-<div id="rnGate" class="card gate" hidden><b>Montez à bord du Ponton</b><div class="mu" style="margin:4px 0 12px">Pour chatter avec les autres plaisanciers, créez votre compte et votre fiche bateau. C'est gratuit et ça prend une minute.</div><a class="btn" href="#compte">Rejoindre l'équipage</a></div>
-<div id="rnBody" hidden>
-<h2 style="margin-top:0">Mes discussions<span class="dot" id="unreadRn" hidden></span></h2><div id="rnThreads"></div>
-<div class="stt" id="rnStt"></div>
-<h2 id="mbReqH" hidden>Demandes d'amis</h2><div id="mbReq"></div>
-<h2>Nouvelle discussion</h2>
-<div class="card"><input class="f" id="mbSearch" type="search" maxlength="40" placeholder="À qui écrire ? Prénom, bateau ou port…" aria-label="Rechercher un plaisancier"><div class="mu" id="mbHint" style="margin-top:6px"></div></div>
+<div class="wa-top"><a class="back" href="#" aria-label="Accueil">←</a><div class="wa-ti"><b>Le Ponton</b><span id="waSub">Le chat des plaisanciers du Léman</span></div></div>
+<div class="wa-tabs" role="tablist"><button data-t="salon" class="on">Salon<span class="dot" id="unreadSl" hidden></span></button><button data-t="prive">Privé<span class="dot" id="unreadRn" hidden></span></button><button data-t="eau">Sur l'eau</button></div>
+<div id="waJoin" class="card wa-join" hidden></div>
+<div class="wa-pane" id="paneSalon">
+<div class="wa-msgs" id="slMsgs"></div>
+<form class="wa-bar" id="slBar" hidden><input id="slIn" maxlength="300" autocomplete="off" placeholder="Écrire à tout le Ponton…" aria-label="Message au salon"><button class="wa-send" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button></form>
+</div>
+<div class="wa-pane" id="panePrive" hidden>
+<div id="pvList">
+<input class="f wa-search" id="mbSearch" type="search" maxlength="40" placeholder="Écrire à quelqu'un : prénom, bateau ou port…" aria-label="Rechercher un plaisancier"><div class="mu" id="mbHint" style="margin:6px 2px"></div>
 <div id="mbList"></div>
+<h3 class="sub" id="mbReqH" hidden>Demandes d'amis</h3><div id="mbReq"></div>
+<div id="rnThreads" class="wa-list"></div>
+</div>
+<div id="pvConv" hidden>
+<div class="wa-chd"><button class="wa-bk" id="pvBack" aria-label="Retour aux discussions">←</button><span id="pvWho"></span></div>
+<div class="wa-msgs" id="pvMsgs"></div>
+<div class="wa-pre" id="pvPre"></div>
+<form class="wa-bar" id="pvBar"><input id="pvIn" maxlength="200" autocomplete="off" placeholder="Message…" aria-label="Message privé"><button class="wa-send" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button></form>
+</div>
+</div>
+<div class="wa-pane" id="paneEau" hidden>
+<div class="stt" id="rnStt"></div>
 <div class="card warn"><b>Rencontres en sécurité.</b> Pour tous les membres, votre position est arrondie (environ 1 km). Ne donnez ni adresse ni numéro dans les messages. Retrouvez-vous dans un port ou un lieu public.</div>
 <div class="card">
 <h2 style="margin:0 0 8px">Sur l'eau en ce moment</h2><label class="l" for="rnMsgTxt">Mon message sur la carte (60 car.)</label><input class="f" id="rnMsgTxt" maxlength="60" placeholder="Apéro à Ouchy ?">
@@ -433,9 +446,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=19"></script>
+<script src="config.js?v=20"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
