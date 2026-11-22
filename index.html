@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=28">
+<link rel="stylesheet" href="app.css?v=29">
 </head>
 <body>
 
@@ -95,7 +95,7 @@
 
 <!-- ===================== PROFIL ===================== -->
 <section id="v-profil" hidden>
-<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<div class="hd pfhd"><a class="back" href="#">← Accueil</a><button class="pfx" id="pfClose" aria-label="Fermer">✕</button></div>
 <h1 class="ph1" id="pfTitle">Ma fiche bateau</h1>
 <p class="lead">Elle vous identifie dans Le Ponton et dans les alertes de panne. Elle est visible par les membres.</p>
 <div class="card pfph"><span class="pfav" id="pfAv">?</span><div><b>Photo de profil</b><div class="mu" id="pfPhSt"></div>
@@ -168,7 +168,8 @@
 <div id="waNotif" class="wa-notif" hidden><span>Soyez prévenu quand on vous écrit</span><button class="btn sm" id="waNotifGo">Activer</button></div>
 <div class="wa-pane" id="paneSalon">
 <div class="wa-msgs" id="slMsgs"></div>
-<form class="wa-bar" id="slBar" hidden><input id="slIn" maxlength="300" autocomplete="off" placeholder="Écrire à tout le Ponton…" aria-label="Message au salon"><button class="wa-send" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button></form>
+<div class="wa-sug" id="slSug" hidden></div>
+<form class="wa-bar" id="slBar" hidden><input id="slIn" maxlength="300" autocomplete="off" placeholder="Écrire à tout le Ponton… (@ pour citer)" aria-label="Message au salon"><button class="wa-send" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button></form>
 </div>
 <div class="wa-pane" id="panePrive" hidden>
 <div id="pvList">
@@ -455,9 +456,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=28"></script>
+<script src="config.js?v=29"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>

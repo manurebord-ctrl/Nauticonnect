@@ -106,8 +106,9 @@ function guestOk(retry, msgEl) {
   }).catch(function () { guestBusy = false; toast("Pas de connexion internet ?"); });
   return false;
 }
+var prevView = "accueil", lastView = "accueil";
 function route() {
-  var h = cur();
+  var h = cur(); if (h !== lastView) { prevView = lastView; lastView = h; }
   if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h); return; }
   VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
   Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
@@ -216,6 +217,8 @@ function onSession(s, ev) {
 /* ================= PROFIL ================= */
 var o0 = el("option", 0, "— choisir —"); o0.value = ""; $("pPort").appendChild(o0);
 Z.forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("pPort").appendChild(o); });
+function pfClose() { if (prevView && prevView !== "profil" && prevView !== "compte") location.hash = prevView === "accueil" ? "" : prevView; else location.hash = ""; }
+$("pfClose").onclick = pfClose;
 function fillProfile() {
   drawPfPhoto();
   var p = me(); $("pfTitle").textContent = p ? "Ma fiche bateau" : "Créez votre fiche bateau";
@@ -240,6 +243,7 @@ $("pSave").onclick = function () {
     renderAll();
     var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
     if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
+    else { toast("Fiche mise à jour"); setTimeout(pfClose, 600); }
   }).then(function () { $("pSave").disabled = false; });
 };
 $("pLogout").onclick = function () { (mySub ? sb.from("push_abos").delete().eq("endpoint", mySub.endpoint).then(function () { mySub = null; myAbo = null; }) : Promise.resolve()).catch(function () {}).then(function () { return sb.auth.signOut(); }).then(function () { location.hash = ""; toast("Déconnecté. À bientôt sur l'eau !"); }); };
@@ -641,10 +645,11 @@ function drawBubbles(box, list, group) {
     var dk = dayKey(m.t); if (dk !== lastDay) { box.appendChild(el("div", "wa-day", dayLabel(m.t))); lastDay = dk; lastDe = ""; }
     var mine = m.de === uid, cont = m.de === lastDe && ts(m.t) - lastT < 5 * 6e4;
     var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : ""));
-    if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; row.appendChild(av); }
+    if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de]) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
     var b = el("div", "wa-b");
-    if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function () { openThread(m.de); }; } b.appendChild(nm); }
-    b.appendChild(el("span", "wa-tx", m.txt));
+    if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
+    b.appendChild(mentionText(m));
+    if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
     var meta = el("small", "wa-meta", hhmm(m.t) + (mine && !group ? " ✓✓" : "")); b.appendChild(meta);
     if (group && (mine || isAdmin)) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Supprimer"); d.onclick = function (e) { e.stopPropagation(); sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else load("salon"); }); }; b.appendChild(d); }; }
     row.appendChild(b); box.appendChild(row); lastDe = m.de; lastT = ts(m.t);
@@ -663,12 +668,36 @@ function sendMsg(to, txt) {
 $("pvBar").onsubmit = function (e) { e.preventDefault(); var i = $("pvIn"), v = i.value; if (!openWith || !v.trim()) return; i.value = ""; sendMsg(openWith, v); };
 $("slBar").onsubmit = function (e) {
   e.preventDefault(); var i = $("slIn"), v = i.value.trim().slice(0, 300); if (!v || sending) return; sending = true;
-  sb.from("salon").insert({ txt: v }).then(function (r) {
+  sb.from("salon").insert({ txt: v, cites: citesOf(v) }).then(function (r) {
     sending = false;
     if (r.error) { toast(/rapide/.test(r.error.message || "") ? "Doucement, un message toutes les 3 secondes." : "Message non envoyé."); return; }
-    i.value = ""; load("salon").then(function () { slBottom(true); });
+    i.value = ""; slTags = {}; $("slSug").hidden = true; load("salon").then(function () { slBottom(true); });
   });
 };
+/* @mentions dans le salon */
+var slTags = {};
+function tagUser(id) {
+  if (!me()) return; var i = $("slIn"), ps = P[id].pseudo; slTags[ps] = id;
+  var v = i.value.replace(/@([^\s@]*)$/, ""); i.value = (v && !/\s$/.test(v) ? v + " " : v) + "@" + ps + " "; $("slSug").hidden = true; i.focus();
+}
+function citesOf(v) { var out = []; Object.keys(slTags).forEach(function (ps) { if (v.indexOf("@" + ps) >= 0 && out.indexOf(slTags[ps]) < 0 && slTags[ps] !== uid) out.push(slTags[ps]); }); return out.slice(0, 5); }
+function mentionText(m) {
+  var sp = el("span", "wa-tx"), names = (m.cites || []).map(function (id) { return P[id] && P[id].pseudo; }).filter(Boolean);
+  if (!names.length) { sp.textContent = m.txt; return sp; }
+  names.sort(function (a, b) { return b.length - a.length; });
+  var re = new RegExp("(" + names.map(function (n) { return "@" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + ")", "g");
+  m.txt.split(re).forEach(function (part, k) { if (k % 2) { var t = el("b", "wa-at", part); sp.appendChild(t); } else if (part) sp.appendChild(document.createTextNode(part)); });
+  return sp;
+}
+$("slIn").oninput = function () {
+  var S = $("slSug"), mt = this.value.match(/@([^\s@]*)$/); S.textContent = "";
+  if (!mt) { S.hidden = true; return; }
+  var q = norm(mt[1]), ids = Object.keys(P).filter(function (id) { return id !== uid && P[id].pseudo && norm(P[id].pseudo).indexOf(q) === 0; }).slice(0, 6);
+  if (!ids.length && q) ids = Object.keys(P).filter(function (id) { return id !== uid && P[id].pseudo && norm(P[id].pseudo).indexOf(q) >= 0; }).slice(0, 6);
+  ids.forEach(function (id) { var b = el("button", "wa-sg"); b.type = "button"; b.appendChild(avatar(id)); var t = el("span"); t.appendChild(el("b", 0, P[id].pseudo)); if (P[id].bateau || P[id].port) t.appendChild(el("small", 0, P[id].bateau || P[id].port)); b.appendChild(t); b.onclick = function () { tagUser(id); }; S.appendChild(b); });
+  S.hidden = !ids.length;
+};
+
 /* rejoindre : compte puis juste un pseudo */
 function drawJoin() {
   var J = $("waJoin"); J.textContent = "";
