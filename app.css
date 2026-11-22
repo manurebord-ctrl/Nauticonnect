@@ -435,3 +435,22 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .wa-new{display:inline-block;vertical-align:2px;margin-left:8px;background:#1f8a5b;color:#fff;font-size:11px;font-weight:800;padding:2px 7px;border-radius:9px}
 @media (prefers-color-scheme:dark){.wa-it.unr{background:#123524}.wa-it.unr .wa-pv{color:#bff0d3}}
 .wa-tick{color:#8696a0;letter-spacing:-3px;margin-left:2px}.wa-tick.lu{color:#34b7f1}
+/* photos du salon */
+.wa-cam{flex:none;width:46px;height:46px;border-radius:50%;background:#fff;color:#0b6fa4;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.wa-cam svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linejoin:round}
+@media (prefers-color-scheme:dark){.wa-cam{background:#1f2c34;color:#53bdeb}}
+.wa-b:has(.wa-ph){padding:4px 4px 6px;max-width:86%}
+.wa-ph{position:relative;margin:2px 0 4px;border-radius:10px;overflow:hidden;line-height:0;cursor:pointer}
+.wa-ph img{display:block;width:100%;max-width:300px;min-width:200px;max-height:380px;object-fit:cover}
+.wa-b:has(.wa-ph) .wa-nm,.wa-b:has(.wa-ph) .wa-tx,.wa-b:has(.wa-ph) .wa-like{margin-left:6px;margin-right:6px}
+.wa-burst{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;animation:burst .7s ease-out forwards}
+.wa-burst svg{width:90px;height:90px;fill:#fff;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
+@keyframes burst{0%{transform:scale(.3);opacity:0}30%{transform:scale(1.1);opacity:1}100%{transform:scale(1);opacity:0}}
+.wa-like{display:flex;align-items:center;gap:8px;margin-top:4px;clear:both}
+.wa-lk{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:2px 0;color:inherit;font:700 14px var(--fb)}
+.wa-lk svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}
+.wa-lk.on{color:#e0245e}.wa-lk.on svg{fill:#e0245e;stroke:#e0245e}
+.wa-like small{font-size:12px;opacity:.7}
+.wa-view{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center}
+.wa-view img{max-width:100%;max-height:100%}
+.wa-vx{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:20px}

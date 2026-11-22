@@ -24,7 +24,7 @@ var session = null, uid = null, isAdmin = false, guest = false;
 function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
-var SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
@@ -36,6 +36,7 @@ var Q = {
   profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat,photo,photo_ok").limit(5000); },
   alertes: function () { return sb.from("alertes").select("*").gte("maj", iso(12 * 36e5)); },
   ouverts: function () { return sb.from("ouverts").select("*").gte("maj", iso(2 * 36e5)); },
+  likes: function () { return sb.from("salon_likes").select("salon_id,uid").limit(5000); },
   salon: function () { return sb.from("salon").select("*").order("t", { ascending: false }).limit(200); },
   messages: function () { return uid ? sb.from("messages").select("*").gte("t", iso(7 * 864e5)).order("t").limit(800) : null; },
   avis: function () { return sb.from("avis").select("*").order("t", { ascending: false }).limit(300); },
@@ -55,7 +56,7 @@ var Q = {
 function store(t, rows) {
   rows = rows || [];
   if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
-  else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse();
+  else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse(); else if (t === "likes") LK = rows;
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
@@ -648,10 +649,13 @@ function drawBubbles(box, list, group) {
     if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de]) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
     var b = el("div", "wa-b");
     if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
-    b.appendChild(mentionText(m));
+    if (group && m.photo) b.appendChild(photoBlock(m));
+    if (m.txt) b.appendChild(mentionText(m));
+    if (group && m.photo) b.appendChild(likeRow(m));
     if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
     var meta = el("small", "wa-meta", hhmm(m.t)); if (mine && !group) meta.appendChild(el("span", "wa-tick" + (m.lu ? " lu" : ""), " ✓✓")); b.appendChild(meta);
-    if (group && (mine || isAdmin)) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Supprimer"); d.onclick = function (e) { e.stopPropagation(); sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else load("salon"); }); }; b.appendChild(d); }; }
+    if (group && (mine || isAdmin)) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Supprimer"); d.onclick = function (e) { e.stopPropagation(); sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else { if (m.photo) sb.storage.from("photos").remove([m.photo]); load("salon"); } }); }; b.appendChild(d); }; }
+    else if (group && m.photo && real()) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Signaler cette photo"); d.onclick = function (e) { e.stopPropagation(); if (!confirm("Signaler cette photo à l'admin ?")) return; sb.from("signalements").insert({ quoi: "salon", ref: String(m.id) }).then(function () { d.textContent = "Signalée, merci"; d.disabled = true; }); }; b.appendChild(d); }; }
     row.appendChild(b); box.appendChild(row); lastDe = m.de; lastT = ts(m.t);
   });
   box.dataset.n = String(list.length);
@@ -674,6 +678,42 @@ $("slBar").onsubmit = function (e) {
     i.value = ""; slTags = {}; $("slSug").hidden = true; load("salon").then(function () { slBottom(true); });
   });
 };
+/* photos du salon façon Instagram */
+var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3.2 4.5 6.9 4.5c2.1 0 3.6 1.2 5.1 3 1.5-1.8 3-3 5.1-3 3.7 0 6 3.7 4.5 7.2C19.5 16.4 12 21 12 21z"/></svg>';
+function likesOf(id) { return LK.filter(function (l) { return l.salon_id === id; }); }
+function toggleLike(m, force) {
+  if (!me()) { toast("Créez votre compte pour aimer les photos"); return; }
+  var mine = likesOf(m.id).some(function (l) { return l.uid === uid; });
+  if (mine && force) return;
+  if (mine) { LK = LK.filter(function (l) { return !(l.salon_id === m.id && l.uid === uid); }); sb.from("salon_likes").delete().eq("salon_id", m.id).eq("uid", uid).then(function () {}); }
+  else { LK.push({ salon_id: m.id, uid: uid }); sb.from("salon_likes").insert({ salon_id: m.id }).then(function () {}); }
+  renderPonton();
+}
+function photoBlock(m) {
+  var w = el("div", "wa-ph"), im = el("img"); im.src = photoUrl(m.photo); im.alt = "Photo de " + ((P[m.de] && P[m.de].pseudo) || "un plaisancier"); im.loading = "lazy"; w.appendChild(im);
+  var last = 0; w.onclick = function (e) { e.stopPropagation(); var n = Date.now();
+    if (n - last < 320) { clearTimeout(w._t); var h = el("span", "wa-burst"); h.innerHTML = HEART; w.appendChild(h); setTimeout(function () { h.remove(); }, 700); toggleLike(m, true); }
+    else w._t = setTimeout(function () { viewPhoto(im.src); }, 330);
+    last = n; };
+  return w;
+}
+function likeRow(m) {
+  var L = likesOf(m.id), mine = L.some(function (l) { return l.uid === uid; }), r = el("div", "wa-like"), b = el("button", "wa-lk" + (mine ? " on" : ""));
+  b.innerHTML = HEART; b.appendChild(el("span", 0, L.length ? String(L.length) : "")); b.setAttribute("aria-label", mine ? "Je n'aime plus" : "J'aime");
+  b.onclick = function (e) { e.stopPropagation(); toggleLike(m); }; r.appendChild(b);
+  if (L.length) { var who = L.slice().sort(function (a, b) { return (b.uid === uid) - (a.uid === uid); }).map(function (l) { return l.uid === uid ? "vous" : (P[l.uid] && P[l.uid].pseudo); }).filter(Boolean); r.appendChild(el("small", 0, "Aimé par " + who.slice(0, 2).join(", ") + (who.length > 2 ? " et " + (who.length - 2) + " autre" + (who.length > 3 ? "s" : "") : ""))); }
+  return r;
+}
+function viewPhoto(src) { var o = el("div", "wa-view"), im = el("img"); im.src = src; o.appendChild(im); o.appendChild(el("button", "wa-vx", "✕")); o.onclick = function () { o.remove(); }; document.body.appendChild(o); }
+$("slPhIn").onchange = function () {
+  var f = this.files && this.files[0]; this.value = ""; if (!f || !me()) return;
+  var i = $("slIn"), cap = i.value.trim().slice(0, 300), path = uid + "/salon-" + Date.now() + ".jpg"; toast("Envoi de la photo…");
+  shrink(f, 1400).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
+    .then(function (r) { if (r.error) throw r.error; return sb.from("salon").insert({ txt: cap, photo: path, cites: citesOf(cap) }); })
+    .then(function (r) { if (r.error) throw r.error; i.value = ""; slTags = {}; load("salon").then(function () { slBottom(true); }); })
+    .catch(function (e) { toast(/rapide/.test((e && e.message) || "") ? "Doucement, une publication toutes les 3 secondes." : "Envoi impossible. Réessayez."); });
+};
+
 /* @mentions dans le salon */
 var slTags = {};
 function tagUser(id) {
