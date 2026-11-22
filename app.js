@@ -21,7 +21,11 @@ var sb = null;
 if (configured && window.supabase) sb = window.supabase.createClient(CFG.url, CFG.key);
 var session = null, uid = null, isAdmin = false, guest = false;
 /* guest = visiteur sans compte (connexion anonyme Supabase, invisible pour lui) */
-function real() { return !!uid && !guest; }
+/* aperçu admin : voir l'appli comme un membre ou un invité */
+var realAdmin = false, viewAs = "admin";
+try { viewAs = sessionStorage.getItem("nc-view") || "admin"; } catch (e) {}
+function preview() { return realAdmin && viewAs !== "admin"; }
+function real() { return !!uid && !guest && !(realAdmin && viewAs === "invite"); }
 
 /* ---------------- données ---------------- */
 var SO = [], SI = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
@@ -122,6 +126,7 @@ function requireProfile(msgEl, why) {
 var guestBusy = false;
 function guestOk(retry, msgEl) {
   if (!sb) { if (msgEl) msgEl.textContent = "L'appli n'est pas encore configurée."; return false; }
+  if (preview() && viewAs === "invite") { toast("Mode aperçu invité : action désactivée."); return false; }
   if (uid) return true;
   if (guestBusy) return false; guestBusy = true;
   sb.auth.signInAnonymously().then(function (r) {
@@ -139,7 +144,7 @@ function route() {
   VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
   Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
   if (h === "profil") fillProfile();
-  if (h === "compte" && authMode !== "reset") setAuthMode(uid ? "in" : authMode);
+  if (h === "compte" && authMode !== "reset") setAuthMode(real() ? "in" : preview() ? "up" : uid && !guest ? "in" : authMode);
   if (h === "ponton") markRead();
   if (h === "webcams") wcFromHash();
   renderAll(); window.scrollTo(0, 0); heroStart();
@@ -211,6 +216,7 @@ function authErr(e) {
   return "Erreur : " + (m || "réessayez.");
 }
 $("auGo").onclick = function () {
+  if (preview()) { toast("Mode aperçu : revenez en mode admin pour vous connecter."); return; }
   var m = $("auMsg"); m.className = "err"; m.textContent = "";
   if (!sb) { m.textContent = "L'appli n'est pas encore configurée (fichier config.js)."; return; }
   var em = $("auEmail").value.trim(), pw = $("auPass").value;
@@ -238,8 +244,8 @@ function onSession(s, ev) {
   var was = uid; session = s; uid = s ? s.user.id : null; guest = !!(s && s.user && s.user.is_anonymous);
   if (ev === "PASSWORD_RECOVERY") { location.hash = "compte"; setAuthMode("reset"); }
   if (uid !== was) {
-    isAdmin = false;
-    if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { isAdmin = !!(r.data && r.data.length); if (isAdmin) load("photos"); renderAll(); });
+    isAdmin = false; realAdmin = false;
+    if (uid) sb.from("admins").select("uid").eq("uid", uid).then(function (r) { realAdmin = !!(r.data && r.data.length); applyView(); if (realAdmin) load("photos"); renderAll(); });
     subscribeAll(); loadAll().then(function () { pushRefresh();
       if (real() && cur() === "compte" && authMode !== "reset") {
         var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); sessionStorage.removeItem("nc-why"); } catch (e) {}
@@ -2085,3 +2091,22 @@ function loadDash() {
     D.appendChild(el("p", "mu", "Les visites sont comptées une fois par jour et par téléphone, sans aucune donnée personnelle."));
   });
 }
+
+/* ================= APERÇU ADMIN ================= */
+var VIEWN = { admin: "Admin (modérateur)", membre: "Membre", invite: "Invité sans compte" }, VIEWS2 = { membre: "membre", invite: "invité" };
+function applyView() {
+  if (!realAdmin) viewAs = "admin";
+  isAdmin = realAdmin && viewAs === "admin";
+  var bar = $("pvBar");
+  if (bar) { bar.hidden = !preview(); $("pvTxt").textContent = "Aperçu " + (VIEWS2[viewAs] || ""); }
+  document.documentElement.classList.toggle("previewing", preview());
+  var B = $("pvBox"); if (B) { B.hidden = !realAdmin; Array.prototype.forEach.call(B.querySelectorAll("[data-view]"), function (b) { b.classList.toggle("g", b.dataset.view !== viewAs); }); }
+}
+function setView(v) {
+  viewAs = v; try { sessionStorage.setItem("nc-view", v); } catch (e) {}
+  applyView(); toast(v === "admin" ? "Retour en mode admin" : "Vous voyez l'appli comme : " + VIEWN[v]);
+  if (v === "admin") location.hash = "profil"; else location.hash = ""; renderAll();
+}
+Array.prototype.forEach.call(document.querySelectorAll("[data-view]"), function (b) { b.onclick = function () { setView(b.dataset.view); }; });
+$("pvExit").onclick = function () { setView("admin"); };
+applyView();
