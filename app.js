@@ -827,9 +827,20 @@ $("slIn").oninput = function () {
 
 /* rejoindre : compte puis juste un pseudo */
 function drawJoin() {
-  var J = $("waJoin"); J.textContent = "";
+  var J = $("waJoin"); J.textContent = ""; J.classList.remove("lock");
   if (!real()) {
-    J.appendChild(el("b", 0, "Pour écrire, montez à bord"));
+    J.classList.add("lock");
+    J.appendChild(el("b", "lk-t", "Le Ponton est réservé aux membres"));
+    var st = el("div", "lk-st"); J.appendChild(st);
+    var nm = Object.keys(P).length;
+    function lkStat(n, t) { var d = el("div"); d.appendChild(el("b", 0, String(n))); d.appendChild(el("span", 0, t)); st.appendChild(d); }
+    if (nm) lkStat(nm, "membre" + (nm > 1 ? "s" : ""));
+    if (PST) { if (PST.msg7) lkStat(PST.msg7, "message" + (PST.msg7 > 1 ? "s" : "") + " cette semaine"); } else setTimeout(loadPst, 0);
+    if (openNow().length) lkStat(openNow().length, "sur l'eau");
+    st.hidden = !st.firstChild;
+    var ul = el("ul", "lk-ul");
+    ["Discutez avec les plaisanciers du Léman", "Écrivez en privé et ajoutez des amis", "Voyez qui est sur l'eau près de vous", "Donnez-vous rendez-vous au port ou au large"].forEach(function (t) { ul.appendChild(el("li", 0, t)); });
+    J.appendChild(ul);
     J.appendChild(el("div", "mu", "Un compte gratuit avec votre e-mail, puis juste un prénom. Une minute en tout."));
     var a = el("a", "btn", "Créer mon compte"); a.href = "#compte"; a.onclick = function () { try { sessionStorage.setItem("nc-ret", "ponton"); sessionStorage.setItem("nc-why", ""); } catch (e) {} }; J.appendChild(a);
     var l = el("a", "linkb", "J'ai déjà un compte"); l.href = "#compte"; l.onclick = a.onclick; J.appendChild(l);
@@ -904,14 +915,19 @@ function renderAmis() {
   $("amSentH").hidden = !S.firstChild;
 }
 $("amFind").onclick = function () { goTab("prive"); setTimeout(function () { var i = $("mbSearch"); if (i) i.focus(); }, 100); };
+var PST = null, pstBusy = false;
+function loadPst() { if (!sb || pstBusy) return; pstBusy = true; sb.rpc("ponton_stats").then(function (r) { if (r.data) { PST = r.data; if (cur() === "ponton") renderPonton(); } }); }
 function renderPonton() {
-  var ok = !!me();
+  var ok = !!me(), mem = real();
+  /* chat réservé aux membres : les visiteurs ne voient que l'invitation */
+  document.querySelector(".wa-tabs").hidden = !mem;
+  if (!mem) { ["paneSalon", "panePrive", "paneAmis", "paneEau", "waNotif"].forEach(function (k) { $(k).hidden = true; }); $("waJoin").hidden = false; drawJoin(); return; }
   Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.classList.toggle("on", b.dataset.t === waTab); });
   $("paneSalon").hidden = waTab !== "salon"; $("panePrive").hidden = waTab !== "prive"; $("paneAmis").hidden = waTab !== "amis" || !ok; $("paneEau").hidden = waTab !== "eau";
   var nm = Object.keys(P).length; $("waSub").textContent = nm ? nm + " membre" + (nm > 1 ? "s" : "") + " · " + openNow().length + " sur l'eau" : "Le chat des plaisanciers du Léman";
   $("waJoin").hidden = ok; if (!ok) drawJoin();
   $("waNotif").hidden = !(ok && pushOk && !(mySub && myAbo) && Notification.permission !== "denied");
-  /* salon : lisible par tous */
+  /* salon : membres uniquement */
   drawBubbles($("slMsgs"), SL, true); $("slBar").hidden = !ok;
   if (waTab === "salon") { if (SL.length) ls("nc-slseen", String(ts(SL[SL.length - 1].t))); slBottom(false); }
   var su = slUnread(); $("unreadSl").hidden = !su || waTab === "salon"; $("unreadSl").textContent = su;

@@ -609,3 +609,11 @@ html.previewing body{padding-top:48px}
 .vdcard .btn{width:100%;background:#e0662b}
 .vd-ok{display:none;font-weight:700;color:var(--ok)}
 .vdcard.on .btn{display:none}.vdcard.on .vd-ok{display:block}
+
+/* chat fermé aux visiteurs */
+.wa-join.lock{border:2px solid var(--ac);margin-top:14px}
+.lk-t{font-size:20px;display:block;margin-bottom:10px}
+.lk-st{display:flex;gap:8px;margin-bottom:12px}
+.lk-st div{flex:1;border:1px solid var(--bd);border-radius:14px;padding:8px;text-align:center}
+.lk-st b{display:block;font-size:22px;font-family:var(--fd)}.lk-st span{font-size:12px;color:var(--mu)}
+.lk-ul{margin:0 0 12px;padding-left:20px;line-height:1.6}
