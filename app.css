@@ -512,3 +512,7 @@ html.splashing,html.splashing body{overflow:hidden}
 .hero.compact .hero-chips{margin-top:10px}
 .hero.compact .hero-chips:not(:has(> :not([hidden]))){display:none}
 .hero.splash .cta{flex-wrap:nowrap}.hero.splash .cta a{flex:1;text-align:center;padding:13px 8px}
+
+/* carburant dans les ports */
+.port .fuel{display:inline-block;margin:6px 0 2px;padding:4px 10px;border-radius:12px;background:#fff4e0;color:#8a4b00;font-size:13px;font-weight:700}
+@media (prefers-color-scheme:dark){.port .fuel{background:#3a2c14;color:#f6c27a}}

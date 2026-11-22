@@ -1085,21 +1085,26 @@ var PORTS = [["gen","Genève – Port Noir","Genève","Petit-Lac"],["her","Herma
 ["rol","Rolle","Vaud","Côte vaudoise"],["spx","Saint-Prex","Vaud","Côte vaudoise"],["mor","Morges","Vaud","Côte vaudoise"],["ssu","Saint-Sulpice","Vaud","Côte vaudoise"],["vid","Lausanne – Vidy","Vaud","Côte vaudoise"],["ouc","Lausanne – Ouchy","Vaud","Côte vaudoise"],["pul","Pully","Vaud","Côte vaudoise"],["lut","Lutry","Vaud","Côte vaudoise"],["cul","Cully","Vaud","Côte vaudoise"],
 ["vev","Vevey","Vaud","Haut-Lac"],["ltp","La Tour-de-Peilz","Vaud","Haut-Lac"],["cla","Montreux – Clarens","Vaud","Haut-Lac"],["vil","Villeneuve","Vaud","Haut-Lac"],["bou","Le Bouveret","Valais","Haut-Lac"],["sgi","Saint-Gingolph","Valais","Haut-Lac"],
 ["evi","Évian-les-Bains","Haute-Savoie","Rive française"],["tho","Thonon – Port de Rives","Haute-Savoie","Rive française"],["yvo","Yvoire","Haute-Savoie","Rive française"]].map(function (a) { return { id: a[0], n: a[1], r: a[2], z: a[3] }; });
-var PZ = ["Tous", "Favoris", "Petit-Lac", "Côte vaudoise", "Haut-Lac", "Rive française"], poZone = ls("nc-pzone") || "Tous", poQ = "", favs = {};
+/* ports avec station de carburant pour bateaux (sources : bateau-geneve.ch, ports-du-leman.ch, sites des ports) */
+var FUEL = { gen: "Essence et diesel (La Nautique, à côté de Port-Noir)", ver: "Essence", nyo: "Essence et diesel (prépaiement)", rol: "Essence",
+  mor: "Essence et diesel (port de la Baie de l'Église)", ssu: "Essence (port des Pierrettes)", ouc: "Essence et diesel", cul: "Essence (port de Moratel)",
+  vev: "Essence (port de la Pichette Est, Corseaux)", bou: "Essence et diesel", evi: "Sans plomb 98 et gasoil, 24 h/24 par carte", tho: "Essence et diesel" };
+var PZ = ["Tous", "Favoris", "Carburant", "Petit-Lac", "Côte vaudoise", "Haut-Lac", "Rive française"], poZone = ls("nc-pzone") || "Tous", poQ = "", favs = {};
 try { JSON.parse(ls("nc-favs") || "[]").forEach(function (f) { favs[f] = 1; }); } catch (e) {}
-PZ.forEach(function (z) { var b = el("button", 0, z === "Favoris" ? "★ Favoris" : z); b.dataset.z = z; b.onclick = function () { poZone = z; ls("nc-pzone", z); renderPorts(); }; $("poChips").appendChild(b); });
+PZ.forEach(function (z) { var b = el("button", 0, z === "Favoris" ? "★ Favoris" : z === "Carburant" ? "⛽ Carburant" : z); b.dataset.z = z; b.onclick = function () { poZone = z; ls("nc-pzone", z); renderPorts(); }; $("poChips").appendChild(b); });
 $("poQ").oninput = function () { poQ = norm(this.value); renderPorts(); };
 var LBL = { libre: "Places libres", peu: "Peu de places", complet: "Complet" };
 function portStatus(id) { var best = null, n = 0, lim = Date.now() - 12 * 36e5; PL.forEach(function (r) { if (r.port !== id || ts(r.t) < lim) return; n++; if (!best || ts(r.t) > ts(best.t)) best = r; }); return best ? { s: best.s, t: best.t, n: n } : null; }
 function renderPorts() {
   Array.prototype.forEach.call($("poChips").children, function (b) { b.classList.toggle("on", b.dataset.z === poZone); });
   var L = $("poList"); L.textContent = ""; var last = null, shown = 0;
-  PORTS.filter(function (p) { return (poZone === "Tous" || (poZone === "Favoris" ? favs[p.id] : p.z === poZone)) && (!poQ || norm(p.n + " " + p.r).indexOf(poQ) >= 0); }).forEach(function (p) {
-    if (p.z !== last && poZone !== "Favoris") { L.appendChild(el("h3", "sub", p.z)); last = p.z; }
+  PORTS.filter(function (p) { return (poZone === "Tous" || (poZone === "Favoris" ? favs[p.id] : poZone === "Carburant" ? FUEL[p.id] : p.z === poZone)) && (!poQ || norm(p.n + " " + p.r).indexOf(poQ) >= 0); }).forEach(function (p) {
+    if (p.z !== last && poZone !== "Favoris" && poZone !== "Carburant") { L.appendChild(el("h3", "sub", p.z)); last = p.z; }
     shown++; var s = portStatus(p.id), c = el("div", "port");
     var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n)); nm.appendChild(el("span", 0, p.r));
     var fv = el("button", "fav" + (favs[p.id] ? " on" : ""), "★"); fv.setAttribute("aria-label", "Favori"); fv.onclick = function () { if (favs[p.id]) delete favs[p.id]; else favs[p.id] = 1; ls("nc-favs", JSON.stringify(Object.keys(favs))); renderPorts(); };
     top.appendChild(d); top.appendChild(nm); top.appendChild(fv); c.appendChild(top);
+    if (FUEL[p.id]) c.appendChild(el("div", "fuel", "⛽ Carburant : " + FUEL[p.id]));
     c.appendChild(el("div", "st " + (s ? s.s : "none"), s ? LBL[s.s] + " · " + ago(s.t) + (s.n > 1 ? " · " + s.n + " signalements" : "") : "Pas de signalement récent"));
     c.appendChild(thumb("port-" + p.id, p.n, "Port : " + p.n + " (ponton visiteurs, capitainerie, état du port…)"));
     var a = el("div", "act"), mine = PL.filter(function (r) { return r.port === p.id && r.auteur === uid && ts(r.t) > Date.now() - 12 * 36e5; })[0];
@@ -1110,6 +1115,7 @@ function renderPorts() {
     var wc = el("a", 0, "Webcam"); wc.href = "#webcams"; wc.onclick = function () { wcPort = p.id; }; a.appendChild(wc);
     c.appendChild(a); L.appendChild(c);
   });
+  if (poZone === "Carburant" && shown) L.insertBefore(el("div", "note", "Ports avec une station de carburant pour bateaux. Horaires et moyens de paiement variables : appelez la capitainerie avant de compter dessus, surtout hors saison."), L.firstChild);
   if (!shown) L.appendChild(el("div", "note", poZone === "Favoris" ? "Touchez ★ sur un port pour l'ajouter à vos favoris." : "Aucun port ne correspond."));
 }
 
