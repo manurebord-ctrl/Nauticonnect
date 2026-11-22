@@ -622,3 +622,4 @@ html.previewing body{padding-top:48px}
 .tile{position:relative}
 .tile.locked::after{content:"Membres";position:absolute;top:6px;right:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;background:var(--ac);color:var(--acx);border-radius:10px;padding:2px 6px}
 .tile.locked .ti{opacity:.55}
+.btn.danger{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important}

@@ -1818,7 +1818,7 @@ function renderAll() {
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
-  else if (v === "profil") { notifUI(); renderMyBadges(); $("dashBox").hidden = !isAdmin; }
+  else if (v === "profil") { notifUI(); renderMyBadges(); $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; }
   else if (v === "sorties") renderSorties();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
@@ -2162,3 +2162,17 @@ function renderVd() {
   ["vdHome", "vdMeteo"].forEach(function (id) { var c = $(id); if (!c) return; c.classList.toggle("on", on); c.hidden = on && id === "vdHome"; });
 }
 Array.prototype.forEach.call(document.querySelectorAll(".vdGo"), function (b) { b.onclick = vaudaireOn; });
+
+/* ================= MODÉRATION : vider le chat principal ================= */
+$("modClear").onclick = function () {
+  var b = this, m = $("modMsg"); m.textContent = "";
+  if (!isAdmin) return;
+  if (b.dataset.ok !== "1") { b.dataset.ok = "1"; b.textContent = "Confirmer : tout effacer (" + SL.length + " message" + (SL.length > 1 ? "s" : "") + ")"; b.classList.add("danger"); setTimeout(function () { if (b.dataset.ok === "1") { b.dataset.ok = ""; b.textContent = "Vider le chat principal"; b.classList.remove("danger"); } }, 6000); return; }
+  b.dataset.ok = ""; b.disabled = true;
+  sb.rpc("vider_salon").then(function (r) {
+    b.disabled = false; b.textContent = "Vider le chat principal"; b.classList.remove("danger");
+    if (r.error) { m.className = "err"; m.textContent = "Impossible de vider le chat : " + r.error.message; return; }
+    SL = []; LK = []; m.className = "okm"; m.textContent = r.data + " message" + (r.data > 1 ? "s" : "") + " effacé" + (r.data > 1 ? "s" : "") + ". Le salon est vide.";
+    load("salon"); load("likes"); renderAll();
+  });
+};
