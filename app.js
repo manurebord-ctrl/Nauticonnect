@@ -1661,13 +1661,13 @@ function pushSave(s, prefs) {
   if (prefs) for (var k in prefs) o[k] = prefs[k];
   return sb.from("push_abos").upsert(o, { onConflict: "endpoint" }).select().maybeSingle().then(function (r) { if (r.error) throw r.error; myAbo = r.data; mySub = s; notifUI(); });
 }
-function pushEnable() {
+function pushEnable(prefs) {
   if (!pushOk) { toast("Votre navigateur ne gère pas les notifications. Installez l'appli sur l'écran d'accueil."); return; }
   if (!requireProfile(null, "Pour recevoir l'alerte vaudaire et les appels à l'aide sur votre téléphone, créez votre compte gratuit.")) return; ls("nc-push-off", "");
   Notification.requestPermission().then(function (p) {
     if (p !== "granted") { toast("Notifications refusées. Autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); notifUI(); return; }
     return swReg().then(function (r) { return r.pushManager.getSubscription().then(function (s) { return s || r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }); }); })
-      .then(function (s) { return pushSave(s); }).then(function () { toast("Notifications activées !"); });
+      .then(function (s) { return pushSave(s, prefs && prefs.vent ? prefs : null); }).then(function () { toast(prefs && prefs.vent ? "Alerte vaudaire activée sur ce téléphone !" : "Notifications activées !"); renderVd(); });
   }).catch(function () { toast("Activation impossible. Réessayez."); });
 }
 function pushDisable() {
@@ -1682,9 +1682,10 @@ function notifUI() {
   if (on) { $("nfMsg").checked = myAbo.msg; $("nfSos").checked = myAbo.sos; $("nfVent").checked = myAbo.vent; }
   var ask = $("notifAsk"); ask.hidden = !(pushOk && me() && !on && !den && !ls("nc-notif-later"));
   if ($("waNotif")) $("waNotif").hidden = !(pushOk && me() && !on && !den);
+  renderVd();
 }
 ["nfMsg", "nfSos", "nfVent"].forEach(function (id) { $(id).onchange = function () { if (!mySub) return; pushSave(mySub, { msg: $("nfMsg").checked, sos: $("nfSos").checked, vent: $("nfVent").checked }).then(function () { toast("Préférences enregistrées"); }); }; });
-$("nfOn").onclick = pushEnable; $("notifAskGo").onclick = pushEnable; $("waNotifGo").onclick = pushEnable;
+$("nfOn").onclick = function () { pushEnable(); }; $("notifAskGo").onclick = function () { pushEnable(); }; $("waNotifGo").onclick = function () { pushEnable(); };
 $("notifAskNo").onclick = function () { ls("nc-notif-later", "1"); $("notifAsk").hidden = true; };
 $("nfOff").onclick = function () { ls("nc-push-off", "1"); pushDisable().then(function () { toast("Notifications désactivées"); }); };
 /* diagnostic : chaque étape est affichée et envoyée à l'admin */
@@ -1786,7 +1787,7 @@ function renderFeed() {
   });
 }
 function renderAll() {
-  renderHome(); renderFeed(); renderHomeSorties();
+  renderHome(); renderFeed(); renderHomeSorties(); renderVd();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
@@ -2110,3 +2111,18 @@ function setView(v) {
 Array.prototype.forEach.call(document.querySelectorAll("[data-view]"), function (b) { b.onclick = function () { setView(b.dataset.view); }; });
 $("pvExit").onclick = function () { setView("admin"); };
 applyView();
+
+/* ================= ALERTE VAUDAIRE : s'abonner ================= */
+function vdOn() { return !!(mySub && myAbo && myAbo.vent) && real(); }
+function vaudaireOn() {
+  if (!requireProfile(null, "Pour recevoir l'alerte vaudaire sur votre téléphone, créez votre compte gratuit. Vous serez prévenu avant que le foehn se lève sur le Haut-Lac.")) return;
+  if (!pushOk) { toast("Installez d'abord l'appli sur l'écran d'accueil de votre téléphone (menu de Chrome › Ajouter à l'écran d'accueil)."); return; }
+  if (Notification.permission === "denied") { toast("Notifications bloquées : autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); return; }
+  if (mySub && myAbo) { pushSave(mySub, { vent: true }).then(function () { toast("Alerte vaudaire activée sur ce téléphone !"); renderVd(); }); return; }
+  pushEnable({ vent: true });
+}
+function renderVd() {
+  var on = vdOn();
+  ["vdHome", "vdMeteo"].forEach(function (id) { var c = $(id); if (!c) return; c.classList.toggle("on", on); c.hidden = on && id === "vdHome"; });
+}
+Array.prototype.forEach.call(document.querySelectorAll(".vdGo"), function (b) { b.onclick = vaudaireOn; });
