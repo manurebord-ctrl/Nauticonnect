@@ -14,7 +14,7 @@
 <meta property="og:image" content="icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=25">
+<link rel="stylesheet" href="app.css?v=26">
 </head>
 <body>
 
@@ -164,6 +164,7 @@
 <div class="wa-top"><a class="back" href="#" aria-label="Accueil">←</a><div class="wa-ti"><b>Le Ponton</b><span id="waSub">Le chat des plaisanciers du Léman</span></div></div>
 <div class="wa-tabs" role="tablist"><button data-t="salon" class="on">Salon<span class="dot" id="unreadSl" hidden></span></button><button data-t="prive">Privé<span class="dot" id="unreadRn" hidden></span></button><button data-t="eau">Sur l'eau</button></div>
 <div id="waJoin" class="card wa-join" hidden></div>
+<div id="waNotif" class="wa-notif" hidden><span>Soyez prévenu quand on vous écrit</span><button class="btn sm" id="waNotifGo">Activer</button></div>
 <div class="wa-pane" id="paneSalon">
 <div class="wa-msgs" id="slMsgs"></div>
 <form class="wa-bar" id="slBar" hidden><input id="slIn" maxlength="300" autocomplete="off" placeholder="Écrire à tout le Ponton…" aria-label="Message au salon"><button class="wa-send" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button></form>
@@ -453,9 +454,9 @@
 <a data-v="profil" href="#profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Profil</a>
 </nav>
 
-<script src="config.js?v=25"></script>
+<script src="config.js?v=26"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=25"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>

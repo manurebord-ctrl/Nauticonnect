@@ -242,7 +242,7 @@ $("pSave").onclick = function () {
     if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
   }).then(function () { $("pSave").disabled = false; });
 };
-$("pLogout").onclick = function () { (typeof pushDisable === "function" && mySub ? pushDisable() : Promise.resolve()).catch(function () {}).then(function () { return sb.auth.signOut(); }).then(function () { location.hash = ""; toast("Déconnecté. À bientôt sur l'eau !"); }); };
+$("pLogout").onclick = function () { (mySub ? sb.from("push_abos").delete().eq("endpoint", mySub.endpoint).then(function () { mySub = null; myAbo = null; }) : Promise.resolve()).catch(function () {}).then(function () { return sb.auth.signOut(); }).then(function () { location.hash = ""; toast("Déconnecté. À bientôt sur l'eau !"); }); };
 var delStep = 0;
 $("pDelete").onclick = function () {
   var m = $("pDelMsg");
@@ -715,6 +715,7 @@ function renderPonton() {
   $("paneSalon").hidden = waTab !== "salon"; $("panePrive").hidden = waTab !== "prive"; $("paneEau").hidden = waTab !== "eau";
   var nm = Object.keys(P).length; $("waSub").textContent = nm ? nm + " membre" + (nm > 1 ? "s" : "") + " · " + openNow().length + " sur l'eau" : "Le chat des plaisanciers du Léman";
   $("waJoin").hidden = ok; if (!ok) drawJoin();
+  $("waNotif").hidden = !(ok && pushOk && !(mySub && myAbo) && Notification.permission !== "denied");
   /* salon : lisible par tous */
   drawBubbles($("slMsgs"), SL, true); $("slBar").hidden = !ok;
   if (waTab === "salon") { if (SL.length) ls("nc-slseen", String(ts(SL[SL.length - 1].t))); slBottom(false); }
@@ -1433,11 +1434,12 @@ function b64u(s) { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length 
 function swReg() { return navigator.serviceWorker.getRegistration().then(function (r) { return r || navigator.serviceWorker.register("sw.js"); }).then(function () { return navigator.serviceWorker.ready; }); }
 function pushRefresh() {
   if (!pushOk || !real()) { mySub = null; myAbo = null; notifUI(); return Promise.resolve(); }
-  return swReg().then(function (r) { return r.pushManager.getSubscription(); }).then(function (s) {
+  var r; return swReg().then(function (x) { r = x; return r.pushManager.getSubscription(); }).then(function (s) {
+    if (!s && Notification.permission === "granted" && !ls("nc-push-off")) return r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }).then(function (n) { return pushSave(n); }); /* déjà autorisé : on réabonne sans rien demander */
     mySub = s; if (!s) { myAbo = null; notifUI(); return; }
     return sb.from("push_abos").select("*").eq("endpoint", s.endpoint).maybeSingle().then(function (r) {
       myAbo = r.data || null;
-      if (!myAbo && Notification.permission === "granted") return pushSave(s); /* réabonner ce compte sur cet appareil */
+      if (!myAbo && Notification.permission === "granted" && !ls("nc-push-off")) return pushSave(s); /* réabonner ce compte sur cet appareil */
       notifUI();
     });
   }).catch(function () { notifUI(); });
@@ -1449,7 +1451,7 @@ function pushSave(s, prefs) {
 }
 function pushEnable() {
   if (!pushOk) { toast("Votre navigateur ne gère pas les notifications. Installez l'appli sur l'écran d'accueil."); return; }
-  if (!requireProfile()) return;
+  if (!requireProfile()) return; ls("nc-push-off", "");
   Notification.requestPermission().then(function (p) {
     if (p !== "granted") { toast("Notifications refusées. Autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); notifUI(); return; }
     return swReg().then(function (r) { return r.pushManager.getSubscription().then(function (s) { return s || r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }); }); })
@@ -1466,11 +1468,12 @@ function notifUI() {
   $("nfOn").hidden = on || !pushOk || den; $("nfPrefs").hidden = !on;
   if (on) { $("nfMsg").checked = myAbo.msg; $("nfSos").checked = myAbo.sos; $("nfVent").checked = myAbo.vent; }
   var ask = $("notifAsk"); ask.hidden = !(pushOk && me() && !on && !den && !ls("nc-notif-later"));
+  if ($("waNotif")) $("waNotif").hidden = !(pushOk && me() && !on && !den);
 }
 ["nfMsg", "nfSos", "nfVent"].forEach(function (id) { $(id).onchange = function () { if (!mySub) return; pushSave(mySub, { msg: $("nfMsg").checked, sos: $("nfSos").checked, vent: $("nfVent").checked }).then(function () { toast("Préférences enregistrées"); }); }; });
-$("nfOn").onclick = pushEnable; $("notifAskGo").onclick = pushEnable;
+$("nfOn").onclick = pushEnable; $("notifAskGo").onclick = pushEnable; $("waNotifGo").onclick = pushEnable;
 $("notifAskNo").onclick = function () { ls("nc-notif-later", "1"); $("notifAsk").hidden = true; };
-$("nfOff").onclick = function () { pushDisable().then(function () { toast("Notifications désactivées"); }); };
+$("nfOff").onclick = function () { ls("nc-push-off", "1"); pushDisable().then(function () { toast("Notifications désactivées"); }); };
 $("nfTest").onclick = function () { sb.rpc("push_test").then(function (r) { toast(r.error ? "Test impossible." : "Notification de test envoyée…"); }); };
 
 /* ================= INVITER UN AMI ================= */

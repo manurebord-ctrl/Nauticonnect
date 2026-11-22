@@ -418,3 +418,6 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .pfph>div{flex:1;min-width:0}
 .pfbtns{display:flex;gap:8px;margin-top:8px}.pfbtns[hidden]{display:none}
 .pfbtns label.btn{flex:1;margin:0;text-align:center;white-space:nowrap;padding:10px 6px;font-size:14px}
+.wa-notif{display:flex;align-items:center;gap:10px;margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#fff6e5;border:1px solid #f5d07a;font-size:14px;font-weight:600}
+.wa-notif span{flex:1}.wa-notif .btn{width:auto;margin:0}.wa-notif[hidden]{display:none}
+@media (prefers-color-scheme:dark){.wa-notif{background:#3a2f14;border-color:#6b5520}}
