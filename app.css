@@ -516,3 +516,12 @@ html.splashing,html.splashing body{overflow:hidden}
 /* carburant dans les ports */
 .port .fuel{display:inline-block;margin:6px 0 2px;padding:4px 10px;border-radius:12px;background:#fff4e0;color:#8a4b00;font-size:13px;font-weight:700}
 @media (prefers-color-scheme:dark){.port .fuel{background:#3a2c14;color:#f6c27a}}
+
+/* dessins des nœuds */
+details.kn summary{justify-content:flex-start}
+details.kn summary>div{flex:1}
+.knth{width:64px;height:40px;object-fit:contain;flex:none;background:#fff;border-radius:8px;border:1px solid var(--bd)}
+details.kn[open] .knth{display:none}
+.knimg{margin:0 0 12px;background:#fff;border:1px solid var(--bd);border-radius:12px;padding:8px}
+.knimg img{display:block;width:100%;max-height:300px;object-fit:contain}
+.knimg figcaption{font-size:12px;color:#5a6b78;margin-top:4px;text-align:center}
