@@ -480,3 +480,5 @@ details.acc[hidden]{display:none}
 .hero.art .hero-ph{background-position:center bottom;background-color:#0a2740}
 .hero.art .hero-t,.hero.art .hero-s{text-shadow:0 2px 12px rgba(4,16,30,.45)}
 .hero.art::before{background:linear-gradient(180deg,rgba(6,22,36,.2) 0%,rgba(6,22,36,0) 30%,rgba(6,22,36,0) 85%,rgba(6,22,36,.3) 100%)}
+.hero-stat{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.14);backdrop-filter:blur(4px);font-size:14px}
+.hero-stat[hidden]{display:none}.hero-stat b{font-weight:800}.hero-stat i{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.6;margin:0 4px}
