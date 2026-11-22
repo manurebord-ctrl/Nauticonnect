@@ -533,16 +533,42 @@ function memberCard(id, extra) {
 }
 var mbQ = "";
 $("mbSearch").oninput = function () { mbQ = this.value; renderMembers(); };
+var mbF = "tous", mbMore = false;
+function onWater(id) { return openNow().some(function (x) { return x.id === id; }); }
+function memberRow(id) {
+  var pr = P[id] || {}, r = rel(id), it = el("button", "wa-it");
+  it.appendChild(avatar(id));
+  var mid = el("span", "wa-im"); mid.appendChild(el("b", 0, pr.pseudo + (pr.bateau ? " · " + pr.bateau : "")));
+  var sub = el("span", "wa-pv", [pr.type, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect"); mid.appendChild(sub); it.appendChild(mid);
+  var rt = el("span", "wa-ir");
+  if (onWater(id)) rt.appendChild(el("span", "wa-tag on", "Sur l'eau"));
+  if (r === "ami") rt.appendChild(el("span", "wa-tag", "Ami")); else if (r === "recu") rt.appendChild(el("span", "wa-tag", "Veut être ami"));
+  it.appendChild(rt); it.onclick = function () { openThread(id); }; return it;
+}
 function renderMembers() {
-  var L = $("mbList"); L.textContent = ""; var q = norm(mbQ.trim()), my = me() || {};
-  var ids = Object.keys(P).filter(function (id) { return id !== uid; });
-  var res = q.length ? ids.filter(function (id) { var p = P[id]; return [p.pseudo, p.bateau, p.port, p.immat].some(function (v) { return norm(v).indexOf(q) >= 0; }); })
-    : ids.filter(function (id) { return my.port && P[id].port === my.port && !rel(id); });
-  $("mbHint").textContent = q.length ? (res.length ? "" : "Aucun plaisancier trouvé.") : res.length ? "Au même port d'attache que vous (" + my.port + ") :" : "Tapez un prénom, un nom de bateau ou un port.";
-  res.slice(0, 12).forEach(function (id) { L.appendChild(memberCard(id)); });
+  var L = $("mbList"); L.textContent = ""; var q = norm(mbQ.trim()), my = me() || {}, words = q.split(/\s+/).filter(Boolean);
+  var ids = Object.keys(P).filter(function (id) { return id !== uid && P[id] && P[id].pseudo; });
+  var hay = function (id) { var p = P[id]; return norm([p.pseudo, p.bateau, p.port, p.type, p.immat].join(" ")); };
+  var res = ids;
+  if (words.length) res = res.filter(function (id) { var h = hay(id); return words.every(function (w) { return h.indexOf(w) >= 0; }); });
+  else if (mbF === "port") res = res.filter(function (id) { return my.port && P[id].port === my.port; });
+  else if (mbF === "eau") res = res.filter(onWater);
+  else if (mbF === "amis") res = res.filter(function (id) { return rel(id) === "ami"; });
+  var score = function (id) { var p = P[id], sc = 0; if (words.length && norm(p.pseudo).indexOf(words[0]) === 0) sc += 8; if (onWater(id)) sc += 4; if (rel(id) === "ami") sc += 2; if (my.port && p.port === my.port) sc += 1; return sc; };
+  res.sort(function (a, b) { return score(b) - score(a) || norm(P[a].pseudo).localeCompare(norm(P[b].pseudo)); });
+  var C = $("mbChips"); C.hidden = !!words.length;
+  Array.prototype.forEach.call(C.querySelectorAll("button"), function (b) { b.classList.toggle("on", b.dataset.f === mbF); });
+  $("mbHead").textContent = words.length ? (res.length ? res.length + " résultat" + (res.length > 1 ? "s" : "") : "") : "Membres";
+  $("mbHint").textContent = words.length && !res.length ? "Aucun plaisancier trouvé. Essayez un prénom, un bateau ou un port (ex. « bouveret », « voilier »)."
+    : !words.length && !res.length ? (mbF === "port" ? (my.port ? "Personne d'autre à " + my.port + " pour l'instant." : "Indiquez votre port d'attache dans votre profil.") : mbF === "eau" ? "Personne n'a hissé le pavillon en ce moment." : mbF === "amis" ? "Pas encore d'amis : ouvrez une discussion et touchez « Ajouter en ami »." : "Pas encore d'autres membres.") : "";
+  var max = mbMore || words.length ? 60 : 15;
+  res.slice(0, max).forEach(function (id) { L.appendChild(memberRow(id)); });
+  if (res.length > max) { var m = el("button", "linkb", "Voir les " + res.length + " membres"); m.onclick = function () { mbMore = true; renderMembers(); }; L.appendChild(m); }
+  $("rnThreads").hidden = !!words.length;
   var R = $("mbReq"); R.textContent = ""; pendingIn().forEach(function (id) { if (P[id]) R.appendChild(memberCard(id, el("div", "okm", "veut devenir votre ami"))); });
   $("mbReqH").hidden = !R.firstChild;
 }
+Array.prototype.forEach.call(document.querySelectorAll("#mbChips button"), function (b) { b.onclick = function () { mbF = b.dataset.f; mbMore = false; renderMembers(); }; });
 $("rnMsgTxt").onchange = function () { ls("nc-msg", this.value.trim()); push(); };
 $("rnGps").onclick = function () {
   rErr(); if (!navigator.geolocation) { rErr("GPS indisponible : touchez la carte pour vous placer."); return; }
@@ -655,7 +681,7 @@ function drawJoin() {
 function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
   var keys = Object.keys(T).sort(function (a, b) { return ts(T[b][T[b].length - 1].t) - ts(T[a][T[a].length - 1].t); });
-  if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Cherchez un plaisancier ci-dessus, ou touchez un nom dans le salon.")); return; }
+  if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Touchez un membre juste en dessous pour lui écrire.")); return; }
   keys.forEach(function (k) {
     var L = T[k], last = L[L.length - 1], n = unreadOf(k, L), it = el("button", "wa-it" + (n ? " unr" : ""));
     it.appendChild(avatar(k));
