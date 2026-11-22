@@ -544,3 +544,33 @@ details.kn[open] .knth{display:none}
 .fd-tx{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:.95rem;line-height:1.3}
 .fd-tx span{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .fd-tx small{color:var(--mu);font-size:.8rem}
+
+/* sorties */
+.hso{margin-top:18px}.hso .row{margin-top:4px}.hso .row .btn{flex:1;text-align:center}
+.socard{cursor:default}.socard.mine{border:2px solid var(--ac)}
+#homeSo .socard{cursor:pointer}
+.evbody{min-width:0;flex:1}
+.so-pl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.so-pl .stack{display:inline-flex}.so-pl .stack .av{width:28px;height:28px;margin-left:-8px;border:2px solid var(--card);font-size:12px}.so-pl .stack .av:first-child{margin-left:0}
+/* offres membres */
+.pof-l{display:inline-block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:#7a5600}
+.pof-t{margin:2px 0 8px}
+.mcarte{border-radius:20px;padding:18px;color:#fff;background:linear-gradient(120deg,#0b3954,#0f6fa3,#1b8fc9,#0b3954);background-size:300% 300%;animation:mcwave 6s ease infinite;margin-bottom:10px}
+@keyframes mcwave{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.mc-top{display:flex;justify-content:space-between;align-items:center}
+.mc-brand{font-weight:800;font-size:18px}
+.mc-live{width:12px;height:12px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 0 rgba(47,191,113,.7);animation:mclive 1.4s infinite}
+@keyframes mclive{70%{box-shadow:0 0 0 10px rgba(47,191,113,0)}100%{box-shadow:0 0 0 0 rgba(47,191,113,0)}}
+.mc-who{display:flex;align-items:center;gap:12px;margin:16px 0}
+.mc-av{width:56px;height:56px;font-size:22px;background:#fff;color:#0b3954;background-size:cover;background-position:center}
+.mc-who b{display:block;font-size:22px}.mc-who span{opacity:.85}
+.mc-off{background:rgba(255,255,255,.16);border-radius:14px;padding:12px}
+.mc-off small{display:block;opacity:.85;margin-bottom:2px}.mc-off b{font-size:18px}
+.mc-clk{margin-top:12px;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center}
+/* accueil des nouveaux */
+.wl-st{margin-bottom:10px}
+.wl-h{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.wl-n{width:28px;height:28px;border-radius:50%;background:var(--ac);color:var(--acx);display:flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.wl-st .btn{margin-top:8px}
+.wl-m{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}.wl-m .btn{margin-top:0;flex:none}
+.socard .row{flex-wrap:wrap;gap:8px}.socard .row .btn{flex:1 1 auto;white-space:nowrap;margin:0}

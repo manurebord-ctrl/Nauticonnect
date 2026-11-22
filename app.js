@@ -24,7 +24,7 @@ var session = null, uid = null, isAdmin = false, guest = false;
 function real() { return !!uid && !guest; }
 
 /* ---------------- données ---------------- */
-var LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var SO = [], SI = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
@@ -51,7 +51,9 @@ var Q = {
   sauvetages: function () { return sb.from("sauvetages").select("*"); },
   evenements: function () { return sb.from("evenements").select("*").order("debut").limit(300); },
   amities: function () { return real() ? sb.from("amities").select("*") : null; },
-  partenaires: function () { return sb.from("partenaires").select("*").order("t"); }
+  partenaires: function () { return sb.from("partenaires").select("*").order("t"); },
+  sorties: function () { return sb.from("sorties").select("*").order("jour").limit(300); },
+  sortie_inscrits: function () { return sb.from("sortie_inscrits").select("*").limit(5000); }
 };
 function store(t, rows) {
   rows = rows || [];
@@ -60,6 +62,7 @@ function store(t, rows) {
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
+  else if (t === "sorties") SO = rows; else if (t === "sortie_inscrits") SI = rows;
   else if (t === "amities") FS = rows;
   else if (t === "evenements") EV = rows;
   else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
@@ -98,7 +101,7 @@ function loadAll() { return Promise.all(Object.keys(Q).map(load)); }
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements"];
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements", "sorties"];
 var NEEDS_AUTH = { profil: 1 };
 function cur() { var h = location.hash.slice(1); return VIEWS.indexOf(h) < 0 ? "accueil" : h; }
 function goAuth(ret, why) { try { sessionStorage.setItem("nc-ret", ret || cur()); sessionStorage.setItem("nc-why", why || ""); } catch (e) {} location.hash = "compte"; }
@@ -185,7 +188,7 @@ function setAuthMode(m) {
   var reset = m === "reset";
   $("auTabs").hidden = reset;
   $("auTitle").textContent = reset ? "Nouveau mot de passe" : m === "up" ? "Rejoindre l'équipage" : "Bon retour à bord";
-  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Gratuit. Il vous permet d'écrire sur le Ponton, de recevoir l'alerte vaudaire, d'aider en cas de panne et de partager avis, photos et bons plans. La météo, les cartes et les infos restent libres d'accès." : "Connectez-vous avec votre e-mail.";
+  $("auLead").textContent = reset ? "Choisissez votre nouveau mot de passe." : m === "up" ? "Gratuit. Il vous permet d'écrire sur le Ponton, de recevoir l'alerte vaudaire, d'aider en cas de panne, de rejoindre les sorties, de profiter des offres membres chez les restos partenaires et de partager vos bons plans. La météo, les cartes et les infos restent libres d'accès." : "Connectez-vous avec votre e-mail.";
   var why = ""; try { why = sessionStorage.getItem("nc-why") || ""; } catch (e) {}
   var W = $("auWhy"); W.hidden = reset || !why || real(); W.textContent = why;
   $("auGo").textContent = reset ? "Enregistrer le mot de passe" : m === "up" ? "Créer mon compte" : "Me connecter";
@@ -276,7 +279,8 @@ $("pSave").onclick = function () {
     P[uid] = Object.assign({}, P[uid], d); m.className = "okm"; m.textContent = first ? "Bienvenue à bord, " + ps + " !" : "Fiche mise à jour.";
     renderAll();
     var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); sessionStorage.removeItem("nc-why"); } catch (e) {}
-    if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
+    if (first) setTimeout(function () { welcome(ret); }, 600);
+    else if (ret) setTimeout(function () { location.hash = ret !== "profil" ? ret : "ponton"; }, 900);
     else { toast("Fiche mise à jour"); $("accFiche").open = false; $("accFicheSum").textContent = [ps, bt, d.port].filter(Boolean).join(" · "); }
   }).then(function () { $("pSave").disabled = false; });
 };
@@ -1344,7 +1348,7 @@ var RESTOS = [
   { id: "pecheurs", n: "Restaurant-Plage Les Pêcheurs", l: "Sciez", r: "FR", a: "ponton", la: 46.352, lo: 6.395, d: "Une institution depuis 1964, les pieds dans l'eau sous les platanes. Deux pontons privés ; réservation conseillée." },
   { id: "chaletport", n: "Le Chalet du Port", l: "Sciez", r: "FR", a: "port", la: 46.346, lo: 6.380, d: "Sur le port de Sciez : féra, perche et terrasse avec vue sur le lac. Aire de jeux pour les enfants." }];
 var ACC = { ponton: ["Ponton du restaurant", "pt"], port: ["Au port", "pt"], non: ["Pas d'accès bateau", ""] };
-var RF = [["tous", "Tous"], ["bateau", "Accès en bateau"], ["CH", "Rive suisse"], ["FR", "Rive française"], ["user", "Ajouts des membres"]], reFilt = "tous", reCur = null;
+var RF = [["tous", "Tous"], ["offres", "Offres membres"], ["bateau", "Accès en bateau"], ["CH", "Rive suisse"], ["FR", "Rive française"], ["user", "Ajouts des membres"]], reFilt = "tous", reCur = null;
 RF.forEach(function (f) { var b = el("button", 0, f[1]); b.dataset.k = f[0]; b.onclick = function () { reFilt = f[0]; renderRestos(); }; $("reChips").appendChild(b); });
 var PLACES = [["geneve",46.21,6.16,"CH"],["versoix",46.283,6.17,"CH"],["coppet",46.316,6.192,"CH"],["nyon",46.382,6.24,"CH"],["rolle",46.458,6.337,"CH"],["prex",46.48,6.455,"CH"],["morges",46.506,6.497,"CH"],["lausanne",46.507,6.627,"CH"],["ouchy",46.505,6.627,"CH"],["pully",46.507,6.66,"CH"],["lutry",46.502,6.685,"CH"],["cully",46.488,6.73,"CH"],["vevey",46.461,6.842,"CH"],["peilz",46.453,6.858,"CH"],["montreux",46.432,6.91,"CH"],["clarens",46.44,6.893,"CH"],["villeneuve",46.4,6.925,"CH"],["bouveret",46.386,6.856,"CH"],["gingolph",46.392,6.805,"CH"],["evian",46.402,6.59,"FR"],["thonon",46.376,6.48,"FR"],["yvoire",46.372,6.327,"FR"],["sciez",46.35,6.39,"FR"],["excenevex",46.347,6.358,"FR"],["hermance",46.302,6.243,"CH"],["meillerie",46.408,6.722,"FR"]];
 function placeOf(l) { var s = norm(l); for (var i = 0; i < PLACES.length; i++) if (s.indexOf(PLACES[i][0]) >= 0) return PLACES[i]; return null; }
@@ -1358,19 +1362,24 @@ function allRestos() {
 }
 function renderRestos() {
   Array.prototype.forEach.call($("reChips").children, function (b) { b.classList.toggle("on", b.dataset.k === reFilt); });
-  var S = allRestos().filter(function (x) { return reFilt === "tous" || (reFilt === "bateau" ? (x.a === "ponton" || x.a === "port") : reFilt === "user" ? !!x.u : x.r === reFilt); });
+  var S = allRestos().filter(function (x) { return reFilt === "tous" || (reFilt === "offres" ? hasOffer(x) : reFilt === "bateau" ? (x.a === "ponton" || x.a === "port") : reFilt === "user" ? !!x.u : x.r === reFilt); });
   var g = detailedLake($("reMap"));
   S.forEach(function (x) { if (x.la == null) return; var n = svgEl("g", { class: "pin" + (x.u ? " user" : "") + (x.pa ? " star" : "") + (x.id === reCur ? " on" : ""), transform: "translate(" + X2(x.lo).toFixed(1) + "," + Y2(x.la).toFixed(1) + ")" }, g);
     svgEl("circle", { r: 18, style: "fill:transparent" }, n); svgEl("circle", { class: "pb", r: x.id === reCur ? 10 : 8 }, n);
     n.onclick = function () { reCur = x.id; renderRestos(); var c = $("r-" + x.id); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }; });
   var L = $("reList"); L.textContent = "";
-  if (!S.length) L.appendChild(el("p", "mu", reFilt === "user" ? "Aucune adresse ajoutée pour l'instant. Soyez le premier !" : "Aucune adresse."));
+  if (!S.length) L.appendChild(el("p", "mu", reFilt === "offres" ? "Pas encore d'offre membres. Les restos partenaires arrivent bientôt !" : reFilt === "user" ? "Aucune adresse ajoutée pour l'instant. Soyez le premier !" : "Aucune adresse."));
   S.forEach(function (x) {
     var c = el("div", "card rcard" + (x.pa ? " partner" : "") + (x.id === reCur ? " on" : "")); c.id = "r-" + x.id;
     if (x.pa) c.appendChild(el("div", "pbadge", paActive(x.pa) ? "Partenaire Nauticonnect" : "Partenariat expiré (visible par l'admin seulement)"));
     c.appendChild(el("h3", 0, x.n)); c.appendChild(el("div", "where", x.l + (x.r ? " · " + (x.r === "CH" ? "Suisse" : "France") : "")));
     var T = el("div", "tags"), ac = ACC[x.a]; if (ac) T.appendChild(el("span", "tag " + ac[1], ac[0])); if (x.u) T.appendChild(el("span", "tag us", "Ajouté par " + ((P[x.u] && P[x.u].pseudo) || "un membre"))); c.appendChild(T);
-    if (x.pa && x.pa.offre) c.appendChild(el("div", "poffre", x.pa.offre));
+    if (hasOffer(x)) {
+      var of = el("div", "poffre"); of.appendChild(el("span", "pof-l", "Offre membres")); of.appendChild(el("div", "pof-t", x.pa.offre));
+      var ob = el("button", "btn sm", real() ? "Montrer ma carte membre" : "Créer mon compte pour en profiter");
+      ob.onclick = function () { if (requireProfile(null, "Pour profiter de l'offre membres chez " + x.n + ", créez votre compte gratuit. C'est l'affaire d'une minute.")) offerCard(x); };
+      of.appendChild(ob); c.appendChild(of);
+    } else if (x.pa && x.pa.offre) c.appendChild(el("div", "poffre", x.pa.offre));
     if (x.d) c.appendChild(el("div", 0, x.d));
     c.appendChild(thumb("resto-" + x.id, x.n, "Escale : " + x.n + " (plats, terrasse, ponton…)"));
     var A2 = el("div", "acts"), go = el("a", "p", "Y aller"); go.href = mapsSearch(x.n + " " + x.l); go.target = "_blank"; go.rel = "noopener"; A2.appendChild(go);
@@ -1750,6 +1759,7 @@ function feedItems() {
   AN.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Petite annonce : " + x.titre + (x.prix ? " · " + x.prix + " CHF" : ""), go: "annonces", k: "an" }); });
   LO.filter(function (x) { return x.actif !== false && ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Bateau à louer : " + x.nom + (x.port ? " à " + x.port : ""), go: "location", k: "lo" }); });
   EP.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 2).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Épave ajoutée sur la carte : " + x.nom, go: "epaves", k: "ep" }); });
+  SO.filter(function (x) { return ts(x.t) > wk && x.jour >= today; }).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: ((P[x.auteur] && P[x.auteur].pseudo) || "Un membre") + " propose une sortie : " + x.titre + " · " + dFr(x.jour), go: "sorties", k: "so" }); });
   var n = SL.filter(function (m) { return Date.now() - ts(m.t) < 864e5; }).length;
   if (n) I.push({ t: Math.max.apply(null, SL.map(function (m) { return ts(m.t); })), txt: n + " message" + (n > 1 ? "s" : "") + " sur le Ponton ces dernières 24 h", go: "ponton", k: "sl" });
   return I.sort(function (a, b) { return b.t - a.t; }).slice(0, 6);
@@ -1768,11 +1778,12 @@ function renderFeed() {
   });
 }
 function renderAll() {
-  renderHome(); renderFeed();
+  renderHome(); renderFeed(); renderHomeSorties();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
   else if (v === "profil") notifUI();
+  else if (v === "sorties") renderSorties();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
 }
@@ -1883,3 +1894,120 @@ $("evSetSv").onclick = function () {
 
 if ($("joinLater")) $("joinLater").onclick = function () { ls("nc-join-later", String(Date.now())); $("joinBar").hidden = true; };
 if ($("joinGo")) $("joinGo").onclick = function () { try { sessionStorage.setItem("nc-ret", "accueil"); sessionStorage.setItem("nc-why", ""); } catch (e) {} };
+
+/* ================= OFFRES MEMBRES ================= */
+function hasOffer(x) { return !!(x.pa && x.pa.offre && paActive(x.pa)); }
+function offerCard(x) {
+  var p = me(); if (!p) return;
+  var md = modal("Carte membre"), bx = md.bx, c = el("div", "mcarte");
+  var top = el("div", "mc-top"); top.appendChild(el("span", "mc-brand", "Nauticonnect")); top.appendChild(el("span", "mc-live", "")); c.appendChild(top);
+  var who = el("div", "mc-who"); who.appendChild(putPhoto(el("span", "av mc-av", initial(uid)), uid));
+  var n = el("div"); n.appendChild(el("b", 0, p.pseudo)); n.appendChild(el("span", 0, [p.bateau, p.port].filter(Boolean).join(" · ") || "Membre")); who.appendChild(n); c.appendChild(who);
+  var o = el("div", "mc-off"); o.appendChild(el("small", 0, "Offre membres chez " + x.n)); o.appendChild(el("b", 0, x.pa.offre)); c.appendChild(o);
+  var clk = el("div", "mc-clk"); c.appendChild(clk);
+  bx.appendChild(c);
+  bx.appendChild(el("p", "mu", "Montrez cet écran au restaurant. L'heure défile en direct : une capture d'écran n'est pas valable."));
+  var D = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+  function tick() { if (!c.isConnected) { clearInterval(iv); return; } var d = new Date(); clk.textContent = D[d.getDay()] + " " + d.toLocaleDateString("fr-CH") + " · " + d.toLocaleTimeString("fr-CH"); }
+  var iv = setInterval(tick, 1000); tick();
+}
+
+/* ================= SORTIES ================= */
+function soUp() { var d = today(); return SO.filter(function (x) { return x.jour >= d; }).sort(function (a, b) { return (a.jour + a.heure).localeCompare(b.jour + b.heure); }); }
+function soWho(id) { return SI.filter(function (i) { return i.sortie_id === id; }).map(function (i) { return i.uid; }); }
+function soCard(x, small) {
+  var c = el("div", "card evcard socard" + (x.auteur === uid ? " mine" : "")), d = new Date(x.jour + "T12:00:00");
+  var dt = el("div", "evdate"); dt.appendChild(el("b", 0, String(d.getDate()))); dt.appendChild(el("span", 0, MOIS[d.getMonth()])); c.appendChild(dt);
+  var b = el("div", "evbody"); b.appendChild(el("h3", 0, x.titre));
+  b.appendChild(el("div", "mu", dFr(x.jour) + (x.heure ? " · " + x.heure : "") + " · départ " + x.depart + (x.dest ? " → " + x.dest : "")));
+  var w = el("div"); w.style.margin = "6px 0"; w.appendChild(badge(x.auteur)); b.appendChild(w);
+  var ins = soWho(x.id), full = x.places && ins.length >= x.places, inn = ins.indexOf(uid) >= 0;
+  if (!small && x.descr) b.appendChild(el("div", 0, x.descr));
+  var pl = el("div", "so-pl");
+  if (ins.length) { var st = el("span", "stack"); ins.slice(0, 6).forEach(function (u) { st.appendChild(putPhoto(el("span", "av", initial(u)), u)); }); pl.appendChild(st); }
+  pl.appendChild(el("span", "mu", ins.length ? ins.length + " participant" + (ins.length > 1 ? "s" : "") + (x.places ? " sur " + x.places : "") + (small ? "" : " : " + ins.map(function (u) { return (P[u] && P[u].pseudo) || "?"; }).join(", ")) : x.places ? x.places + " place" + (x.places > 1 ? "s" : "") + " · soyez le premier" : "Soyez le premier à rejoindre"));
+  b.appendChild(pl);
+  if (small) { c.onclick = function () { location.hash = "sorties"; }; c.appendChild(b); return c; }
+  var A = el("div", "row"); A.style.marginTop = "8px";
+  if (x.auteur !== uid) {
+    var j = el("button", "btn sm" + (inn ? " g" : ""), inn ? "Je ne viens plus" : full ? "Complet" : "Je viens");
+    j.disabled = !inn && full;
+    j.onclick = function () {
+      if (!requireProfile(null, "Pour rejoindre une sortie, créez votre compte gratuit : l'organisateur saura qui vient.")) return;
+      j.disabled = true;
+      (inn ? sb.from("sortie_inscrits").delete().eq("sortie_id", x.id).eq("uid", uid) : sb.from("sortie_inscrits").insert({ sortie_id: x.id }))
+        .then(function (r) { if (r.error) toast(full ? "Cette sortie est complète." : "Action impossible. Réessayez."); else toast(inn ? "Désinscrit" : "Inscrit ! L'organisateur est prévenu."); load("sortie_inscrits"); });
+    };
+    A.appendChild(j);
+    if (real() && P[x.auteur]) { var wr = el("button", "btn g sm", "Écrire"); wr.onclick = function () { openThread(x.auteur, "Bonjour, à propos de la sortie « " + x.titre + " »… "); }; A.appendChild(wr); }
+  } else {
+    var del = el("button", "btn g sm", "Annuler la sortie");
+    del.onclick = function () { if (del.dataset.ok !== "1") { del.dataset.ok = "1"; del.textContent = "Confirmer l'annulation"; return; } sb.from("sorties").delete().eq("id", x.id).then(function () { toast("Sortie annulée"); load("sorties"); }); };
+    A.appendChild(del);
+  }
+  if (isAdmin && x.auteur !== uid) { var ad = el("button", "btn g sm", "Retirer (admin)"); ad.onclick = function () { if (confirm("Retirer cette sortie ?")) sb.from("sorties").delete().eq("id", x.id).then(function () { load("sorties"); }); }; A.appendChild(ad); }
+  var sh = el("button", "btn g sm", "Partager"); sh.onclick = function () { shareIt("Sortie sur le Léman : " + x.titre + ", " + dFr(x.jour) + (x.heure ? " à " + x.heure : "") + ", départ " + x.depart + ". Tu viens ? Inscris-toi sur Nauticonnect", "sorties", "Partager la sortie"); }; A.appendChild(sh);
+  b.appendChild(A); c.appendChild(b); return c;
+}
+function renderSorties() {
+  var L = $("soList"); L.textContent = ""; var up = soUp();
+  if (!up.length) L.appendChild(el("p", "mu", "Aucune sortie prévue pour l'instant. Lancez la première : une balade, un apéro au large, une virée à Yvoire…"));
+  up.forEach(function (x) { L.appendChild(soCard(x)); });
+}
+function renderHomeSorties() {
+  var H = $("homeSo"); if (!H) return; H.textContent = "";
+  var up = sb ? soUp() : [];
+  up.slice(0, 2).forEach(function (x) { H.appendChild(soCard(x, true)); });
+  if (!up.length) H.appendChild(el("p", "mu", "Aucune sortie prévue. Proposez la première !"));
+  $("homeSoAll").textContent = up.length > 2 ? "Voir les " + up.length + " sorties" : "Voir les sorties";
+}
+function soMsg(t, ok) { $("soMsg").className = ok ? "okm" : "err"; $("soMsg").textContent = t || ""; }
+(function () { var dl = $("soPorts"); if (dl) Z.forEach(function (z) { var o = document.createElement("option"); o.value = z[0]; dl.appendChild(o); }); })();
+$("soAdd").onclick = function () {
+  soMsg(); if (!requireProfile($("soMsg"), "Pour proposer une sortie, créez votre compte gratuit.")) return;
+  var f = $("soForm"); f.hidden = false; if (!$("soJo").value) $("soJo").value = today(); $("soJo").min = today();
+  if (!$("soDe").value && me().port) $("soDe").value = me().port; $("soTi").focus();
+};
+$("homeSoAdd").onclick = function () { location.hash = "sorties"; setTimeout(function () { $("soAdd").onclick(); }, 50); };
+$("soCx").onclick = function () { $("soForm").hidden = true; soMsg(); };
+$("soSv").onclick = function () {
+  soMsg(); if (!requireProfile($("soMsg"))) return;
+  var d = { titre: $("soTi").value.trim(), depart: $("soDe").value.trim(), dest: $("soDs").value.trim(), jour: $("soJo").value, heure: $("soHe").value, places: +$("soPl").value || null, descr: $("soTx").value.trim() };
+  if (d.titre.length < 3) { soMsg("Donnez un titre à la sortie (ex. Apéro au large de Saint-Gingolph)."); return; }
+  if (d.depart.length < 2) { soMsg("Indiquez le port de départ."); return; }
+  if (!d.jour || d.jour < today()) { soMsg("Choisissez une date à venir."); return; }
+  $("soSv").disabled = true;
+  sb.from("sorties").insert(d).then(function (r) {
+    if (r.error) { soMsg("Publication impossible. Réessayez."); return; }
+    $("soForm").hidden = true; ["soTi", "soDs", "soHe", "soPl", "soTx"].forEach(function (k) { $(k).value = ""; });
+    toast("Sortie publiée ! Vos amis sont prévenus."); load("sorties");
+  }).then(function () { $("soSv").disabled = false; });
+};
+
+/* ================= ACCUEIL DES NOUVEAUX ================= */
+function welcome(ret) {
+  var p = me(); if (!p) return;
+  var md = modal("Bienvenue à bord, " + p.pseudo + " !"), bx = md.bx;
+  bx.appendChild(el("p", "mu", "Trois petites choses pour bien démarrer sur Nauticonnect."));
+  function step(n, t, sub) { var c = el("div", "card wl-st"); var h = el("div", "wl-h"); h.appendChild(el("span", "wl-n", String(n))); h.appendChild(el("b", 0, t)); c.appendChild(h); if (sub) c.appendChild(el("div", "mu", sub)); bx.appendChild(c); return c; }
+  var s1 = step(1, "Activez les notifications", "Alerte vaudaire, appels à l'aide sur le lac, messages et amis sur l'eau.");
+  var nb = el("button", "btn", mySub ? "Notifications activées" : "Activer les notifications"); nb.disabled = !!mySub;
+  nb.onclick = function () { pushEnable(); setTimeout(function () { if (mySub) { nb.textContent = "Notifications activées"; nb.disabled = true; } }, 2500); };
+  if (pushOk) s1.appendChild(nb); else s1.appendChild(el("div", "mu", "Installez l'appli sur l'écran d'accueil de votre téléphone pour les recevoir."));
+  var mine = Object.keys(P).filter(function (k) { return k !== uid; }), same = p.port ? mine.filter(function (k) { return P[k].port === p.port; }) : [];
+  var L = (same.length ? same : mine).slice(0, 5);
+  if (L.length) {
+    var s2 = step(2, same.length ? "Leur bateau est aussi à " + p.port : "Quelques membres du lac", "Ajoutez-les en ami : vous saurez quand ils sont sur l'eau.");
+    L.forEach(function (id) {
+      var r = el("div", "wl-m"); r.appendChild(badge(id));
+      var b = el("button", "btn g sm", rel(id) === "ami" ? "Ami" : rel(id) === "envoye" ? "Demande envoyée" : "Ajouter en ami");
+      b.disabled = !!rel(id); b.onclick = function () { befriend(id); b.textContent = "Demande envoyée"; b.disabled = true; };
+      r.appendChild(b); s2.appendChild(r);
+    });
+  }
+  var s3 = step(L.length ? 3 : 2, "Retrouvez-vous sur l'eau", soUp().length ? soUp().length + " sortie" + (soUp().length > 1 ? "s" : "") + " prévue" + (soUp().length > 1 ? "s" : "") + " : rejoignez-en une ou proposez la vôtre." : "Proposez une sortie, ou dites bonjour sur le Ponton.");
+  var r3 = el("div", "row"), a = el("button", "btn sm", "Voir les sorties"), b2 = el("button", "btn g sm", "Ouvrir le chat");
+  a.onclick = function () { md.close(); location.hash = "sorties"; }; b2.onclick = function () { md.close(); location.hash = "ponton"; };
+  r3.appendChild(a); r3.appendChild(b2); s3.appendChild(r3);
+  var go = el("button", "btn", "C'est parti"); go.style.marginTop = "6px"; go.onclick = function () { md.close(); location.hash = ret && ret !== "profil" ? ret : ""; }; bx.appendChild(go);
+}

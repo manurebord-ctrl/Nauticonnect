@@ -41,7 +41,13 @@
 </div>
 </header>
 <a class="sosbar" href="#panne"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.8"/><path d="M5.6 5.6l3.7 3.7M14.7 14.7l3.7 3.7M18.4 5.6l-3.7 3.7M9.3 14.7l-3.7 3.7"/></svg></span><span><b>Je suis en panne</b><span class="s">Alerter les plaisanciers proches · aider quelqu'un</span></span><span class="arr" aria-hidden="true">›</span></a>
-<div class="joinbar" id="joinBar" hidden><div><b id="joinTxt">Rejoignez les plaisanciers du Léman</b><span>Compte gratuit : chat, alerte vaudaire sur votre téléphone, entraide en cas de panne.</span></div><div class="jb-row"><a class="btn" id="joinGo" href="#compte">Créer mon compte</a><button class="linkb" id="joinLater">Plus tard</button></div></div>
+<div class="joinbar" id="joinBar" hidden><div><b id="joinTxt">Rejoignez les plaisanciers du Léman</b><span>Compte gratuit : chat, sorties, offres membres chez les restos partenaires, alerte vaudaire sur votre téléphone.</span></div><div class="jb-row"><a class="btn" id="joinGo" href="#compte">Créer mon compte</a><button class="linkb" id="joinLater">Plus tard</button></div></div>
+
+<section class="hso">
+<h2 class="sec">Prochaines sorties</h2>
+<div id="homeSo"></div>
+<div class="row"><a class="btn g" id="homeSoAll" href="#sorties">Voir les sorties</a><button class="btn" id="homeSoAdd">+ Proposer</button></div>
+</section>
 
 <h2 class="sec">Avant de partir</h2>
 <div class="grid">
@@ -410,6 +416,24 @@
 <div class="row"><button class="btn g" id="anCx">Annuler</button><button class="btn" id="anSv">Publier</button></div></div>
 <div class="err" id="anMsg"></div>
 <div id="anList" style="margin-top:12px"></div>
+</section>
+
+<!-- ===================== SORTIES ===================== -->
+<section id="v-sorties" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Sorties sur le lac</h1>
+<p class="lead">Une balade, un apéro au large, une virée à Yvoire… Proposez une sortie ou rejoignez celle d'un autre plaisancier.</p>
+<button class="btn" id="soAdd">+ Proposer une sortie</button>
+<div id="soForm" class="card" hidden style="margin-top:10px">
+<label class="l" for="soTi">Titre</label><input class="f" id="soTi" maxlength="80" placeholder="Ex. Apéro au large de Saint-Gingolph">
+<div class="row"><div><label class="l" for="soDe">Départ</label><input class="f" id="soDe" maxlength="50" list="soPorts" placeholder="Port de départ"></div><div><label class="l" for="soDs">Destination (facultatif)</label><input class="f" id="soDs" maxlength="50" list="soPorts" placeholder="Ex. Yvoire"></div></div>
+<datalist id="soPorts"></datalist>
+<div class="row"><div><label class="l" for="soJo">Date</label><input class="f" id="soJo" type="date"></div><div><label class="l" for="soHe">Heure</label><input class="f" id="soHe" type="time"></div></div>
+<label class="l" for="soPl">Nombre de bateaux ou de places (facultatif)</label><input class="f" id="soPl" type="number" min="1" max="50" inputmode="numeric" placeholder="Laisser vide si illimité">
+<label class="l" for="soTx">Détails (facultatif)</label><textarea class="f" id="soTx" rows="3" maxlength="400" placeholder="Ex. On se retrouve devant la capitainerie, chacun amène quelque chose à grignoter."></textarea>
+<div class="row"><button class="btn g" id="soCx">Annuler</button><button class="btn" id="soSv">Publier</button></div></div>
+<div class="err" id="soMsg"></div>
+<div id="soList" style="margin-top:12px"></div>
 </section>
 
 <!-- ===================== LOCATION ===================== -->
