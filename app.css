@@ -406,3 +406,9 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .sg{flex:none;width:132px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px 8px 10px}
 .sg .wa-av{width:58px;height:58px;font-size:22px}.sg b{font-size:15px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sg .mu{font-size:12px}
 .sg .btn{width:100%;margin:6px 0 0}
+.av.ph,.wa-av.ph,.pfav.ph{background-size:cover;background-position:center;color:transparent}
+.pfph{display:flex;gap:14px;align-items:center}
+.pfav{flex:none;width:84px;height:84px;border-radius:50%;background-color:var(--ac);color:var(--acx);display:inline-flex;align-items:center;justify-content:center;font:800 32px var(--fd)}
+.pfav.sm{width:56px;height:56px;font-size:20px}
+.pfph label.btn{display:inline-block;width:auto;margin:0}.pfph .row .btn{margin:0}
+.pfq{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--bd)}.pfq .row{margin-top:6px}

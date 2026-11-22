@@ -28,10 +28,12 @@ var SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [],
 function me() { return real() && P[uid] ? P[uid] : null; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
-function badge(id, fb) { var b = el("span", "badge"); b.appendChild(el("span", "av", initial(id))); b.appendChild(document.createTextNode(nameOf(id, fb))); return b; }
+function photoOf(id) { var p = P[id]; return p && p.photo && (p.photo_ok || id === uid || isAdmin) ? photoUrl(p.photo) : ""; }
+function putPhoto(a, id) { var u = photoOf(id); if (u) { a.textContent = ""; a.style.backgroundImage = "url(\"" + u + "\")"; a.classList.add("ph"); } return a; }
+function badge(id, fb) { var b = el("span", "badge"); b.appendChild(putPhoto(el("span", "av", initial(id)), id)); b.appendChild(document.createTextNode(nameOf(id, fb))); return b; }
 
 var Q = {
-  profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat").limit(5000); },
+  profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat,photo,photo_ok").limit(5000); },
   alertes: function () { return sb.from("alertes").select("*").gte("maj", iso(12 * 36e5)); },
   ouverts: function () { return sb.from("ouverts").select("*").gte("maj", iso(2 * 36e5)); },
   salon: function () { return sb.from("salon").select("*").order("t", { ascending: false }).limit(200); },
@@ -215,6 +217,7 @@ function onSession(s, ev) {
 var o0 = el("option", 0, "— choisir —"); o0.value = ""; $("pPort").appendChild(o0);
 Z.forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("pPort").appendChild(o); });
 function fillProfile() {
+  drawPfPhoto();
   var p = me(); $("pfTitle").textContent = p ? "Ma fiche bateau" : "Créez votre fiche bateau";
   $("pSave").textContent = p ? "Mettre à jour" : "Rejoindre l'équipage";
   if (p) { $("pPseudo").value = p.pseudo || ""; $("pBoat").value = p.bateau || ""; $("pType").value = p.type || "Voilier"; $("pPort").value = p.port || ""; $("pImm").value = p.immat || ""; }
@@ -233,7 +236,7 @@ $("pSave").onclick = function () {
   $("pSave").disabled = true;
   sb.from("profils").upsert(d).then(function (r) {
     if (r.error) { m.textContent = "Enregistrement impossible : " + r.error.message; return; }
-    P[uid] = d; m.className = "okm"; m.textContent = first ? "Bienvenue à bord, " + ps + " !" : "Fiche mise à jour.";
+    P[uid] = Object.assign({}, P[uid], d); m.className = "okm"; m.textContent = first ? "Bienvenue à bord, " + ps + " !" : "Fiche mise à jour.";
     renderAll();
     var ret = ""; try { ret = sessionStorage.getItem("nc-ret") || ""; sessionStorage.removeItem("nc-ret"); } catch (e) {}
     if (first || ret) setTimeout(function () { location.hash = ret && ret !== "profil" ? ret : "ponton"; }, 900);
@@ -258,7 +261,7 @@ $("pDelete").onclick = function () {
 /* ================= ACCUEIL ================= */
 function renderChip() {
   var c = $("meChip"), p = me(); c.textContent = "";
-  if (p) { c.className = "me"; c.href = "#profil"; c.appendChild(el("span", "av", initial(uid))); c.appendChild(el("span", 0, p.pseudo)); }
+  if (p) { c.className = "me"; c.href = "#profil"; c.appendChild(putPhoto(el("span", "av", initial(uid)), uid)); c.appendChild(el("span", 0, p.pseudo)); }
   else if (real()) { c.className = "me new"; c.href = "#profil"; c.textContent = "Ma fiche bateau"; }
   else { c.className = "me new"; c.href = "#compte"; c.textContent = "Se connecter"; }
 }
@@ -609,7 +612,7 @@ function hhmm(v) { var d = new Date(ts(v)); return ("0" + d.getHours()).slice(-2
 function dayKey(v) { var d = new Date(ts(v)); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }
 function dayLabel(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) === dayKey(n)) return "Aujourd'hui"; n.setDate(n.getDate() - 1); if (dayKey(d) === dayKey(n)) return "Hier"; return d.toLocaleDateString("fr-CH", { weekday: "long", day: "numeric", month: "long" }); }
 function listTime(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) === dayKey(n)) return hhmm(v); n.setDate(n.getDate() - 1); if (dayKey(d) === dayKey(n)) return "Hier"; return ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2); }
-function avatar(id) { var a = el("span", "wa-av", initial(id)); a.style.background = ncol(id); return a; }
+function avatar(id) { var a = el("span", "wa-av", initial(id)); a.style.backgroundColor = ncol(id); return putPhoto(a, id); }
 /* lu / non lu par discussion */
 function seenMap() { try { return JSON.parse(ls("nc-seenmap") || "{}"); } catch (e) { return {}; } }
 function seenOf(id) { var m = seenMap(); return m[id] || +ls("nc-seen") || 0; }
@@ -684,7 +687,7 @@ function drawJoin() {
   f.onsubmit = function (e) {
     e.preventDefault(); var ps = i.value.trim().slice(0, 24); if (ps.length < 2) { m.textContent = "Au moins 2 lettres."; return; }
     b.disabled = true; var d = { id: uid, pseudo: ps, maj: nowIso() };
-    sb.from("profils").upsert(d).then(function (r) { b.disabled = false; if (r.error) { m.textContent = "Enregistrement impossible, réessayez."; return; } P[uid] = d; toast("Bienvenue à bord, " + ps + " !"); renderAll(); slBottom(true); });
+    sb.from("profils").upsert(d).then(function (r) { b.disabled = false; if (r.error) { m.textContent = "Enregistrement impossible, réessayez."; return; } P[uid] = Object.assign({}, P[uid], d); toast("Bienvenue à bord, " + ps + " !"); renderAll(); slBottom(true); });
   };
 }
 function renderThreads() {
@@ -774,6 +777,50 @@ function renderAvis() {
     bd.appendChild(f);
     if (isAdmin) { var se = el("select"); [["", "Statut…"], ["prevu", "Prévu"], ["encours", "En cours"], ["fait", "Fait"], ["non", "Pas retenu"]].forEach(function (o) { var op = el("option", 0, o[1]); op.value = o[0]; se.appendChild(op); }); se.value = x.statut || ""; se.setAttribute("aria-label", "Statut"); se.onchange = function () { sb.from("avis").update({ statut: se.value }).eq("id", x.id).then(function () { load("avis"); }); }; bd.appendChild(se); }
     d.appendChild(bd); L.appendChild(d);
+  });
+}
+
+/* ================= PHOTO DE PROFIL ================= */
+function squareJpeg(file, size) {
+  return (window.createImageBitmap ? createImageBitmap(file) : Promise.reject()).catch(function () {
+    return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = URL.createObjectURL(file); });
+  }).then(function (src) {
+    var w = src.width || src.naturalWidth, h = src.height || src.naturalHeight, m = Math.min(w, h), c = document.createElement("canvas");
+    c.width = c.height = size; c.getContext("2d").drawImage(src, (w - m) / 2, (h - m) / 2, m, m, 0, 0, size, size);
+    return new Promise(function (r) { c.toBlob(r, "image/jpeg", .85); });
+  });
+}
+function drawPfPhoto() {
+  var p = me(), A = $("pfAv"); A.className = "pfav"; A.style.backgroundImage = ""; A.textContent = p ? initial(uid) : "?";
+  if (p) putPhoto(A, uid);
+  $("pfPhRm").hidden = !(p && p.photo);
+  $("pfPhSt").textContent = !p ? "Enregistrez d'abord votre fiche, puis ajoutez une photo." : !p.photo ? "Une photo de vous ou de votre bateau. Elle est vérifiée avant d'être visible par les autres membres."
+    : p.photo_ok ? "Votre photo est visible par les membres." : "Photo en attente de vérification : vous seul la voyez pour l'instant.";
+  $("pfPhLb").hidden = !p;
+  drawPfQueue();
+}
+$("pfPhIn").onchange = function () {
+  var f = this.files && this.files[0]; this.value = ""; if (!f || !me()) return;
+  var old = me().photo, path = uid + "/profil-" + Date.now() + ".jpg"; $("pfPhSt").textContent = "Envoi de la photo…";
+  squareJpeg(f, 400).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
+    .then(function (r) { if (r.error) throw r.error; return sb.from("profils").update({ photo: path }).eq("id", uid); })
+    .then(function (r) { if (r.error) throw r.error; P[uid].photo = path; P[uid].photo_ok = false; if (old) sb.storage.from("photos").remove([old]); toast("Photo envoyée. Elle sera visible après vérification."); renderAll(); drawPfPhoto(); })
+    .catch(function () { $("pfPhSt").textContent = "Envoi impossible. Réessayez avec une autre photo."; });
+};
+$("pfPhRm").onclick = function () {
+  var p = me(); if (!p || !p.photo) return; var old = p.photo;
+  sb.from("profils").update({ photo: "" }).eq("id", uid).then(function (r) { if (r.error) { toast("Action impossible."); return; } P[uid].photo = ""; sb.storage.from("photos").remove([old]); renderAll(); drawPfPhoto(); });
+};
+function drawPfQueue() {
+  var Q2 = $("pfQueue"); Q2.textContent = ""; var ids = isAdmin ? Object.keys(P).filter(function (k) { return P[k].photo && !P[k].photo_ok; }) : [];
+  $("pfQueueBox").hidden = !ids.length;
+  ids.forEach(function (k) {
+    var c = el("div", "pfq"), a = el("span", "pfav sm"); putPhoto(a, k); c.appendChild(a);
+    var mid = el("div"); mid.appendChild(el("b", 0, P[k].pseudo)); var R = el("div", "row");
+    var ok = el("button", "btn sm", "Valider"), no = el("button", "btn g sm", "Refuser");
+    ok.onclick = function () { ok.disabled = true; sb.rpc("valider_photo_profil", { membre: k, ok: true }).then(function (r) { if (r.error) { toast("Erreur"); ok.disabled = false; return; } P[k].photo_ok = true; toast("Photo validée"); renderAll(); drawPfPhoto(); }); };
+    no.onclick = function () { no.disabled = true; var path = P[k].photo; sb.rpc("valider_photo_profil", { membre: k, ok: false }).then(function (r) { if (r.error) { toast("Erreur"); no.disabled = false; return; } sb.storage.from("photos").remove([path]); P[k].photo = ""; toast("Photo refusée et supprimée"); renderAll(); drawPfPhoto(); }); };
+    R.appendChild(ok); R.appendChild(no); mid.appendChild(R); c.appendChild(mid); Q2.appendChild(c);
   });
 }
 
