@@ -63,6 +63,7 @@ function store(t, rows) {
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
   else if (t === "sorties") SO = rows; else if (t === "sortie_inscrits") SI = rows;
+  if (t === "sorties" || t === "sortie_inscrits" || t === "alertes") badgesSoon();
   else if (t === "amities") FS = rows;
   else if (t === "evenements") EV = rows;
   else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
@@ -97,7 +98,7 @@ function catchUp() {
 document.addEventListener("visibilitychange", catchUp); window.addEventListener("focus", catchUp); window.addEventListener("online", catchUp); window.addEventListener("pageshow", catchUp);
 /* filet de sécurité : sur le chat, on vérifie toutes les 15 s */
 setInterval(function () { if (sb && !document.hidden && cur() === "ponton") { load("salon"); load("messages"); load("likes"); } }, 15000);
-function loadAll() { return Promise.all(Object.keys(Q).map(load)); }
+function loadAll() { loadBadges(); return Promise.all(Object.keys(Q).map(load)); }
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
@@ -581,6 +582,7 @@ function befriend(id) {
 function memberCard(id, extra) {
   var pr = P[id] || {}, c = el("div", "card mcard"), r = rel(id); c.appendChild(badge(id));
   var info = [pr.type, pr.port ? pr.port : ""].filter(Boolean).join(" · "); if (info) c.appendChild(el("div", "mu", info));
+  var bw = badgeRow(id); if (bw) c.appendChild(bw);
   if (extra) c.appendChild(extra);
   var row = el("div", "row"); row.style.marginTop = "8px";
   var w = el("button", "btn sm", "Écrire"); w.onclick = function () { openThread(id); }; row.appendChild(w);
@@ -1715,7 +1717,7 @@ $("nfTest").onclick = function () { sb.rpc("push_test").then(function (r) { toas
 /* ================= INVITER UN AMI ================= */
 function invite() { shareIt("Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac", "", "Inviter un ami"); }
 function shareIt(txt, hash, title) {
-  var url = location.origin + location.pathname + (hash ? "#" + hash : "");
+  var url = location.origin + location.pathname + "?src=" + (hash ? "partage" : "invitation") + (hash ? "#" + hash : "");
   if (navigator.share) { navigator.share({ title: "Nauticonnect", text: txt, url: url }).catch(function () {}); return; }
   var md = modal(title || "Partager"), bx = md.bx;
   var wa = el("a", "btn", "Partager sur WhatsApp"); wa.href = "https://wa.me/?text=" + encodeURIComponent(txt + " " + url); wa.target = "_blank"; wa.rel = "noopener"; bx.appendChild(wa);
@@ -1782,7 +1784,7 @@ function renderAll() {
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
-  else if (v === "profil") notifUI();
+  else if (v === "profil") { notifUI(); renderMyBadges(); $("dashBox").hidden = !isAdmin; }
   else if (v === "sorties") renderSorties();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
@@ -2010,4 +2012,76 @@ function welcome(ret) {
   a.onclick = function () { md.close(); location.hash = "sorties"; }; b2.onclick = function () { md.close(); location.hash = "ponton"; };
   r3.appendChild(a); r3.appendChild(b2); s3.appendChild(r3);
   var go = el("button", "btn", "C'est parti"); go.style.marginTop = "6px"; go.onclick = function () { md.close(); location.hash = ret && ret !== "profil" ? ret : ""; }; bx.appendChild(go);
+}
+
+/* ================= BADGES ================= */
+var BG = {}, bgT = null;
+function loadBadges() { if (!sb) return; sb.rpc("badges").then(function (r) { if (r.error || !r.data) return; var o = {}; r.data.forEach(function (x) { o[x.uid] = x; }); BG = o; renderAll(); }); }
+function badgesSoon() { clearTimeout(bgT); bgT = setTimeout(loadBadges, 3000); }
+setInterval(function () { if (!document.hidden) loadBadges(); }, 10 * 60000);
+/* [clé, nom, comment l'obtenir, obtenu ?, détail] */
+function badgeList(id) {
+  var b = BG[id] || { aides: 0, orga: 0, rejoint: 0, photos: 0, rang: 0 };
+  return [
+    ["fond", "Membre fondateur", "Faire partie des 100 premiers membres", b.rang > 0 && b.rang <= 100, b.rang ? "Membre n° " + b.rang : ""],
+    ["aide", b.aides >= 5 ? "Sauveteur du lac" : "Entraide", "Proposer son aide à un bateau en panne", b.aides >= 1, b.aides ? "A répondu à " + b.aides + " appel" + (b.aides > 1 ? "s" : "") + " à l'aide" : ""],
+    ["orga", "Capitaine de sorties", "Organiser une sortie", b.orga >= 1, b.orga ? b.orga + " sortie" + (b.orga > 1 ? "s" : "") + " organisée" + (b.orga > 1 ? "s" : "") : ""],
+    ["equi", "Équipier fidèle", "Rejoindre 3 sorties", b.rejoint >= 3, b.rejoint ? b.rejoint + " sortie" + (b.rejoint > 1 ? "s" : "") + " rejointe" + (b.rejoint > 1 ? "s" : "") : ""],
+    ["repo", "Reporter du lac", "Partager 3 photos du lac", b.photos >= 3, b.photos ? b.photos + " photo" + (b.photos > 1 ? "s" : "") + " partagée" + (b.photos > 1 ? "s" : "") : ""]
+  ];
+}
+function badgeRow(id) {
+  var got = badgeList(id).filter(function (x) { return x[3]; }); if (!got.length) return null;
+  var w = el("div", "bdg-row"); got.forEach(function (x) { var s = el("span", "bdg bdg-" + x[0], x[1]); s.title = x[4]; w.appendChild(s); }); return w;
+}
+function renderMyBadges() {
+  var B = $("myBadges"); if (!B) return; B.textContent = "";
+  $("bdgBox").hidden = !me(); if (!me()) return;
+  var L = badgeList(uid), n = L.filter(function (x) { return x[3]; }).length;
+  $("bdgSum").textContent = n + " sur " + L.length;
+  L.forEach(function (x) {
+    var r = el("div", "bdg-it" + (x[3] ? " on" : "")); r.appendChild(el("span", "bdg bdg-" + x[0], x[1]));
+    r.appendChild(el("span", "mu", x[3] ? x[4] || "Obtenu" : "Pour l'obtenir : " + x[2].charAt(0).toLowerCase() + x[2].slice(1)));
+    B.appendChild(r);
+  });
+}
+
+/* ================= COMPTEUR DE VISITES (anonyme) ================= */
+(function () {
+  if (!sb) return;
+  var d = new Date().toISOString().slice(0, 10), src = "";
+  try { src = (new URLSearchParams(location.search).get("src") || "").slice(0, 20); } catch (e) {}
+  if (src) { ls("nc-src", src); try { history.replaceState(null, "", location.pathname + location.hash); } catch (e) {} }
+  if (ls("nc-vis") === d) return;
+  var neuf = !ls("nc-seen"); ls("nc-vis", d); ls("nc-seen", "1");
+  sb.rpc("visite", { src: neuf ? (src || "direct") : "retour", nouveau: neuf }).then(function () {});
+})();
+
+/* ================= TABLEAU DE BORD ADMIN ================= */
+$("dashBox").addEventListener("toggle", function () { if (this.open) loadDash(); });
+function loadDash() {
+  var D = $("dash"); D.textContent = ""; D.appendChild(el("p", "mu", "Chargement…"));
+  sb.rpc("stats_admin").then(function (r) {
+    D.textContent = "";
+    if (r.error || !r.data) { D.appendChild(el("p", "err", "Statistiques indisponibles.")); return; }
+    var s = r.data;
+    function tiles(t, list) {
+      D.appendChild(el("h3", "dh", t)); var g = el("div", "dgrid");
+      list.forEach(function (x) { var c = el("div", "dt"); c.appendChild(el("b", 0, String(x[1]))); c.appendChild(el("span", 0, x[0])); g.appendChild(c); });
+      D.appendChild(g);
+    }
+    tiles("Membres", [["inscrits", s.membres], ["nouveaux cette semaine", s.nouveaux7], ["nouveaux sur 30 jours", s.nouveaux30], ["actifs cette semaine", s.actifs7], ["avec fiche bateau", s.fiches], ["notifications activées", s.notifs]]);
+    D.appendChild(el("h3", "dh", "Inscriptions par semaine"));
+    var ch = el("div", "dchart"), W = s.semaines || [], mx = Math.max.apply(null, W.map(function (w) { return w.n; }).concat([1]));
+    W.forEach(function (w) { var c = el("div", "dcol"); c.appendChild(el("small", 0, String(w.n))); var bar = el("i"); bar.style.height = Math.max(3, Math.round(w.n / mx * 90)) + "px"; c.appendChild(bar); c.appendChild(el("span", 0, w.s)); ch.appendChild(c); });
+    D.appendChild(ch);
+    tiles("Activité", [["messages salon (7 j)", s.salon7], ["messages privés (7 j)", s.prives7], ["sorties à venir", s.sorties], ["inscrits aux sorties", s.inscrits], ["alertes panne (30 j)", s.alertes30]]);
+    tiles("Visites", [["visites (7 j)", s.visites7], ["nouveaux visiteurs (7 j)", s.nouvvis7]]);
+    var SRC = { direct: "Accès direct", affiche: "Affiche QR", partage: "Contenu partagé", invitation: "Invitation d'un membre" };
+    var src = s.sources || {}, ks = Object.keys(src).sort(function (a, b) { return src[b] - src[a]; });
+    D.appendChild(el("h3", "dh", "D'où viennent les nouveaux visiteurs (30 j)"));
+    if (!ks.length) D.appendChild(el("p", "mu", "Pas encore de données : le compteur démarre aujourd'hui."));
+    ks.forEach(function (k) { var r2 = el("div", "dsrc"); r2.appendChild(el("span", 0, SRC[k] || k)); r2.appendChild(el("b", 0, String(src[k]))); D.appendChild(r2); });
+    D.appendChild(el("p", "mu", "Les visites sont comptées une fois par jour et par téléphone, sans aucune donnée personnelle."));
+  });
 }
