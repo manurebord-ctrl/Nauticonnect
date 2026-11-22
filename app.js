@@ -650,7 +650,7 @@ function drawBubbles(box, list, group) {
     if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
     b.appendChild(mentionText(m));
     if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
-    var meta = el("small", "wa-meta", hhmm(m.t) + (mine && !group ? " ✓✓" : "")); b.appendChild(meta);
+    var meta = el("small", "wa-meta", hhmm(m.t)); if (mine && !group) meta.appendChild(el("span", "wa-tick" + (m.lu ? " lu" : ""), " ✓✓")); b.appendChild(meta);
     if (group && (mine || isAdmin)) { b.onclick = function () { if (b.querySelector(".wa-del")) return; var d = el("button", "wa-del", "Supprimer"); d.onclick = function (e) { e.stopPropagation(); sb.from("salon").delete().eq("id", m.id).then(function (r) { if (r.error) toast("Suppression impossible."); else load("salon"); }); }; b.appendChild(d); }; }
     row.appendChild(b); box.appendChild(row); lastDe = m.de; lastT = ts(m.t);
   });
@@ -731,11 +731,13 @@ function renderThreads() {
     it.onclick = function () { openThread(k); }; W.appendChild(it);
   });
 }
+var marking = {};
 function renderConv() {
   var k = openWith, L = threads()[k] || [];
   var W = $("pvWho"); W.textContent = ""; W.appendChild(avatar(k)); var t = el("span", "wa-ti"); t.appendChild(el("b", 0, (P[k] && P[k].pseudo) || "Plaisancier")); var pr = P[k] || {}; t.appendChild(el("span", 0, [pr.bateau, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); W.appendChild(t);
   var f = el("button", "wa-fr", rel(k) === "ami" ? "Ami" : rel(k) === "envoye" ? "Demande envoyée" : rel(k) === "recu" ? "Accepter en ami" : "Ajouter en ami"); f.onclick = function () { befriend(k); }; W.appendChild(f);
   drawBubbles($("pvMsgs"), L, false); markThread(k);
+  if (L.some(function (m) { return m.de === k && !m.lu; }) && !document.hidden && !marking[k]) { marking[k] = 1; sb.rpc("marquer_lus", { autre: k }).then(function () { marking[k] = 0; L.forEach(function (m) { if (m.de === k) m.lu = m.lu || nowIso(); }); }); }
   var Pp = $("pvPre"); Pp.textContent = ""; Pp.hidden = L.length > 0; PRESETS.forEach(function (x) { var b = el("button", "wa-chip", x); b.onclick = function () { sendMsg(k, x); }; Pp.appendChild(b); });
 }
 function renderPonton() {

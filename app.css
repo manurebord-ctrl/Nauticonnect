@@ -434,3 +434,4 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .wa-it.unr .wa-im b{font-weight:800}.wa-it.unr .wa-pv{color:#0f3d26;font-weight:700}
 .wa-new{display:inline-block;vertical-align:2px;margin-left:8px;background:#1f8a5b;color:#fff;font-size:11px;font-weight:800;padding:2px 7px;border-radius:9px}
 @media (prefers-color-scheme:dark){.wa-it.unr{background:#123524}.wa-it.unr .wa-pv{color:#bff0d3}}
+.wa-tick{color:#8696a0;letter-spacing:-3px;margin-left:2px}.wa-tick.lu{color:#34b7f1}
