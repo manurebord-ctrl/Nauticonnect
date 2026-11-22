@@ -412,3 +412,9 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .pfav.sm{width:56px;height:56px;font-size:20px}
 .pfph label.btn{display:inline-block;width:auto;margin:0}.pfph .row .btn{margin:0}
 .pfq{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--bd)}.pfq .row{margin-top:6px}
+.pfph .row{flex-wrap:wrap}.pfph #pfPhLb{display:flex;gap:8px}.pfph #pfPhLb[hidden]{display:none}.pfph #pfPhLb label{flex:1;text-align:center}
+.pfph #pfPhLb{width:100%}.pfph #pfPhLb label{white-space:nowrap;padding:10px 8px}.pfph #pfPhRm{flex:none;margin-top:6px}
+.pfph .pfav{width:72px;height:72px}
+.pfph>div{flex:1;min-width:0}
+.pfbtns{display:flex;gap:8px;margin-top:8px}.pfbtns[hidden]{display:none}
+.pfbtns label.btn{flex:1;margin:0;text-align:center;white-space:nowrap;padding:10px 6px;font-size:14px}

@@ -806,6 +806,7 @@ $("pfPhIn").onchange = function () {
     .then(function (r) { if (r.error) throw r.error; P[uid].photo = path; P[uid].photo_ok = true; if (old) sb.storage.from("photos").remove([old]); toast("Photo de profil mise à jour !"); renderAll(); drawPfPhoto(); })
     .catch(function () { $("pfPhSt").textContent = "Envoi impossible. Réessayez avec une autre photo."; });
 };
+$("pfPhCam").onchange = $("pfPhIn").onchange;
 $("pfPhRm").onclick = function () {
   var p = me(); if (!p || !p.photo) return; var old = p.photo;
   sb.from("profils").update({ photo: "" }).eq("id", uid).then(function (r) { if (r.error) { toast("Action impossible."); return; } P[uid].photo = ""; sb.storage.from("photos").remove([old]); renderAll(); drawPfPhoto(); });
@@ -846,7 +847,7 @@ function pickPhoto(k, label) {
   if (!real()) { toast("Créez un compte (gratuit) pour partager des photos."); try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "compte"; return; }
   var md = modal("Ajouter une photo"), bx = md.bx;
   bx.appendChild(el("div", "mu", label));
-  var fi = el("input", "f"); fi.type = "file"; fi.accept = "image/*"; fi.style.marginTop = "8px"; bx.appendChild(fi);
+  var fi = el("input", "f"); fi.type = "file"; fi.accept = "image/jpeg,image/png,image/webp"; fi.style.marginTop = "8px"; bx.appendChild(fi);
   var im = el("img", "ph-prev"); im.alt = ""; im.hidden = true; bx.appendChild(im);
   var cap = el("input", "f"); cap.maxLength = 120; cap.placeholder = "Légende (ex. ponton visiteurs plein, lac calme…)"; cap.style.marginTop = "8px"; bx.appendChild(cap);
   var go = el("button", "btn", "Publier la photo"); go.disabled = true; bx.appendChild(go);
