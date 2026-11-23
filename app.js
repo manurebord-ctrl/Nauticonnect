@@ -12,7 +12,7 @@ function iso(msAgo) { return new Date(Date.now() - msAgo).toISOString(); }
 function nowIso() { return new Date().toISOString(); }
 function norm(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
 var toastT = null;
-function toast(t) { var d = $("toastEl"); if (!d) { d = el("div", "toast"); d.id = "toastEl"; document.body.appendChild(d); } d.textContent = t; d.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { d.hidden = true; }, 2800); }
+function toast(t, ms) { var d = $("toastEl"); if (!d) { d = el("div", "toast"); d.id = "toastEl"; document.body.appendChild(d); } d.textContent = t; d.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { d.hidden = true; }, ms || 2800); }
 
 /* ---------------- connexion à Supabase ---------------- */
 var CFG = window.NC_CONFIG || {};
@@ -1744,14 +1744,29 @@ function pushSave(s, prefs) {
   if (prefs) for (var k in prefs) o[k] = prefs[k];
   return sb.from("push_abos").upsert(o, { onConflict: "endpoint" }).select().maybeSingle().then(function (r) { if (r.error) throw r.error; myAbo = r.data; mySub = s; pushKnown = true; notifUI(); });
 }
+/* navigateur Samsung ou Chrome : le chemin des réglages n'est pas le même */
+function notifHelp() {
+  return /SamsungBrowser/.test(navigator.userAgent)
+    ? "Autorisez-les dans Samsung Internet : menu ☰ › Paramètres › Sites et téléchargements › Notifications, puis autorisez Nauticonnect (et vérifiez Réglages du téléphone › Applications › Samsung Internet › Notifications)."
+    : "Autorisez-les dans les réglages du téléphone : Applications › Chrome › Notifications, puis dans Chrome : ⋮ › Paramètres › Paramètres des sites › Notifications.";
+}
+/* une étape qui ne répond pas (fenêtre d'autorisation bloquée, etc.) ne doit pas laisser le bouton muet */
+function withTimeout(p, ms, what) { return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej(new Error("délai dépassé : " + what)); }, ms); })]); }
+function pushLog(log) { try { if (sb && real()) sb.from("push_diag").insert({ info: { log: log, ua: navigator.userAgent, standalone: matchMedia("(display-mode: standalone)").matches, auto: true } }).then(function () {}); } catch (e) {} }
 function pushEnable(prefs) {
-  if (!pushOk) { toast("Votre navigateur ne gère pas les notifications. Installez l'appli sur l'écran d'accueil."); return; }
+  if (!pushOk) { toast("Votre navigateur ne gère pas les notifications. Installez l'appli sur l'écran d'accueil."); pushLog(["navigateur non compatible"]); return; }
   if (!requireProfile(null, "Pour recevoir l'alerte vaudaire et les appels à l'aide sur votre téléphone, créez votre compte gratuit.")) return; ls("nc-push-off", "");
-  Notification.requestPermission().then(function (p) {
-    if (p !== "granted") { toast("Notifications refusées. Autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); notifUI(); return; }
-    return swReg().then(function (r) { return r.pushManager.getSubscription().then(function (s) { return s || r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }); }); })
-      .then(function (s) { return pushSave(s, prefs && prefs.vent ? prefs : null); }).then(function () { toast(prefs && prefs.vent ? "Alerte vaudaire activée sur ce téléphone !" : "Notifications activées !"); renderVd(); });
-  }).catch(function () { toast("Activation impossible. Réessayez."); });
+  var log = ["autorisation avant : " + Notification.permission];
+  toast("Activation des notifications…");
+  withTimeout(Notification.requestPermission(), 20000, "fenêtre d'autorisation").then(function (p) {
+    log.push("autorisation après : " + p);
+    if (p !== "granted") { pushLog(log); toast("Notifications bloquées. " + notifHelp(), 9000); notifUI(); return; }
+    return withTimeout(swReg(), 15000, "service worker").then(function (r) { log.push("service worker : ok"); return r.pushManager.getSubscription().then(function (s) { return s || withTimeout(r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.vapid) }), 20000, "abonnement"); }); })
+      .then(function (s) { log.push("abonnement : ok"); return pushSave(s, prefs && prefs.vent ? prefs : null); }).then(function () { log.push("enregistré : ok"); pushLog(log); toast(prefs && prefs.vent ? "Alerte vaudaire activée sur ce téléphone !" : "Notifications activées !"); renderVd(); });
+  }).catch(function (e) {
+    log.push("ERREUR : " + ((e && (e.name + " " + e.message)) || e)); pushLog(log);
+    toast(/délai/.test(String(e && e.message)) ? "Le téléphone ne répond pas. Fermez complètement l'appli, rouvrez-la et réessayez. Si ça bloque encore : " + notifHelp() : "Activation impossible. Réessayez.", 9000);
+  });
 }
 function pushDisable() {
   var s = mySub; if (!s) return Promise.resolve();
@@ -1759,7 +1774,7 @@ function pushDisable() {
 }
 function notifUI() {
   var on = !!(mySub && myAbo), den = pushOk && Notification.permission === "denied";
-  $("nfState").textContent = !pushOk ? "Pas disponible sur ce navigateur. Installez l'appli sur l'écran d'accueil (Chrome)." : den ? "Bloquées sur ce téléphone : autorisez-les dans les réglages (Applications › Chrome › Notifications)." : on ? "Activées sur ce téléphone." : "Désactivées.";
+  $("nfState").textContent = !pushOk ? "Pas disponible sur ce navigateur. Installez l'appli sur l'écran d'accueil (Chrome)." : den ? "Bloquées sur ce téléphone. " + notifHelp() : on ? "Activées sur ce téléphone." : "Désactivées.";
   if ($("nfSum")) $("nfSum").textContent = on ? "Activées" : den ? "Bloquées" : "Désactivées";
   $("nfOn").hidden = on || !pushOk || den; $("nfPrefs").hidden = !on;
   if (on) { $("nfMsg").checked = myAbo.msg; $("nfSos").checked = myAbo.sos; $("nfVent").checked = myAbo.vent; }
