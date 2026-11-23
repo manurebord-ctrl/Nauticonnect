@@ -1,9 +1,9 @@
 /* Nauticonnect – décoration des fêtes
-   Active automatiquement du 1er décembre au 6 janvier.
+   Active automatiquement du 23 novembre au 25 décembre (Noël compris).
    Pour la voir avant : ouvrir l'appli avec ?noel=1 (et ?noel=0 pour revenir au réglage auto). */
 (function () {
   var d = new Date(), m = d.getMonth(), j = d.getDate();
-  var saison = m === 11 || (m === 0 && j <= 6);
+  var saison = (m === 10 && j >= 23) || (m === 11 && j <= 25);
   var force = null;
   try {
     var q = new URLSearchParams(location.search).get("noel");
@@ -41,7 +41,9 @@
   if (s) {
     var p = document.createElement("p");
     p.className = "noel-voeux";
-    p.textContent = (m === 0 || (m === 11 && j >= 27)) ? "Bonne année sur le Léman" : "Joyeuses fêtes sur le Léman";
+    /* compte à rebours jusqu'à Noël, puis « Joyeux Noël » le 25 */
+    var noel = new Date(d.getFullYear(), 11, 25), jours = Math.ceil((noel - new Date(d.getFullYear(), m, j)) / 864e5);
+    p.textContent = jours <= 0 ? "Joyeux Noël sur le Léman !" : jours === 1 ? "Joyeuses fêtes sur le Léman · Noël, c'est demain !" : "Joyeuses fêtes sur le Léman · Noël dans " + jours + " jours";
     s.parentNode.insertBefore(p, s.nextSibling);
   }
 
