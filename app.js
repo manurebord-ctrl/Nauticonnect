@@ -1608,34 +1608,39 @@ $("knQ").oninput = renderNoeuds; $("knC").onchange = renderNoeuds;
 
 /* ================= ANNONCES ================= */
 var CATS = ["Moteurs et hélices", "Voiles et gréement", "Électronique et GPS", "Sécurité", "Ancres et mouillage", "Remorques", "Annexes et pneumatiques", "Bateaux", "Plongée et loisirs", "Autre"];
-var COL = { Vente: "#1f8a4c", Troc: "#0b6fa4", Don: "#c26a00" }, anEd = null;
+var COL = { Vente: "#1f8a4c", Troc: "#0b6fa4", Don: "#c26a00", Recherche: "#7a3fb0" }, anEd = null;
+function anTyL(t) { return t === "Recherche" ? "Je recherche" : t; }
+/* formulaire : libellés adaptés quand on cherche un objet */
+function anTyUI() { var r = $("anTy").value === "Recherche"; $("anPrL").textContent = r ? "Budget max (CHF, facultatif)" : "Prix (CHF)"; $("anTi").placeholder = r ? "Ex. Pare-battage d'occasion" : "Ex. Moteur hors-bord 15 CV, révisé"; $("anEt").parentNode.hidden = r; }
+$("anTy").onchange = anTyUI;
 var fo = el("option", 0, "Toutes les catégories"); fo.value = ""; $("anFc").appendChild(fo);
 CATS.forEach(function (c) { $("anFc").appendChild(el("option", 0, c)); $("anCt").appendChild(el("option", 0, c)); });
 function anMsg(t) { $("anMsg").textContent = t || ""; }
 function renderAnnonces() {
   var L = $("anList"); L.textContent = ""; var q = norm($("anQ").value), ft = $("anFt").value, fc = $("anFc").value;
   AN.filter(function (a) { return (!ft || a.type === ft) && (!fc || a.cat === fc) && norm([a.titre, a.descr, a.lieu, a.cat].join(" ")).indexOf(q) > -1; }).forEach(function (a) {
-    var c = el("div", "card"), h = el("div"), b = el("span", "bdg", a.type); b.style.background = COL[a.type] || "#555"; h.appendChild(b); h.appendChild(el("b", 0, a.titre)); c.appendChild(h);
-    c.appendChild(el("div", "price", a.type === "Vente" ? (+a.prix ? a.prix + " CHF" : "Prix à discuter") : a.type === "Don" ? "Gratuit" : "Troc"));
-    c.appendChild(el("div", "mu", [a.cat, a.etat, a.lieu].filter(Boolean).join(" · "))); if (a.descr) c.appendChild(el("div", 0, a.descr));
+    var c = el("div", "card"), h = el("div"), b = el("span", "bdg", anTyL(a.type)), R = a.type === "Recherche"; b.style.background = COL[a.type] || "#555"; h.appendChild(b); h.appendChild(el("b", 0, a.titre)); c.appendChild(h);
+    c.appendChild(el("div", "price", R ? (+a.prix ? "Budget : " + a.prix + " CHF" : "Budget à discuter") : a.type === "Vente" ? (+a.prix ? a.prix + " CHF" : "Prix à discuter") : a.type === "Don" ? "Gratuit" : "Troc"));
+    c.appendChild(el("div", "mu", [a.cat, R ? "" : a.etat, a.lieu].filter(Boolean).join(" · "))); if (a.descr) c.appendChild(el("div", 0, a.descr));
     var by = el("div", "mu"); by.style.marginTop = "6px"; by.appendChild(document.createTextNode("Par ")); by.appendChild(badge(a.auteur)); by.appendChild(document.createTextNode(" · " + ago(a.maj))); c.appendChild(by);
     if (a.auteur === uid || isAdmin) {
       var e = el("button", "btn g sm", "Modifier"); e.onclick = function () { anOpen(a); }; c.appendChild(e);
-      var d = el("button", "btn g sm", "Retirer (vendu / donné)"); d.onclick = function () { sb.from("annonces").delete().eq("id", a.id).then(function () { load("annonces"); }); }; c.appendChild(d);
+      var d = el("button", "btn g sm", R ? "Retirer (trouvé)" : "Retirer (vendu / donné)"); d.onclick = function () { sb.from("annonces").delete().eq("id", a.id).then(function () { load("annonces"); }); }; c.appendChild(d);
     } else {
-      var k = el("button", "btn sm", "Contacter"); k.onclick = function () { openThread(a.auteur, "Bonjour, votre annonce « " + a.titre + " » m'intéresse. "); }; c.appendChild(k);
+      var k = el("button", "btn sm", R ? "J'en ai un, je le contacte" : "Contacter"); k.onclick = function () { openThread(a.auteur, R ? "Bonjour, j'ai peut-être ce que vous recherchez (« " + a.titre + " »). " : "Bonjour, votre annonce « " + a.titre + " » m'intéresse. "); }; c.appendChild(k);
       var r = el("button", "btn g sm", "Signaler"); r.onclick = function () { if (!guestOk(function () { r.onclick(); })) return; sb.from("signalements").insert({ quoi: "annonce", ref: String(a.id) }).then(function () { r.textContent = "Signalée"; r.disabled = true; }); }; c.appendChild(r);
     }
     L.appendChild(c);
   });
   if (!L.firstChild) L.appendChild(el("p", "mu", "Aucune annonce pour l’instant. Publiez la première !"));
 }
-function anOpen(a) { anEd = a ? a.id : null; $("anTi").value = a ? a.titre : ""; $("anTy").value = a ? a.type : "Vente"; $("anPr").value = a ? a.prix || "" : ""; $("anCt").value = a ? a.cat : CATS[0]; $("anEt").value = a ? a.etat : "Bon"; $("anLo").value = a ? a.lieu || "" : ""; $("anDs").value = a ? a.descr || "" : ""; $("anForm").hidden = false; $("anForm").scrollIntoView({ behavior: "smooth" }); }
+function anOpen(a) { anEd = a ? a.id : null; $("anTi").value = a ? a.titre : ""; $("anTy").value = a ? a.type : "Vente"; $("anPr").value = a ? a.prix || "" : ""; $("anCt").value = a ? a.cat : CATS[0]; $("anEt").value = a ? a.etat : "Bon"; $("anLo").value = a ? a.lieu || "" : ""; $("anDs").value = a ? a.descr || "" : ""; $("anForm").hidden = false; anTyUI(); $("anForm").scrollIntoView({ behavior: "smooth" }); }
 $("anAdd").onclick = function () { anMsg(); if (!memberOk($("anMsg"), "Pour publier une annonce, créez votre compte gratuit.")) return; anOpen(null); };
+$("anAddR").onclick = function () { anMsg(); if (!memberOk($("anMsg"), "Pour publier une recherche, créez votre compte gratuit.")) return; anOpen(null); $("anTy").value = "Recherche"; anTyUI(); $("anTi").focus(); };
 $("anCx").onclick = function () { $("anForm").hidden = true; anEd = null; };
 $("anSv").onclick = function () {
   anMsg(); var t = $("anTi").value.trim(); if (t.length < 2) { anMsg("Titre requis."); return; }
-  var o = { titre: t, type: $("anTy").value, prix: $("anTy").value === "Vente" ? +$("anPr").value || 0 : 0, cat: $("anCt").value, etat: $("anEt").value, lieu: $("anLo").value.trim(), descr: $("anDs").value.trim(), maj: nowIso() };
+  var o = { titre: t, type: $("anTy").value, prix: ($("anTy").value === "Vente" || $("anTy").value === "Recherche") ? +$("anPr").value || 0 : 0, cat: $("anCt").value, etat: $("anEt").value, lieu: $("anLo").value.trim(), descr: $("anDs").value.trim(), maj: nowIso() };
   (anEd ? sb.from("annonces").update(o).eq("id", anEd) : sb.from("annonces").insert(o)).then(function (r) { if (r.error) anMsg("Publication impossible. Réessayez."); else { $("anForm").hidden = true; anEd = null; load("annonces"); toast("Annonce publiée"); } });
 };
 ["anQ", "anFt", "anFc"].forEach(function (i) { $(i).oninput = renderAnnonces; $(i).onchange = renderAnnonces; });
@@ -1882,7 +1887,7 @@ function feedItems() {
   PH.filter(function (x) { return pub(x) && ts(x.t) > wk; }).slice(0, 4).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: ((P[x.auteur] && P[x.auteur].pseudo) || "Un membre") + " a partagé une photo du lac" + (x.c ? " : " + x.c : ""), go: "meteo", img: photoUrl(x.chemin), k: "ph" }); });
   RU.filter(function (x) { return ts(x.t) > wk; }).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: "Nouvelle escale : " + x.nom + (x.lieu ? " (" + x.lieu + ")" : ""), go: "restos", k: "re" }); });
   EV.filter(function (e) { return e.statut === "publie" && e.fin >= today && e.debut <= new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10); }).forEach(function (e) { I.push({ t: Date.now() - 1, txt: e.titre + " · " + evDates(e) + " · " + e.lieu, go: "evenements", k: "ev" }); });
-  AN.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Petite annonce : " + x.titre + (x.prix ? " · " + x.prix + " CHF" : ""), go: "annonces", k: "an" }); });
+  AN.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: (x.type === "Recherche" ? "Recherché : " : "Petite annonce : ") + x.titre + (x.prix ? " · " + (x.type === "Recherche" ? "budget " : "") + x.prix + " CHF" : ""), go: "annonces", k: "an" }); });
   LO.filter(function (x) { return x.actif !== false && ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Bateau à louer : " + x.nom + (x.port ? " à " + x.port : ""), go: "location", k: "lo" }); });
   EP.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 2).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Épave ajoutée sur la carte : " + x.nom, go: "epaves", k: "ep" }); });
   SO.filter(function (x) { return ts(x.t) > wk && x.jour >= today; }).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: ((P[x.auteur] && P[x.auteur].pseudo) || "Un membre") + " propose une sortie : " + x.titre + " · " + dFr(x.jour), go: "sorties", k: "so" }); });

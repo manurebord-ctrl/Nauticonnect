@@ -422,14 +422,15 @@
 <!-- ===================== ANNONCES ===================== -->
 <section id="v-annonces" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
-<h1 class="ph1">À vendre · Troc · Dons</h1>
+<h1 class="ph1">À vendre · Je recherche</h1>
+<p class="mu">Vente, troc, dons… et si vous cherchez quelque chose, dites-le : un membre l'a peut-être au fond de son coffre.</p>
 <div class="card warn"><b>Restez prudent.</b> Voyez l’objet avant de payer, ne versez jamais d’avance et privilégiez une remise en main propre dans un port. Pour le matériel de sécurité, vérifiez l’état et les dates de validité.</div>
 <input class="f" id="anQ" type="search" placeholder="Rechercher (moteur, gilet, ancre…)" aria-label="Rechercher une annonce">
-<div class="row"><select class="f" id="anFt" aria-label="Type"><option value="">Tout</option><option>Vente</option><option>Troc</option><option>Don</option></select><select class="f" id="anFc" aria-label="Catégorie"></select></div>
-<button class="btn" id="anAdd">+ Publier une annonce</button>
+<div class="row"><select class="f" id="anFt" aria-label="Type"><option value="">Tout</option><option>Vente</option><option value="Recherche">Je recherche</option><option>Troc</option><option>Don</option></select><select class="f" id="anFc" aria-label="Catégorie"></select></div>
+<div class="row"><button class="btn" id="anAdd">+ Publier une annonce</button><button class="btn g" id="anAddR">Je recherche…</button></div>
 <div id="anForm" class="card" hidden style="margin-top:10px">
 <label class="l" for="anTi">Titre</label><input class="f" id="anTi" maxlength="70" placeholder="Ex. Moteur hors-bord 15 CV, révisé">
-<div class="row"><div><label class="l" for="anTy">Type</label><select class="f" id="anTy"><option>Vente</option><option>Troc</option><option>Don</option></select></div><div><label class="l" for="anPr">Prix (CHF)</label><input class="f" id="anPr" type="number" inputmode="decimal"></div></div>
+<div class="row"><div><label class="l" for="anTy">Type</label><select class="f" id="anTy"><option>Vente</option><option value="Recherche">Je recherche</option><option>Troc</option><option>Don</option></select></div><div><label class="l" for="anPr" id="anPrL">Prix (CHF)</label><input class="f" id="anPr" type="number" inputmode="decimal"></div></div>
 <div class="row"><div><label class="l" for="anCt">Catégorie</label><select class="f" id="anCt"></select></div><div><label class="l" for="anEt">État</label><select class="f" id="anEt"><option>Neuf</option><option>Très bon</option><option selected>Bon</option><option>Usagé</option><option>À réparer</option></select></div></div>
 <label class="l" for="anLo">Lieu (port ou localité)</label><input class="f" id="anLo" maxlength="40" placeholder="Ex. Morges">
 <label class="l" for="anDs">Description (pour un troc : ce que vous cherchez)</label><textarea class="f" id="anDs" rows="3" maxlength="500"></textarea>
@@ -525,7 +526,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=47"></script>
+<script src="app.js?v=48"></script>
 <script src="noel.js?v=1"></script>
 </body>
 </html>
