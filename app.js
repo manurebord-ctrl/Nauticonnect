@@ -1132,14 +1132,14 @@ function pickPhoto(k, label) {
   var cap = el("input", "f"); cap.maxLength = 120; cap.placeholder = "Légende (ex. ponton visiteurs plein, lac calme…)"; cap.style.marginTop = "8px"; bx.appendChild(cap);
   var go = el("button", "btn", "Publier la photo"); go.disabled = true; bx.appendChild(go);
   var msg = el("div", "err"); bx.appendChild(msg);
-  var rl = el("div", "card wxal"); rl.style.margin = "10px 0 0"; rl.appendChild(el("b", 0, "Règles des photos")); rl.appendChild(el("div", "mu", "Photos du lac, des ports et de la météo uniquement. Aucune personne reconnaissable sans son accord. " + (isAdmin ? "" : "Chaque photo est vérifiée avant d'être visible par les autres membres.") + " Les abus entraînent la suppression du compte.")); bx.appendChild(rl);
+  var rl = el("div", "card wxal"); rl.style.margin = "10px 0 0"; rl.appendChild(el("b", 0, "Règles des photos")); rl.appendChild(el("div", "mu", "Photos du lac, des ports et de la météo uniquement. Aucune personne reconnaissable sans son accord. " + "Votre photo est visible tout de suite. Toute photo peut être signalée et retirée par l'administrateur. Les abus entraînent la suppression du compte.")); bx.appendChild(rl);
   fi.onchange = function () { var f = fi.files && fi.files[0]; go.disabled = !f; if (f) { im.src = URL.createObjectURL(f); im.hidden = false; } };
   go.onclick = function () {
     var f = fi.files && fi.files[0]; if (!f) return; go.disabled = true; msg.className = "mu"; msg.textContent = "Envoi en cours…";
     var path = uid + "/" + Date.now() + ".jpg";
     shrink(f, 1600).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
       .then(function (r) { if (r.error) throw r.error; return sb.from("photos").insert({ k: k, chemin: path, c: cap.value.trim().slice(0, 120) }); })
-      .then(function (r) { if (r.error) throw r.error; md.close(); toast(isAdmin ? "Photo publiée, merci !" : "Merci ! Votre photo sera visible après vérification."); load("photos"); })
+      .then(function (r) { if (r.error) throw r.error; md.close(); toast("Photo publiée, merci !"); load("photos"); })
       .catch(function () { msg.className = "err"; msg.textContent = "L'envoi a échoué. Vérifiez la connexion et réessayez (photo JPEG ou PNG)."; go.disabled = false; });
   };
 }
