@@ -1805,7 +1805,26 @@ $("nfFix").onclick = function () {
 $("nfTest").onclick = function () { sb.rpc("push_test").then(function (r) { toast(r.error ? "Test impossible." : "Notification de test envoyée…"); }); };
 
 /* ================= INVITER UN AMI ================= */
-function invite() { shareIt("Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac", "", "Inviter un ami"); }
+var INV_TXT = "Rejoins-moi sur Nauticonnect, l'appli des plaisanciers du Léman : chat, entraide en cas de panne, vent et météo du lac";
+/* inviter : QR code à faire scanner (Android et iPhone), ou envoi du lien */
+function invite() {
+  var url = location.origin + location.pathname + "?src=qr", md = modal("Inviter un ami"), bx = md.bx;
+  bx.appendChild(el("p", "mu", "Faites scanner ce code avec l'appareil photo du téléphone. Ça marche sur Android et sur iPhone."));
+  var q = el("img", "qrimg"); q.alt = "QR code vers Nauticonnect"; q.src = "https://api.qrserver.com/v1/create-qr-code/?size=480x480&margin=12&data=" + encodeURIComponent(url); bx.appendChild(q);
+  bx.appendChild(el("p", "mu", "Sur iPhone : le lien s'ouvre dans Safari. Touchez ensuite Partager, puis « Sur l'écran d'accueil » pour avoir l'appli."));
+  var b = el("button", "btn", "Envoyer le lien par message"); b.onclick = function () { md.close(); shareIt(INV_TXT, "", "Inviter un ami"); }; bx.appendChild(b);
+}
+/* iPhone : petit guide pour ajouter l'appli à l'écran d'accueil (affiché tant que ce n'est pas fait) */
+(function () {
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var inst = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  if (!ios || inst || ls("nc-ios-ok")) return;
+  var h = $("hero"); if (!h) return;
+  var c = el("div", "card iosg"); c.appendChild(el("b", 0, "Installer Nauticonnect sur votre iPhone"));
+  var o = el("ol"); ["Touchez le bouton Partager de Safari (le carré avec la flèche vers le haut).", "Choisissez « Sur l'écran d'accueil ».", "Touchez « Ajouter » : l'icône du voilier apparaît avec vos applis."].forEach(function (t) { o.appendChild(el("li", 0, t)); }); c.appendChild(o);
+  var ok = el("button", "btn g sm", "C'est fait"); ok.onclick = function () { ls("nc-ios-ok", "1"); c.remove(); }; c.appendChild(ok);
+  h.parentNode.insertBefore(c, h.nextSibling);
+})();
 function shareIt(txt, hash, title) {
   var url = location.origin + location.pathname + "?src=" + (hash ? "partage" : "invitation") + (hash ? "#" + hash : "");
   if (navigator.share) { navigator.share({ title: "Nauticonnect", text: txt, url: url }).catch(function () {}); return; }
