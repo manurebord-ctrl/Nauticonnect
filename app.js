@@ -247,7 +247,15 @@ $("auGo").onclick = function () {
   if (authMode !== "reset" && !/^\S+@\S+\.\S+$/.test(em)) { m.textContent = "Adresse e-mail invalide."; return; }
   if (pw.length < 8) { m.textContent = "Mot de passe : 8 caractères minimum."; return; }
   $("auGo").disabled = true;
-  var p = authMode === "up" ? sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: location.origin + location.pathname } })
+  /* inscription par la fonction serveur : compte créé déjà confirmé, sans e-mail (évite la limite d'envoi), puis connexion directe */
+  var p = authMode === "up" ? sb.functions.invoke("inscription", { body: { email: em, password: pw } }).then(function (r) {
+      if (!r.error) return sb.auth.signInWithPassword({ email: em, password: pw });
+      var ctx = r.error.context;
+      return (ctx && ctx.json ? ctx.json() : Promise.resolve({})).catch(function () { return {}; }).then(function (j) {
+        var c = j && j.error;
+        return { error: { message: c === "existe" ? "User already registered" : c === "limite" ? "rate limit" : c === "password" ? "Password should be at least 8 characters" : c === "email" ? "Adresse e-mail invalide." : "inscription impossible, réessayez." } };
+      });
+    })
     : authMode === "in" ? sb.auth.signInWithPassword({ email: em, password: pw })
     : sb.auth.updateUser({ password: pw });
   p.then(function (r) {
