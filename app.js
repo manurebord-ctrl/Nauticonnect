@@ -748,6 +748,7 @@ function drawBubbles(box, list, group) {
     if (group && m.photo) b.appendChild(photoBlock(m));
     if (m.txt) b.appendChild(mentionText(m));
     if (group && (m.photo || likesOf(m.id).length)) b.appendChild(likeRow(m, !m.photo));
+    if (!group && m.likes && m.likes.length) b.appendChild(pmLikeRow(m));
     if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
     var meta = el("small", "wa-meta", hhmm(m.t)); if (mine && !group) meta.appendChild(el("span", "wa-tick" + (m.lu ? " lu" : ""), " ✓✓")); b.appendChild(meta);
     bindBubble(b, row, m, group, mine);
@@ -797,6 +798,7 @@ function bubbleMenu(b, m, group, mine) {
   var M = el("div", "wa-menu"), add = function (t, f, cls) { var x = el("button", cls || 0, t); x.type = "button"; x.onclick = function (e) { e.stopPropagation(); M.remove(); f(); }; M.appendChild(x); };
   add("Répondre", function () { setReply(group ? "salon" : "prive", m); });
   if (group) { var liked = likesOf(m.id).some(function (l) { return l.uid === uid; }); add(liked ? "Je n'aime plus" : "J'aime", function () { toggleLike(m); }); }
+  else { var pl = (m.likes || []).indexOf(uid) >= 0; add(pl ? "Je n'aime plus" : "J'aime", function () { pmLike(m); }); }
   if (canSel(m, group)) add("Sélectionner", function () { selStart(m, group); });
   if (!group && mine) add("Supprimer", function () { delMsgs([m.id], false); }, "red");
   if (group && m.de !== uid && P[m.de]) add("Message privé", function () { openThread(m.de); });
@@ -825,6 +827,21 @@ function photoBlock(m) {
     else w._t = setTimeout(function () { viewPhoto(im.src); }, 330);
     last = n; };
   return w;
+}
+/* J'aime dans les messages privés (stocké dans le message, modifiable seulement par les deux personnes) */
+function pmLike(m) {
+  if (!me()) return;
+  var L = m.likes || [], on = L.indexOf(uid) >= 0;
+  m.likes = on ? L.filter(function (x) { return x !== uid; }) : L.concat([uid]); renderPonton();
+  sb.rpc("aimer_message", { mid: m.id }).then(function (r) { if (r.error) { m.likes = L; renderPonton(); toast("Action impossible. Réessayez."); } else load("messages"); });
+}
+function pmLikeRow(m) {
+  var L = m.likes || [], mine = L.indexOf(uid) >= 0, r = el("div", "wa-like sm"), b = el("button", "wa-lk" + (mine ? " on" : ""));
+  b.type = "button"; b.innerHTML = HEART; b.setAttribute("aria-label", mine ? "Je n'aime plus" : "J'aime");
+  b.onclick = function (e) { e.stopPropagation(); pmLike(m); }; r.appendChild(b);
+  var who = L.map(function (id) { return id === uid ? "vous" : (P[id] && P[id].pseudo); }).filter(Boolean);
+  if (who.length) r.appendChild(el("small", 0, "Aimé par " + who.join(" et ")));
+  return r;
 }
 function likeRow(m, small) {
   var L = likesOf(m.id), mine = L.some(function (l) { return l.uid === uid; }), r = el("div", "wa-like" + (small ? " sm" : "")), b = el("button", "wa-lk" + (mine ? " on" : ""));
