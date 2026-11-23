@@ -1196,7 +1196,7 @@ function thumb(k, title, label) {
 /* ================= PORTS ================= */
 var PORTS = [["gen","Genève – Port Noir","Genève","Petit-Lac"],["her","Hermance","Genève","Petit-Lac"],["ver","Versoix – Port Choiseul","Genève","Petit-Lac"],["cop","Coppet","Vaud","Petit-Lac"],["nyo","Nyon","Vaud","Petit-Lac"],
 ["rol","Rolle","Vaud","Côte vaudoise"],["spx","Saint-Prex","Vaud","Côte vaudoise"],["mor","Morges","Vaud","Côte vaudoise"],["ssu","Saint-Sulpice","Vaud","Côte vaudoise"],["vid","Lausanne – Vidy","Vaud","Côte vaudoise"],["ouc","Lausanne – Ouchy","Vaud","Côte vaudoise"],["pul","Pully","Vaud","Côte vaudoise"],["lut","Lutry","Vaud","Côte vaudoise"],["cul","Cully","Vaud","Côte vaudoise"],
-["vev","Vevey","Vaud","Haut-Lac"],["ltp","La Tour-de-Peilz","Vaud","Haut-Lac"],["cla","Montreux – Clarens","Vaud","Haut-Lac"],["vil","Villeneuve","Vaud","Haut-Lac"],["bou","Le Bouveret","Valais","Haut-Lac"],["sgi","Saint-Gingolph","Valais","Haut-Lac"],
+["vev","Vevey","Vaud","Haut-Lac"],["ltp","La Tour-de-Peilz","Vaud","Haut-Lac"],["cla","Montreux – Clarens","Vaud","Haut-Lac"],["vil","Villeneuve","Vaud","Haut-Lac"],["nov","Noville – Chantier naval du Vieux-Rhône","Vaud","Haut-Lac"],["bou","Le Bouveret","Valais","Haut-Lac"],["sgi","Saint-Gingolph","Valais","Haut-Lac"],
 ["evi","Évian-les-Bains","Haute-Savoie","Rive française"],["tho","Thonon – Port de Rives","Haute-Savoie","Rive française"],["yvo","Yvoire","Haute-Savoie","Rive française"]].map(function (a) { return { id: a[0], n: a[1], r: a[2], z: a[3] }; });
 /* ports avec station de carburant pour bateaux (sources : bateau-geneve.ch, ports-du-leman.ch, sites des ports) */
 var FUEL = { gen: "Essence et diesel (La Nautique, à côté de Port-Noir)", ver: "Essence", nyo: "Essence et diesel (prépaiement)", rol: "Essence",
@@ -1224,7 +1224,7 @@ function renderPorts() {
     ["libre", "peu", "complet"].forEach(function (k) { var b = el("button", k + (mine && mine.s === k ? " mine" : ""), k === "libre" ? "Libre" : k === "peu" ? "Peu" : "Complet");
       b.onclick = function () { if (!memberOk(null, "Pour indiquer les places libres au port, créez votre compte gratuit.")) return; b.disabled = true; (mine && mine.s === k ? sb.from("places").delete().eq("port", p.id).eq("auteur", uid) : sb.from("places").upsert({ port: p.id, auteur: uid, s: k, t: nowIso() }, { onConflict: "port,auteur" })).then(function () { load("places"); toast("Merci pour le signalement !"); }); };
       a.appendChild(b); });
-    var m = el("a", 0, "Carte"); m.href = mapsSearch("port " + p.n.replace(" – ", " ")); m.target = "_blank"; m.rel = "noopener"; a.appendChild(m);
+    var m = el("a", 0, "Carte"); m.href = mapsSearch(p.id === "nov" ? "Chantier Naval du Vieux-Rhône, Noville" : "port " + p.n.replace(" – ", " ")); m.target = "_blank"; m.rel = "noopener"; a.appendChild(m);
     var wc = el("a", 0, "Webcam"); wc.href = "#webcams"; wc.onclick = function () { wcPort = p.id; }; a.appendChild(wc);
     c.appendChild(a); L.appendChild(c);
   });
@@ -1400,7 +1400,7 @@ var CAMS = [
   { id: "bouveret", n: "Le Bouveret – Port-Valais", d: "Vidéo en direct du port de Port-Valais, au Bouveret.", la: 46.386, lo: 6.854, u: "https://www.youtube.com/live/Du8kmgjsOew", s: "YouTube · Port-Valais", k: "Vidéo en direct" },
   { id: "thonon", n: "Thonon – Port de Rives", d: "Vue sur le port de Rives. Webcams d'Évian à proximité sur la même page.", la: 46.377, lo: 6.478, u: "https://www.windy.com/webcams/1759008664", s: "Windy", k: "Vue directe" },
   { id: "sciez", n: "Sciez & Excenevex", d: "Webcams autour de Sciez, dont la plage d'Excenevex.", la: 46.347, lo: 6.358, u: "https://www.windfinder.com/webcams/sciez", s: "Windfinder", k: "Page de webcams" }];
-var PORTXY = { gen: [46.212, 6.165], her: [46.302, 6.243], ver: [46.283, 6.168], cop: [46.315, 6.192], nyo: [46.382, 6.240], rol: [46.458, 6.337], spx: [46.478, 6.455], mor: [46.505, 6.497], ssu: [46.508, 6.560], vid: [46.517, 6.597], ouc: [46.505, 6.627], pul: [46.507, 6.660], lut: [46.502, 6.685], cul: [46.488, 6.730], vev: [46.461, 6.842], ltp: [46.453, 6.858], cla: [46.440, 6.893], vil: [46.400, 6.925], bou: [46.383, 6.857], sgi: [46.390, 6.803], evi: [46.402, 6.590], tho: [46.377, 6.478], yvo: [46.372, 6.327] };
+var PORTXY = { gen: [46.212, 6.165], her: [46.302, 6.243], ver: [46.283, 6.168], cop: [46.315, 6.192], nyo: [46.382, 6.240], rol: [46.458, 6.337], spx: [46.478, 6.455], mor: [46.505, 6.497], ssu: [46.508, 6.560], vid: [46.517, 6.597], ouc: [46.505, 6.627], pul: [46.507, 6.660], lut: [46.502, 6.685], cul: [46.488, 6.730], vev: [46.461, 6.842], ltp: [46.453, 6.858], cla: [46.440, 6.893], vil: [46.400, 6.925], nov: [46.390, 6.890], bou: [46.383, 6.857], sgi: [46.390, 6.803], evi: [46.402, 6.590], tho: [46.377, 6.478], yvo: [46.372, 6.327] };
 var wcCur = null, wcPort = null;
 function renderWebcams() {
   var g = detailedLake($("wcMap"));
