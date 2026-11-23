@@ -59,10 +59,25 @@ var Q = {
   amities: function () { return real() ? sb.from("amities").select("*") : null; },
   partenaires: function () { return sb.from("partenaires").select("*").order("t"); },
   sorties: function () { return SORTIES_ON ? sb.from("sorties").select("*").order("jour").limit(300) : null; },
-  sortie_inscrits: function () { return SORTIES_ON ? sb.from("sortie_inscrits").select("*").limit(5000) : null; }
+  sortie_inscrits: function () { return SORTIES_ON ? sb.from("sortie_inscrits").select("*").limit(5000) : null; },
+  blocages: function () { return real() ? sb.from("blocages").select("bloque") : null; }
 };
+/* membres bloqués : on ne voit plus leurs messages, ils ne peuvent plus nous écrire */
+var BL = [];
+function isBl(id) { return BL.indexOf(id) >= 0; }
+function toggleBlock(id) {
+  if (!real() || !id || id === uid) return;
+  var nm = (P[id] && P[id].pseudo) || "ce membre";
+  if (isBl(id)) {
+    sb.from("blocages").delete().eq("auteur", uid).eq("bloque", id).then(function (r) { if (r.error) { toast("Action impossible. Réessayez."); return; } load("blocages"); toast(nm + " est débloqué."); });
+    return;
+  }
+  if (!confirm("Bloquer " + nm + " ? Vous ne verrez plus ses messages et il ne pourra plus vous écrire en privé.")) return;
+  sb.from("blocages").insert({ bloque: id }).then(function (r) { if (r.error) { toast("Blocage impossible. Réessayez."); return; } load("blocages"); toast(nm + " est bloqué."); });
+}
 function store(t, rows) {
   rows = rows || [];
+  if (t === "blocages") { BL = rows.map(function (r) { return r.bloque; }); return; }
   if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
   else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse(); else if (t === "likes") LK = rows;
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
@@ -551,6 +566,8 @@ $("scSave").onclick = function () {
   pnMsg(); if (!memberOk($("pnMsg"), "Pour ajouter un numéro de sauvetage, créez votre compte gratuit.")) return;
   var n = $("scName").value.trim(), t = $("scTel").value.trim();
   if (!n || !/^[+0-9 ().\/-]{7,20}$/.test(t)) { pnMsg("Section et numéro valide requis."); return; }
+  /* seul l'admin enregistre un numéro ; un membre le propose, l'admin vérifie */
+  if (!isAdmin) { sb.from("signalements").insert({ quoi: "sauvetage", ref: (n.slice(0, 40) + " : " + t) }).then(function (r) { if (r.error) pnMsg("Envoi impossible. Réessayez."); else { $("scTel").value = ""; pnMsg("Merci ! Le numéro sera vérifié avant d'être ajouté."); } }); return; }
   sb.from("sauvetages").upsert({ nom: n.slice(0, 40), tel: t, maj: nowIso() }).then(function (r) { if (r.error) pnMsg("Enregistrement refusé."); else { $("scTel").value = ""; load("sauvetages"); } });
 };
 
@@ -618,6 +635,7 @@ function memberRow(id) {
   var mid = el("span", "wa-im"); mid.appendChild(el("b", 0, pr.pseudo + (pr.bateau ? " · " + pr.bateau : "")));
   var sub = el("span", "wa-pv", [pr.type, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect"); mid.appendChild(sub); it.appendChild(mid);
   var rt = el("span", "wa-ir");
+  if (isBl(id)) { rt.appendChild(el("span", "wa-tag", "Bloqué")); it.appendChild(rt); it.onclick = function () { openThread(id); }; return it; }
   if (onWater(id)) rt.appendChild(el("span", "wa-tag on", "Sur l'eau"));
   var fb = el("span", "wa-add" + (r === "ami" || r === "envoye" ? " done" : ""), r === "ami" ? "Ami ✓" : r === "envoye" ? "Envoyée" : r === "recu" ? "Accepter" : "+ Ajouter");
   if (!r || r === "recu") fb.onclick = function (e) { e.stopPropagation(); fb.textContent = "…"; befriend(id); };
@@ -691,10 +709,10 @@ function seenMap() { try { return JSON.parse(ls("nc-seenmap") || "{}"); } catch 
 function seenOf(id) { var m = seenMap(); return m[id] || +ls("nc-seen") || 0; }
 function markThread(id) { var m = seenMap(); m[id] = Date.now(); ls("nc-seenmap", JSON.stringify(m)); }
 function markRead() { if (openWith) markThread(openWith); }
-function threads() { var T = {}, C = {}; M.forEach(function (m) { var o = m.de === uid ? m.a : m.a === uid ? m.de : null; if (!o) return; if (C[o] == null) C[o] = +ls("nc-clr-" + o) || 0; if (ts(m.t) <= C[o]) return; (T[o] = T[o] || []).push(m); }); return T; }
+function threads() { var T = {}, C = {}; M.forEach(function (m) { var o = m.de === uid ? m.a : m.a === uid ? m.de : null; if (!o || isBl(o)) return; if (C[o] == null) C[o] = +ls("nc-clr-" + o) || 0; if (ts(m.t) <= C[o]) return; (T[o] = T[o] || []).push(m); }); return T; }
 function unreadOf(id, list) { var s = seenOf(id); return (list || []).filter(function (m) { return m.de === id && ts(m.t) > s; }).length; }
 function unread() { if (!uid) return 0; var T = threads(), n = 0; Object.keys(T).forEach(function (k) { if (!(cur() === "ponton" && waTab === "prive" && k === openWith)) n += unreadOf(k, T[k]); }); return n; }
-function slUnread() { var s = +ls("nc-slseen") || 0; return SL.filter(function (m) { return m.de !== uid && ts(m.t) > s; }).length; }
+function slUnread() { var s = +ls("nc-slseen") || 0; return SL.filter(function (m) { return m.de !== uid && !isBl(m.de) && ts(m.t) > s; }).length; }
 /* onglets */
 var waTab = ls("nc-watab") || "salon"; openWith = null; ls("nc-open", ""); if (["salon", "prive", "amis", "eau"].indexOf(waTab) < 0) waTab = "salon";
 Array.prototype.forEach.call(document.querySelectorAll(".wa-tabs button"), function (b) { b.onclick = function () { waTab = b.dataset.t; ls("nc-watab", waTab); openWith = null; ls("nc-open", ""); renderPonton(); if (waTab === "salon") slBottom(true); }; });
@@ -775,6 +793,8 @@ function bubbleMenu(b, m, group, mine) {
   if (group && m.de !== uid && P[m.de]) add("Message privé", function () { openThread(m.de); });
   if (group && (mine || isAdmin)) add("Supprimer", function () { delMsgs([m.id], true); }, "red");
   if (group && !mine && real()) add("Signaler", function () { if (!confirm("Signaler ce message à l'admin ?")) return; sb.from("signalements").insert({ quoi: "salon", ref: String(m.id) }).then(function () { toast("Signalé, merci"); }); });
+  if (!group && !mine && real()) add("Signaler", function () { if (!confirm("Signaler ce message à l'admin ?")) return; sb.from("signalements").insert({ quoi: "prive", ref: String(m.id) }).then(function () { toast("Signalé, merci"); }); });
+  if (!mine && m.de && m.de !== uid && real()) add("Bloquer ce membre", function () { toggleBlock(m.de); }, "red");
   b.appendChild(M);
 }
 
@@ -888,6 +908,9 @@ function renderConv() {
   $("pvClr").hidden = !L.length;
   var W = $("pvWho"); W.textContent = ""; W.appendChild(avatar(k)); var t = el("span", "wa-ti"); t.appendChild(el("b", 0, (P[k] && P[k].pseudo) || "Plaisancier")); var pr = P[k] || {}; t.appendChild(el("span", 0, [pr.bateau, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); W.appendChild(t);
   var f = el("button", "wa-fr", rel(k) === "ami" ? "Ami" : rel(k) === "envoye" ? "Demande envoyée" : rel(k) === "recu" ? "Accepter en ami" : "Ajouter en ami"); f.onclick = function () { befriend(k); }; W.appendChild(f);
+  var bk = el("button", "wa-fr", isBl(k) ? "Débloquer" : "Bloquer"); bk.onclick = function () { toggleBlock(k); }; W.appendChild(bk);
+  $("pvBar").hidden = isBl(k);
+  if (isBl(k)) { $("pvMsgs").textContent = ""; $("pvMsgs").appendChild(el("div", "wa-empty", "Vous avez bloqué ce membre. Touchez « Débloquer » pour lui écrire à nouveau.")); $("pvPre").hidden = true; return; }
   drawBubbles($("pvMsgs"), L, false); markThread(k);
   if (L.some(function (m) { return m.de === k && !m.lu; }) && !document.hidden && !marking[k]) { marking[k] = 1; sb.rpc("marquer_lus", { autre: k }).then(function () { marking[k] = 0; L.forEach(function (m) { if (m.de === k) m.lu = m.lu || nowIso(); }); }); }
   var Pp = $("pvPre"); Pp.textContent = ""; Pp.hidden = L.length > 0; PRESETS.forEach(function (x) { var b = el("button", "wa-chip", x); b.onclick = function () { sendMsg(k, x); }; Pp.appendChild(b); });
@@ -942,7 +965,7 @@ function renderPonton() {
   $("waJoin").hidden = ok; if (!ok) drawJoin();
   $("waNotif").hidden = !(ok && pushOk && !(mySub && myAbo) && Notification.permission !== "denied");
   /* salon : membres uniquement */
-  drawBubbles($("slMsgs"), SL, true); $("slBar").hidden = !ok;
+  drawBubbles($("slMsgs"), SL.filter(function (m) { return !isBl(m.de); }), true); $("slBar").hidden = !ok;
   if (waTab === "salon") { if (SL.length) ls("nc-slseen", String(ts(SL[SL.length - 1].t))); slBottom(false); }
   var su = slUnread(); $("unreadSl").hidden = !su || waTab === "salon"; $("unreadSl").textContent = su;
   /* privé */
@@ -2136,7 +2159,7 @@ var VIEWN = { admin: "Admin (modérateur)", membre: "Membre", invite: "Invité s
 function applyView() {
   if (!realAdmin) viewAs = "admin";
   isAdmin = realAdmin && viewAs === "admin";
-  var bar = $("pvBar");
+  var bar = $("vwBar");
   if (bar) { bar.hidden = !preview(); $("pvTxt").textContent = "Aperçu " + (VIEWS2[viewAs] || ""); }
   document.documentElement.classList.toggle("previewing", preview());
   var B = $("pvBox"); if (B) { B.hidden = !realAdmin; Array.prototype.forEach.call(B.querySelectorAll("[data-view]"), function (b) { b.classList.toggle("g", b.dataset.view !== viewAs); }); }
