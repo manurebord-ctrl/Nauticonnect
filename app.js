@@ -759,7 +759,7 @@ function sendMsg(to, txt) {
 $("pvBar").onsubmit = function (e) { e.preventDefault(); var i = $("pvIn"), v = i.value; if (!openWith || !v.trim()) return; i.value = ""; sendMsg(openWith, v); };
 $("slBar").onsubmit = function (e) {
   e.preventDefault(); var i = $("slIn"), v = i.value.trim().slice(0, 300); if (!v || sending) return; sending = true;
-  sb.from("salon").insert({ txt: v, cites: citesOf(v), reponse: replyTo.salon ? replyTo.salon.id : null }).then(function (r) {
+  sb.from("salon").insert({ txt: v, cites: citesOf(v), tous: isTous(v), reponse: replyTo.salon ? replyTo.salon.id : null }).then(function (r) {
     sending = false;
     if (r.error) { toast(/rapide/.test(r.error.message || "") ? "Doucement, un message toutes les 3 secondes." : "Message non envoyé."); return; }
     i.value = ""; slTags = {}; setReply("salon", null); $("slSug").hidden = true; load("salon").then(function () { slBottom(true); });
@@ -829,7 +829,7 @@ $("slPhIn").onchange = function () {
   var f = this.files && this.files[0]; this.value = ""; if (!f || !me()) return;
   var i = $("slIn"), cap = i.value.trim().slice(0, 300), path = uid + "/salon-" + Date.now() + ".jpg"; toast("Envoi de la photo…");
   shrink(f, 1400).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); })
-    .then(function (r) { if (r.error) throw r.error; return sb.from("salon").insert({ txt: cap, photo: path, cites: citesOf(cap), reponse: replyTo.salon ? replyTo.salon.id : null }); })
+    .then(function (r) { if (r.error) throw r.error; return sb.from("salon").insert({ txt: cap, photo: path, cites: citesOf(cap), tous: isTous(cap), reponse: replyTo.salon ? replyTo.salon.id : null }); })
     .then(function (r) { if (r.error) throw r.error; i.value = ""; slTags = {}; load("salon").then(function () { slBottom(true); }); })
     .catch(function (e) { toast(/rapide/.test((e && e.message) || "") ? "Doucement, une publication toutes les 3 secondes." : "Envoi impossible. Réessayez."); });
 };
@@ -841,11 +841,13 @@ function tagUser(id) {
   var v = i.value.replace(/@([^\s@]*)$/, ""); i.value = (v && !/\s$/.test(v) ? v + " " : v) + "@" + ps + " "; $("slSug").hidden = true; i.focus();
 }
 function citesOf(v) { var out = []; if (replyTo.salon && replyTo.salon.de !== uid) out.push(replyTo.salon.de); Object.keys(slTags).forEach(function (ps) { if (v.indexOf("@" + ps) >= 0 && out.indexOf(slTags[ps]) < 0 && slTags[ps] !== uid) out.push(slTags[ps]); }); return out.slice(0, 5); }
+/* @tous : l'admin prévient tous les membres (vérifié aussi côté serveur) */
+function isTous(v) { return !!isAdmin && /(^|\s)@tous(?![\wÀ-ÿ])/i.test(v || ""); }
 function mentionText(m) {
-  var sp = el("span", "wa-tx"), names = (m.cites || []).map(function (id) { return P[id] && P[id].pseudo; }).filter(Boolean);
+  var sp = el("span", "wa-tx"), names = m.tous ? ["tous"] : (m.cites || []).map(function (id) { return P[id] && P[id].pseudo; }).filter(Boolean);
   if (!names.length) { sp.textContent = m.txt; return sp; }
   names.sort(function (a, b) { return b.length - a.length; });
-  var re = new RegExp("(" + names.map(function (n) { return "@" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + ")", "g");
+  var re = new RegExp("(" + names.map(function (n) { return "@" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + ")", m.tous ? "gi" : "g");
   m.txt.split(re).forEach(function (part, k) { if (k % 2) { var t = el("b", "wa-at", part); sp.appendChild(t); } else if (part) sp.appendChild(document.createTextNode(part)); });
   return sp;
 }
@@ -854,8 +856,9 @@ $("slIn").oninput = function () {
   if (!mt) { S.hidden = true; return; }
   var q = norm(mt[1]), ids = Object.keys(P).filter(function (id) { return id !== uid && P[id].pseudo && norm(P[id].pseudo).indexOf(q) === 0; }).slice(0, 6);
   if (!ids.length && q) ids = Object.keys(P).filter(function (id) { return id !== uid && P[id].pseudo && norm(P[id].pseudo).indexOf(q) >= 0; }).slice(0, 6);
+  if (isAdmin && "tous".indexOf(q) === 0) { var bt = el("button", "wa-sg"); bt.type = "button"; var tt = el("span"); tt.appendChild(el("b", 0, "@tous")); tt.appendChild(el("small", 0, "Prévenir tous les membres")); bt.appendChild(tt); bt.onclick = function () { var i = $("slIn"), v = i.value.replace(/@([^\s@]*)$/, ""); i.value = (v && !/\s$/.test(v) ? v + " " : v) + "@tous "; S.hidden = true; i.focus(); }; S.appendChild(bt); }
   ids.forEach(function (id) { var b = el("button", "wa-sg"); b.type = "button"; b.appendChild(avatar(id)); var t = el("span"); t.appendChild(el("b", 0, P[id].pseudo)); if (P[id].bateau || P[id].port) t.appendChild(el("small", 0, P[id].bateau || P[id].port)); b.appendChild(t); b.onclick = function () { tagUser(id); }; S.appendChild(b); });
-  S.hidden = !ids.length;
+  S.hidden = !S.firstChild;
 };
 
 /* rejoindre : compte puis juste un pseudo */
