@@ -451,6 +451,7 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .wa-lk svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}
 .wa-lk.on{color:#e0245e}.wa-lk.on svg{fill:#e0245e;stroke:#e0245e}
 .wa-like small{font-size:12px;opacity:.7}
+.wa-like.sm{margin-top:2px;gap:6px}.wa-like.sm .wa-lk{font-size:12px}.wa-like.sm .wa-lk svg{width:16px;height:16px}.wa-like.sm small{font-size:11px}
 .wa-view{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center}
 .wa-view img{max-width:100%;max-height:100%}
 .wa-vx{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:20px}

@@ -739,7 +739,7 @@ function drawBubbles(box, list, group) {
     if (m.reponse) { var q = list.filter(function (x) { return x.id === m.reponse; })[0]; b.appendChild(quoteBlock(q, box)); }
     if (group && m.photo) b.appendChild(photoBlock(m));
     if (m.txt) b.appendChild(mentionText(m));
-    if (group && m.photo) b.appendChild(likeRow(m));
+    if (group && (m.photo || likesOf(m.id).length)) b.appendChild(likeRow(m, !m.photo));
     if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
     var meta = el("small", "wa-meta", hhmm(m.t)); if (mine && !group) meta.appendChild(el("span", "wa-tick" + (m.lu ? " lu" : ""), " ✓✓")); b.appendChild(meta);
     bindBubble(b, row, m, group, mine);
@@ -788,6 +788,7 @@ function bubbleMenu(b, m, group, mine) {
   if (!me()) return;
   var M = el("div", "wa-menu"), add = function (t, f, cls) { var x = el("button", cls || 0, t); x.type = "button"; x.onclick = function (e) { e.stopPropagation(); M.remove(); f(); }; M.appendChild(x); };
   add("Répondre", function () { setReply(group ? "salon" : "prive", m); });
+  if (group) { var liked = likesOf(m.id).some(function (l) { return l.uid === uid; }); add(liked ? "Je n'aime plus" : "J'aime", function () { toggleLike(m); }); }
   if (canSel(m, group)) add("Sélectionner", function () { selStart(m, group); });
   if (!group && mine) add("Supprimer", function () { delMsgs([m.id], false); }, "red");
   if (group && m.de !== uid && P[m.de]) add("Message privé", function () { openThread(m.de); });
@@ -802,7 +803,7 @@ function bubbleMenu(b, m, group, mine) {
 var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3.2 4.5 6.9 4.5c2.1 0 3.6 1.2 5.1 3 1.5-1.8 3-3 5.1-3 3.7 0 6 3.7 4.5 7.2C19.5 16.4 12 21 12 21z"/></svg>';
 function likesOf(id) { return LK.filter(function (l) { return l.salon_id === id; }); }
 function toggleLike(m, force) {
-  if (!me()) { toast("Créez votre compte pour aimer les photos"); return; }
+  if (!me()) { toast("Créez votre compte pour aimer les messages et les photos"); return; }
   var mine = likesOf(m.id).some(function (l) { return l.uid === uid; });
   if (mine && force) return;
   if (mine) { LK = LK.filter(function (l) { return !(l.salon_id === m.id && l.uid === uid); }); sb.from("salon_likes").delete().eq("salon_id", m.id).eq("uid", uid).then(function () {}); }
@@ -817,8 +818,8 @@ function photoBlock(m) {
     last = n; };
   return w;
 }
-function likeRow(m) {
-  var L = likesOf(m.id), mine = L.some(function (l) { return l.uid === uid; }), r = el("div", "wa-like"), b = el("button", "wa-lk" + (mine ? " on" : ""));
+function likeRow(m, small) {
+  var L = likesOf(m.id), mine = L.some(function (l) { return l.uid === uid; }), r = el("div", "wa-like" + (small ? " sm" : "")), b = el("button", "wa-lk" + (mine ? " on" : ""));
   b.innerHTML = HEART; b.appendChild(el("span", 0, L.length ? String(L.length) : "")); b.setAttribute("aria-label", mine ? "Je n'aime plus" : "J'aime");
   b.onclick = function (e) { e.stopPropagation(); toggleLike(m); }; r.appendChild(b);
   if (L.length) { var who = L.slice().sort(function (a, b) { return (b.uid === uid) - (a.uid === uid); }).map(function (l) { return l.uid === uid ? "vous" : (P[l.uid] && P[l.uid].pseudo); }).filter(Boolean); r.appendChild(el("small", 0, "Aimé par " + who.slice(0, 2).join(", ") + (who.length > 2 ? " et " + (who.length - 2) + " autre" + (who.length > 3 ? "s" : "") : ""))); }
