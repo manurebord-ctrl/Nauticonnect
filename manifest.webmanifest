@@ -34,5 +34,59 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "SOS panne",
+      "short_name": "SOS",
+      "description": "Signaler une panne sur le lac",
+      "url": "./#panne",
+      "icons": [
+        {
+          "src": "sc-sos.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Météo et vent",
+      "short_name": "Météo",
+      "description": "Vent, alertes et état du lac",
+      "url": "./#meteo",
+      "icons": [
+        {
+          "src": "sc-meteo.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Chat · Le Ponton",
+      "short_name": "Chat",
+      "description": "Discuter avec les plaisanciers",
+      "url": "./#ponton",
+      "icons": [
+        {
+          "src": "sc-chat.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Ports et places",
+      "short_name": "Ports",
+      "description": "Places visiteurs dans les ports",
+      "url": "./#ports",
+      "icons": [
+        {
+          "src": "sc-ports.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }
