@@ -1304,7 +1304,9 @@ function poNear() {
 }
 var PZ = ["Tous", "Près de moi", "Favoris", "Carburant", "Petit-Lac", "Côte vaudoise", "Haut-Lac", "Rive française"], poZone = ls("nc-pzone") || "Tous", poQ = "", favs = {};
 try { JSON.parse(ls("nc-favs") || "[]").forEach(function (f) { favs[f] = 1; }); } catch (e) {}
-PZ.forEach(function (z) { var b = el("button", 0, z === "Favoris" ? "★ Favoris" : z === "Carburant" ? "⛽ Carburant" : z); b.dataset.z = z; b.onclick = function () { poZone = z; ls("nc-pzone", z); if (z === "Près de moi") poNear(); else renderPorts(); }; $("poChips").appendChild(b); });
+var PZL = { "Côte vaudoise": "Côte vaudoise", "Rive française": "Rive française" }, poOpen = null;
+$("poChips").className = "pogrid";
+PZ.forEach(function (z) { var b = el("button", 0, PZL[z] || z); b.dataset.z = z; b.onclick = function () { poZone = z; ls("nc-pzone", z); if (z === "Près de moi") poNear(); else renderPorts(); }; $("poChips").appendChild(b); });
 if (poZone === "Près de moi") poZone = "Tous";
 $("poQ").oninput = function () { poQ = pnorm(this.value); renderPorts(); };
 var LBL = { libre: "Places libres", peu: "Peu de places", complet: "Complet" };
@@ -1324,11 +1326,18 @@ function renderPorts() {
   if (near) L.appendChild(el("div", "mu", "Les 8 ports les plus proches de vous"));
   res.forEach(function (p) {
     if (!flat && p.z !== last) { L.appendChild(el("h3", "sub", p.z)); last = p.z; }
-    shown++; var s = portStatus(p.id), c = el("div", "port");
-    var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n)); nm.appendChild(el("span", 0, p.r + (poGps && (near || words.length) && PGPS[p.id] ? " · " + dist(p).toFixed(1).replace(".", ",") + " km" : "")));
-    var fv = el("button", "fav" + (favs[p.id] ? " on" : ""), "★"); fv.setAttribute("aria-label", "Favori"); fv.onclick = function () { if (favs[p.id]) delete favs[p.id]; else favs[p.id] = 1; ls("nc-favs", JSON.stringify(Object.keys(favs))); renderPorts(); };
-    top.appendChild(d); top.appendChild(nm); top.appendChild(fv); c.appendChild(top);
-    if (FUEL[p.id]) c.appendChild(el("div", "fuel", "⛽ Carburant : " + FUEL[p.id]));
+    shown++; var s = portStatus(p.id), open = poOpen === p.id, c = el("div", "port pl" + (open ? " open" : ""));
+    var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n));
+    var sub = [p.r]; if (poGps && (near || words.length || poZone === "Près de moi") && PGPS[p.id]) sub.push(dist(p).toFixed(1).replace(".", ",") + " km");
+    if (s) sub.push(LBL[s.s] + " " + ago(s.t)); nm.appendChild(el("span", 0, sub.join(" · ")));
+    if (FUEL[p.id] && !open) nm.appendChild(el("span", "pfuel", "Carburant"));
+    var fv = el("button", "fav" + (favs[p.id] ? " on" : ""), "★"); fv.setAttribute("aria-label", "Favori"); fv.onclick = function (e) { e.stopPropagation(); if (favs[p.id]) delete favs[p.id]; else favs[p.id] = 1; ls("nc-favs", JSON.stringify(Object.keys(favs))); renderPorts(); };
+    var ch = el("span", "pchev", open ? "−" : "+");
+    top.appendChild(d); top.appendChild(nm); top.appendChild(fv); top.appendChild(ch); c.appendChild(top);
+    top.onclick = function () { poOpen = open ? null : p.id; renderPorts(); if (!open) setTimeout(function () { var x = $("po-" + p.id); if (x) x.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, 30); };
+    c.id = "po-" + p.id; L.appendChild(c);
+    if (!open) return;
+    if (FUEL[p.id]) c.appendChild(el("div", "fuel", "Carburant : " + FUEL[p.id]));
     c.appendChild(el("div", "st " + (s ? s.s : "none"), s ? LBL[s.s] + " · " + ago(s.t) + (s.n > 1 ? " · " + s.n + " signalements" : "") : "Pas de signalement récent"));
     c.appendChild(thumb("port-" + p.id, p.n, "Port : " + p.n + " (ponton visiteurs, capitainerie, état du port…)"));
     var a = el("div", "act"), mine = PL.filter(function (r) { return r.port === p.id && r.auteur === uid && ts(r.t) > Date.now() - 12 * 36e5; })[0];
@@ -1337,7 +1346,7 @@ function renderPorts() {
       a.appendChild(b); });
     var m = el("a", 0, "Carte"); m.href = mapsSearch(p.id === "nov" ? "Chantier Naval du Vieux-Rhône, Noville" : "port " + p.n.replace(" – ", " ")); m.target = "_blank"; m.rel = "noopener"; a.appendChild(m);
     var wc = el("a", 0, "Webcam"); wc.href = "#webcams"; wc.onclick = function () { wcPort = p.id; }; a.appendChild(wc);
-    c.appendChild(a); L.appendChild(c);
+    c.appendChild(a);
   });
   if (poZone === "Carburant" && shown) L.insertBefore(el("div", "note", "Ports avec une station de carburant pour bateaux. Horaires et moyens de paiement variables : appelez la capitainerie avant de compter dessus, surtout hors saison."), L.firstChild);
   if (!shown) {
