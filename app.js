@@ -463,19 +463,27 @@ function hornOn() { return ls("nc-corne") !== "0"; }
 function hornUnlock() { try { if (!hornCtx) hornCtx = new (window.AudioContext || window.webkitAudioContext)(); if (hornCtx.state === "suspended") hornCtx.resume(); } catch (e) {} }
 document.addEventListener("pointerdown", hornUnlock, { passive: true });
 function hornBlast(c, t0, dur) {
+  /* sifflet à vapeur façon bateau CGN : accord aigu + souffle de vapeur */
   var out = c.createGain(); out.gain.setValueAtTime(0.0001, t0);
-  out.gain.exponentialRampToValueAtTime(0.9, t0 + 0.35); out.gain.setValueAtTime(0.9, t0 + dur - 0.5); out.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 650; lp.Q.value = 4;
+  out.gain.exponentialRampToValueAtTime(0.7, t0 + 0.15); out.gain.setValueAtTime(0.7, t0 + dur - 0.35); out.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2600; lp.Q.value = 1;
   lp.connect(out); out.connect(c.destination);
-  [[110, "sawtooth", 0.5], [110.8, "sawtooth", 0.4], [55, "square", 0.25], [220, "triangle", 0.15]].forEach(function (x) {
-    var o = c.createOscillator(), g = c.createGain(); o.type = x[1];
-    o.frequency.setValueAtTime(x[0] * 0.92, t0); o.frequency.exponentialRampToValueAtTime(x[0], t0 + 0.3);
-    g.gain.value = x[2]; o.connect(g); g.connect(lp); o.start(t0); o.stop(t0 + dur + 0.05);
+  [[262, 0.32], [330, 0.26], [392, 0.22], [524, 0.08]].forEach(function (x) {
+    var o = c.createOscillator(), g = c.createGain(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(x[0] * 0.96, t0); o.frequency.exponentialRampToValueAtTime(x[0], t0 + 0.2);
+    var vib = c.createOscillator(), vg = c.createGain(); vib.frequency.value = 5.5; vg.gain.value = x[0] * 0.004; vib.connect(vg); vg.connect(o.frequency);
+    g.gain.value = x[1]; o.connect(g); g.connect(lp); o.start(t0); o.stop(t0 + dur + 0.05); vib.start(t0); vib.stop(t0 + dur + 0.05);
   });
+  /* souffle */
+  var n = c.sampleRate * (dur + 0.1), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+  for (var k = 0; k < n; k++) d[k] = Math.random() * 2 - 1;
+  var src = c.createBufferSource(); src.buffer = b;
+  var bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1800; bp.Q.value = 0.8;
+  var ng = c.createGain(); ng.gain.value = 0.12; src.connect(bp); bp.connect(ng); ng.connect(out); src.start(t0); src.stop(t0 + dur + 0.05);
 }
 function horn() {
   hornUnlock(); var c = hornCtx; if (!c) return;
-  var t = c.currentTime + 0.05; hornBlast(c, t, 2.2); hornBlast(c, t + 2.8, 2.2);
+  var t = c.currentTime + 0.05; hornBlast(c, t, 2.4); hornBlast(c, t + 2.9, 1.4);
   try { navigator.vibrate && navigator.vibrate([600, 300, 600]); } catch (e) {}
 }
 function sosCheck(rows) {
