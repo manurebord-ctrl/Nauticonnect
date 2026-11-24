@@ -123,8 +123,8 @@ function loadAll() { loadBadges(); return Promise.all(Object.keys(Q).map(load));
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements"].concat(SORTIES_ON ? ["sorties"] : []);
-var NEEDS_AUTH = { profil: 1, location: 1, annonces: 1, vitesse: 1, epaves: 1, noeuds: 1 };
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements", "admin"].concat(SORTIES_ON ? ["sorties"] : []);
+var NEEDS_AUTH = { profil: 1, admin: 1, location: 1, annonces: 1, vitesse: 1, epaves: 1, noeuds: 1 };
 var WHYV = {
   location: "La location de bateaux entre plaisanciers est réservée aux membres. Créez votre compte gratuit pour voir les bateaux disponibles.",
   annonces: "Les petites annonces (vente, troc, dons) sont réservées aux membres. Créez votre compte gratuit pour les voir.",
@@ -165,6 +165,7 @@ function route() {
   var h = cur(); if (h !== lastView) { prevView = lastView; lastView = h; if (SEL) selEnd(true); }
   if (h !== "compte" && prevView === "compte") { try { sessionStorage.removeItem("nc-why"); } catch (e) {} }
   if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h, WHYV[h]); return; }
+  if (h === "admin" && !realAdmin && sb) { if (uid) { location.hash = "profil"; return; } }
   VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
   Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
   if (h === "profil") fillProfile();
@@ -1938,11 +1939,13 @@ function renderFeed() {
   });
 }
 function renderAll() {
+  var al = $("admLink"); if (al) al.hidden = !realAdmin;
   renderHome(); renderFeed(); renderHomeSorties(); renderVd();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
-  else if (v === "profil") { notifUI(); renderMyBadges(); $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; }
+  else if (v === "profil") { notifUI(); renderMyBadges(); }
+  else if (v === "admin") { $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; drawPfQueue(); }
   else if (v === "sorties") renderSorties();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();

@@ -144,6 +144,20 @@
 </div>
 <button class="linkb" id="nfFix">Réparer les notifications</button><div class="mu" id="nfDiag" style="white-space:pre-line;font-size:12px"></div></details>
 <details class="card acc" id="bdgBox" hidden><summary><b>Mes badges</b><span class="mu" id="bdgSum"></span></summary><div id="myBadges"></div></details>
+<button class="btn pfinv" id="admLink" hidden onclick="location.hash='admin'">Espace modérateur</button>
+<button class="btn g pfinv" data-invite>Inviter un ami sur Nauticonnect</button>
+<a class="btn g pfinv" href="affiche.html" target="_blank" rel="noopener">Affiche à imprimer pour votre port (QR code)</a>
+<details class="card acc"><summary><b>Mon compte</b><span class="mu">Déconnexion, suppression</span></summary><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
+<button class="btn g" id="pLogout">Se déconnecter</button>
+<button class="btn g" id="pDelete" style="margin-top:8px;color:var(--red)">Supprimer mon compte</button>
+<div class="err" id="pDelMsg"></div></details>
+</section>
+
+<!-- ===================== ESPACE MODÉRATEUR ===================== -->
+<section id="v-admin" hidden>
+<div class="hd"><a class="back" href="#profil">← Mon profil</a></div>
+<h1 class="ph1">Espace modérateur</h1>
+<p class="lead">Réservé à votre compte admin.</p>
 <div class="card" id="pvBox" hidden><b>Voir l'appli comme…</b><div class="mu" style="margin:4px 0 10px">Réservé à votre compte admin. Rien n'est modifié pour les autres.</div>
 <div class="pvbtns"><button class="btn" data-view="admin">Admin (modérateur)</button><button class="btn g" data-view="membre">Membre</button><button class="btn g" data-view="invite">Invité sans compte</button></div></div>
 <details class="card acc" id="modBox" hidden><summary><b>Modération du chat</b><span class="mu">Admin · salon du Ponton</span></summary>
@@ -155,14 +169,8 @@
 <details class="card acc" id="mbBox" hidden><summary><b>Gestion des membres</b><span class="mu">Admin · modifier ou supprimer un compte</span></summary>
 <input class="f" id="mbQ" placeholder="Rechercher : pseudo, bateau, e-mail, port" style="margin:4px 0 10px"><div id="mbList"></div></details>
 <details class="card acc" id="dashBox" hidden><summary><b>Tableau de bord</b><span class="mu">Admin · membres, activité, visites</span></summary><div id="dash"></div></details>
-<button class="btn g pfinv" data-invite>Inviter un ami sur Nauticonnect</button>
-<a class="btn g pfinv" href="affiche.html" target="_blank" rel="noopener">Affiche à imprimer pour votre port (QR code)</a>
-<details class="card acc"><summary><b>Mon compte</b><span class="mu">Déconnexion, suppression</span></summary><div class="mu" id="pEmail" style="margin:4px 0 10px"></div>
-<button class="btn g" id="pLogout">Se déconnecter</button>
-<button class="btn g" id="pDelete" style="margin-top:8px;color:var(--red)">Supprimer mon compte</button>
-<div class="err" id="pDelMsg"></div></details>
 <details class="card acc" id="pfQueueBox" hidden><summary><b>Photos de profil des membres</b><span class="mu">Admin · retirer en cas d'abus</span></summary><div id="pfQueue"></div></details>
-</section>
+
 
 <!-- ===================== PANNE ===================== -->
 <section id="v-panne" hidden>
