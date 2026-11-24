@@ -1280,19 +1280,49 @@ var PORTS = [["gen","Genève – Port Noir","Genève","Petit-Lac"],["her","Herma
 var FUEL = { gen: "Essence et diesel (La Nautique, à côté de Port-Noir)", ver: "Essence", nyo: "Essence et diesel (prépaiement)", rol: "Essence",
   mor: "Essence et diesel (port de la Baie de l'Église)", ssu: "Essence (port des Pierrettes)", ouc: "Essence et diesel", cul: "Essence (port de Moratel)",
   vev: "Essence (port de la Pichette Est, Corseaux)", bou: "Essence et diesel", evi: "Sans plomb 98 et gasoil, 24 h/24 par carte", tho: "Essence et diesel" };
-var PZ = ["Tous", "Favoris", "Carburant", "Petit-Lac", "Côte vaudoise", "Haut-Lac", "Rive française"], poZone = ls("nc-pzone") || "Tous", poQ = "", favs = {};
+/* recherche des ports : autres noms, quartiers, communes voisines + position pour « Près de moi » */
+var PALIAS = { gen: "port-noir eaux-vives cologny geneve", her: "hermance", ver: "choiseul versoix", cop: "coppet", nyo: "nyon", rol: "rolle",
+  spx: "saint-prex", mor: "baie de l'eglise morges", ssu: "pierrettes saint-sulpice", vid: "vidy lausanne", ouc: "ouchy lausanne", pul: "pully", lut: "lutry",
+  cul: "moratel cully lavaux", vev: "corseaux pichette vevey lavaux", ltp: "tour-de-peilz", cla: "clarens montreux", vil: "villeneuve",
+  nov: "noville vieux-rhone chantier naval", bou: "port-valais bouveret valais", sgi: "saint-gingolph", evi: "evian", tho: "thonon rives", yvo: "yvoire" };
+var PGPS = { gen: [46.211, 6.163], her: [46.301, 6.243], ver: [46.283, 6.167], cop: [46.316, 6.193], nyo: [46.381, 6.241], rol: [46.459, 6.339], spx: [46.479, 6.457],
+  mor: [46.507, 6.497], ssu: [46.512, 6.560], vid: [46.517, 6.596], ouc: [46.506, 6.627], pul: [46.508, 6.661], lut: [46.503, 6.686], cul: [46.488, 6.731],
+  vev: [46.459, 6.842], ltp: [46.452, 6.858], cla: [46.429, 6.910], vil: [46.398, 6.925], nov: [46.393, 6.893], bou: [46.389, 6.857], sgi: [46.398, 6.806],
+  evi: [46.402, 6.590], tho: [46.377, 6.484], yvo: [46.371, 6.327] };
+function pnorm(t) { return norm(t).replace(/['’-]/g, " ").replace(/\bst\b/g, "saint").replace(/\s+/g, " ").trim(); }
+function portHay(p) { return pnorm([p.n, p.r, p.z, PALIAS[p.id] || "", FUEL[p.id] ? "carburant essence diesel station" : ""].join(" ")); }
+var poGps = null, poGpsBusy = false;
+function poNear() {
+  if (poGps) { renderPorts(); return; }
+  if (!navigator.geolocation) { toast("Position indisponible sur ce téléphone."); return; }
+  if (poGpsBusy) return; poGpsBusy = true; toast("Recherche de votre position…");
+  navigator.geolocation.getCurrentPosition(function (x) { poGpsBusy = false; poGps = [x.coords.latitude, x.coords.longitude]; renderPorts(); },
+    function () { poGpsBusy = false; poZone = "Tous"; ls("nc-pzone", "Tous"); renderPorts(); toast("Activez la localisation pour voir les ports les plus proches."); }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 });
+}
+var PZ = ["Tous", "Près de moi", "Favoris", "Carburant", "Petit-Lac", "Côte vaudoise", "Haut-Lac", "Rive française"], poZone = ls("nc-pzone") || "Tous", poQ = "", favs = {};
 try { JSON.parse(ls("nc-favs") || "[]").forEach(function (f) { favs[f] = 1; }); } catch (e) {}
-PZ.forEach(function (z) { var b = el("button", 0, z === "Favoris" ? "★ Favoris" : z === "Carburant" ? "⛽ Carburant" : z); b.dataset.z = z; b.onclick = function () { poZone = z; ls("nc-pzone", z); renderPorts(); }; $("poChips").appendChild(b); });
-$("poQ").oninput = function () { poQ = norm(this.value); renderPorts(); };
+PZ.forEach(function (z) { var b = el("button", 0, z === "Favoris" ? "★ Favoris" : z === "Carburant" ? "⛽ Carburant" : z); b.dataset.z = z; b.onclick = function () { poZone = z; ls("nc-pzone", z); if (z === "Près de moi") poNear(); else renderPorts(); }; $("poChips").appendChild(b); });
+if (poZone === "Près de moi") poZone = "Tous";
+$("poQ").oninput = function () { poQ = pnorm(this.value); renderPorts(); };
 var LBL = { libre: "Places libres", peu: "Peu de places", complet: "Complet" };
 function portStatus(id) { var best = null, n = 0, lim = Date.now() - 12 * 36e5; PL.forEach(function (r) { if (r.port !== id || ts(r.t) < lim) return; n++; if (!best || ts(r.t) > ts(best.t)) best = r; }); return best ? { s: best.s, t: best.t, n: n } : null; }
 function renderPorts() {
   Array.prototype.forEach.call($("poChips").children, function (b) { b.classList.toggle("on", b.dataset.z === poZone); });
   var L = $("poList"); L.textContent = ""; var last = null, shown = 0;
-  PORTS.slice().sort(function (a, b) { return (poZone === "Tous" ? PZ.indexOf(a.z) - PZ.indexOf(b.z) : 0) || alpha(a.n, b.n); }).filter(function (p) { return (poZone === "Tous" || (poZone === "Favoris" ? favs[p.id] : poZone === "Carburant" ? FUEL[p.id] : p.z === poZone)) && (!poQ || norm(p.n + " " + p.r).indexOf(poQ) >= 0); }).forEach(function (p) {
-    if (p.z !== last && poZone !== "Favoris" && poZone !== "Carburant") { L.appendChild(el("h3", "sub", p.z)); last = p.z; }
+  var words = poQ ? poQ.split(" ") : [], near = !words.length && poZone === "Près de moi" && poGps;
+  var dist = function (p) { var g = PGPS[p.id]; return poGps && g ? km(poGps[0], poGps[1], g[0], g[1]) : 999; };
+  var flat = words.length || poZone !== "Tous";
+  var res = PORTS.filter(function (p) {
+    if (words.length) { var h = portHay(p); return words.every(function (w) { return h.indexOf(w) >= 0; }); } /* la recherche cherche dans tous les ports */
+    return poZone === "Tous" || poZone === "Près de moi" || (poZone === "Favoris" ? favs[p.id] : poZone === "Carburant" ? FUEL[p.id] : p.z === poZone);
+  }).sort(function (a, b) { return near ? dist(a) - dist(b) : (flat ? 0 : PZ.indexOf(a.z) - PZ.indexOf(b.z)) || alpha(a.n, b.n); });
+  if (near) res = res.slice(0, 8);
+  if (words.length) L.appendChild(el("div", "mu", res.length ? res.length + " port" + (res.length > 1 ? "s" : "") + " trouvé" + (res.length > 1 ? "s" : "") : ""));
+  if (near) L.appendChild(el("div", "mu", "Les 8 ports les plus proches de vous"));
+  res.forEach(function (p) {
+    if (!flat && p.z !== last) { L.appendChild(el("h3", "sub", p.z)); last = p.z; }
     shown++; var s = portStatus(p.id), c = el("div", "port");
-    var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n)); nm.appendChild(el("span", 0, p.r));
+    var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n)); nm.appendChild(el("span", 0, p.r + (poGps && (near || words.length) && PGPS[p.id] ? " · " + dist(p).toFixed(1).replace(".", ",") + " km" : "")));
     var fv = el("button", "fav" + (favs[p.id] ? " on" : ""), "★"); fv.setAttribute("aria-label", "Favori"); fv.onclick = function () { if (favs[p.id]) delete favs[p.id]; else favs[p.id] = 1; ls("nc-favs", JSON.stringify(Object.keys(favs))); renderPorts(); };
     top.appendChild(d); top.appendChild(nm); top.appendChild(fv); c.appendChild(top);
     if (FUEL[p.id]) c.appendChild(el("div", "fuel", "⛽ Carburant : " + FUEL[p.id]));
@@ -1307,7 +1337,11 @@ function renderPorts() {
     c.appendChild(a); L.appendChild(c);
   });
   if (poZone === "Carburant" && shown) L.insertBefore(el("div", "note", "Ports avec une station de carburant pour bateaux. Horaires et moyens de paiement variables : appelez la capitainerie avant de compter dessus, surtout hors saison."), L.firstChild);
-  if (!shown) L.appendChild(el("div", "note", poZone === "Favoris" ? "Touchez ★ sur un port pour l'ajouter à vos favoris." : "Aucun port ne correspond."));
+  if (!shown) {
+    var nt = el("div", "note", words.length ? "Aucun port trouvé pour « " + $("poQ").value.trim() + " ». Essayez le nom de la commune (ex. « Montreux », « Lausanne », « Évian »). Il manque un port ? Écrivez-nous à " + CFG.contact + "." : poZone === "Favoris" ? "Touchez ★ sur un port pour l'ajouter à vos favoris." : poZone === "Près de moi" ? "Recherche de votre position…" : "Aucun port ne correspond.");
+    L.appendChild(nt);
+    if (words.length) { var cl = el("button", "btn g sm", "Effacer la recherche"); cl.onclick = function () { $("poQ").value = ""; poQ = ""; renderPorts(); }; L.appendChild(cl); }
+  }
 }
 
 /* ================= MÉTÉO ================= */
