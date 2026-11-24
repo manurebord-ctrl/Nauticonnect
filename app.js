@@ -424,7 +424,24 @@ var deferredInstall = null;
 window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferredInstall = e; $("installBox").hidden = false; });
 $("installBtn").onclick = function () { if (!deferredInstall) return; deferredInstall.prompt(); deferredInstall.userChoice.then(function () { deferredInstall = null; $("installBox").hidden = true; }); };
 window.addEventListener("appinstalled", function () { $("installBox").hidden = true; toast("Nauticonnect est installé !"); });
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
+/* mise à jour automatique : dès qu'une nouvelle version est en ligne, l'appli se recharge toute seule (plus besoin de la fermer) */
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  var swHad = !!navigator.serviceWorker.controller, swReloading = false, swPending = false;
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (r) {
+    function chk() { if (!document.hidden) r.update().catch(function () {}); }
+    document.addEventListener("visibilitychange", chk); window.addEventListener("online", chk);
+    setInterval(chk, 5 * 60000);
+  }).catch(function () {});
+  function swBusy() { var a = document.activeElement; return !!(a && (a.tagName === "TEXTAREA" || a.tagName === "INPUT") && a.value); }
+  function swGo() { if (swReloading) return; swReloading = true; location.reload(); }
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (!swHad) { swHad = true; return; } /* première installation : rien à recharger */
+    if (document.hidden || !swBusy()) return swGo();
+    swPending = true; toast("Nouvelle version prête : elle s'installera dès que vous quittez la saisie");
+  });
+  document.addEventListener("visibilitychange", function () { if (swPending && document.hidden) swGo(); });
+  document.addEventListener("focusout", function () { if (swPending) setTimeout(function () { if (!swBusy()) swGo(); }, 1500); });
+}
 
 /* ================= PANNE ================= */
 var gp = null, pbv = "", PB = ["Panne moteur", "Batterie / électricité", "Panne de carburant", "Échouement", "Hélice / safran", "Autre"];
