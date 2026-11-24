@@ -443,6 +443,18 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   document.addEventListener("focusout", function () { if (swPending) setTimeout(function () { if (!swBusy()) swGo(); }, 1500); });
 }
 
+/* retour dans l'appli après une pause (ex. laissée ouverte toute la nuit) : on remet TOUT à jour, météo comprise */
+var ncHidAt = 0;
+function ncBack() {
+  if (document.hidden) { ncHidAt = ncHidAt || Date.now(); return; }
+  var away = ncHidAt ? Date.now() - ncHidAt : 0; ncHidAt = 0;
+  if (away < 5 * 60000) return;
+  try { loadWind(true); lacAt = 0; if (cur() === "meteo") loadLac(); } catch (e) {}
+  if (sb) Promise.resolve(loadAll()).catch(function () {}).then(function () { try { renderAll(); } catch (e) {} });
+  else try { renderAll(); } catch (e) {}
+}
+document.addEventListener("visibilitychange", ncBack);
+window.addEventListener("pageshow", function (e) { if (e.persisted) { ncHidAt = ncHidAt || 1; ncBack(); } });
 /* ================= PANNE ================= */
 var gp = null, pbv = "", PB = ["Panne moteur", "Batterie / électricité", "Panne de carburant", "Échouement", "Hélice / safran", "Autre"];
 Z.forEach(function (z, i) { var o = el("option", 0, "Zone : " + z[0]); o.value = i; $("pnZone").appendChild(o); });
