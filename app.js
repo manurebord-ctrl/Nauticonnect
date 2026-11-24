@@ -458,10 +458,16 @@ document.addEventListener("visibilitychange", ncBack);
 window.addEventListener("pageshow", function (e) { if (e.persisted) { ncHidAt = ncHidAt || 1; ncBack(); } });
 /* ================= MENU LATÉRAL ================= */
 function mnShow(on) {
-  $("mnDr").hidden = !on; $("mnBg").hidden = !on; $("mnBtn").setAttribute("aria-expanded", on ? "true" : "false");
+  $("mnDr").hidden = !on; $("mnBg").hidden = !on; 
   if (on) { $("mnAdm").hidden = !realAdmin; var v = cur(); Array.prototype.forEach.call($("mnDr").querySelectorAll("a"), function (a) { a.classList.toggle("on", (a.getAttribute("href").slice(1) || "accueil") === v); }); }
 }
-$("mnBtn").onclick = function () { mnShow(true); };
+/* bouton menu en haut à gauche de chaque page */
+Array.prototype.forEach.call(document.querySelectorAll(".hd, .hero-top, .wa-top"), function (hd) {
+  var b = document.createElement("button"); b.type = "button"; b.className = "mnb"; b.setAttribute("aria-label", "Menu");
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  b.onclick = function (e) { e.preventDefault(); mnShow(true); };
+  hd.insertBefore(b, hd.firstChild);
+});
 $("mnX").onclick = $("mnBg").onclick = function () { mnShow(false); };
 Array.prototype.forEach.call($("mnDr").querySelectorAll("a"), function (a) { a.addEventListener("click", function () { mnShow(false); }); });
 window.addEventListener("hashchange", function () { mnShow(false); });
