@@ -696,3 +696,7 @@ html.splashing .hero .mnb{display:none}
 .port.pl .nm span{display:inline}
 .port.pl .nm b+span{display:block}
 .port.pl .fav{font-size:20px;padding:2px 4px}
+/* écran d'ouverture : bouton Entrer juste sous le titre, visible tout de suite */
+.hero.splash .hero-top,.hero.splash .hero-t,.hero.splash .hero-s{order:-2}
+.hero.splash .enter{order:-1;margin:18px auto 14px;padding:16px 36px;font-size:22px;animation:enterIn .5s .8s cubic-bezier(.2,1.4,.4,1) forwards,enterPulse 2s 1.4s ease-in-out infinite}
+.hero.splash .cta{margin-top:auto}
