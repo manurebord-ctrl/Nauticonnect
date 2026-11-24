@@ -990,7 +990,7 @@ function drawJoin() {
   }
   J.appendChild(el("b", 0, "Comment vous appelle-t-on sur le Ponton ?"));
   J.appendChild(el("div", "mu", "Votre prénom ou un pseudo. Le reste de votre fiche (bateau, port) peut attendre."));
-  var f = el("form", "wa-jf"), i = el("input", "f"); i.maxLength = 24; i.placeholder = "ex. Manu"; i.setAttribute("aria-label", "Prénom ou pseudo");
+  var f = el("form", "wa-jf"), i = el("input", "f"); i.maxLength = 24; i.placeholder = "ex. Julien"; i.setAttribute("aria-label", "Prénom ou pseudo");
   var b = el("button", "btn", "Entrer"); f.appendChild(i); f.appendChild(b); J.appendChild(f);
   var m = el("div", "err"); J.appendChild(m);
   f.onsubmit = function (e) {

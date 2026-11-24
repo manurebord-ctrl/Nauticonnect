@@ -182,7 +182,7 @@
     "J'ai déjà un compte": "Ich habe schon ein Konto",
     "Comment vous appelle-t-on sur le Ponton ?": "Wie sollen wir Sie auf dem Ponton nennen?",
     "Votre prénom ou un pseudo. Le reste de votre fiche (bateau, port) peut attendre.": "Ihr Vorname oder ein Spitzname. Der Rest Ihres Profils (Boot, Hafen) kann warten.",
-    "ex. Manu": "z. B. Manu",
+    "ex. Julien": "z. B. Julien",
     "Prénom ou pseudo": "Vorname oder Spitzname",
     "Entrer": "Eintreten",
     "Au moins 2 lettres.": "Mindestens 2 Buchstaben.",
