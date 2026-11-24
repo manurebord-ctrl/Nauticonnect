@@ -186,7 +186,9 @@ window.addEventListener("hashchange", route);
 
 /* ---------------- géographie commune ---------------- */
 var Z = [["Hermance",46.301,6.243],["Corsier-Port",46.268,6.226],["Genève – Port-Noir / Eaux-Vives",46.222,6.168],["Genève – Pâquis",46.213,6.155],["Genthod",46.257,6.158],["Versoix",46.280,6.165],["Coppet",46.316,6.191],["Nyon",46.381,6.240],["Gland",46.415,6.267],["Yvoire (F)",46.371,6.329],["Rolle",46.454,6.337],["Sciez (F)",46.386,6.371],["Saint-Prex",46.483,6.455],["Thonon (F)",46.409,6.489],["Morges",46.506,6.495],["Préverenges",46.512,6.528],["Saint-Sulpice",46.511,6.557],["Lausanne – Vidy",46.515,6.590],["Évian (F)",46.401,6.589],["Lausanne – Ouchy",46.508,6.627],["Pully",46.507,6.660],["Lutry",46.503,6.687],["Cully",46.488,6.729],["Saint-Saphorin",46.471,6.795],["Saint-Gingolph",46.399,6.806],["Vevey",46.459,6.840],["Le Bouveret",46.392,6.857],["La Tour-de-Peilz",46.453,6.859],["Clarens / Montreux",46.432,6.911],["Territet",46.433,6.925],["Villeneuve",46.399,6.926]];
+function alpha(a, b) { return String(a || "").localeCompare(String(b || ""), "fr", { sensitivity: "base" }); }
 Z.sort(function (a, b) { return a[2] - b[2]; });
+function ZA() { return Z.slice().sort(function (a, b) { return alpha(a[0], b[0]); }); } /* ports par ordre alphabétique pour les listes */
 var OUT = [[6.155,46.213],[6.158,46.257],[6.165,46.28],[6.191,46.316],[6.24,46.381],[6.267,46.415],[6.337,46.454],[6.455,46.483],[6.495,46.506],[6.627,46.508],[6.687,46.503],[6.729,46.488],[6.84,46.459],[6.911,46.432],[6.926,46.399],[6.857,46.392],[6.806,46.399],[6.71,46.4],[6.59,46.401],[6.489,46.409],[6.371,46.386],[6.329,46.371],[6.243,46.301],[6.226,46.268],[6.168,46.222]];
 var TOWNS = [["Genève",6.155,46.213,16,"start"],["Nyon",6.24,46.381,-9,"middle"],["Lausanne",6.627,46.508,-9,"middle"],["Vevey",6.84,46.459,-9,"middle"],["Montreux",6.911,46.432,18,"middle"],["Évian",6.589,46.401,18,"middle"],["Thonon",6.489,46.409,18,"middle"]];
 function X(o) { return (o - 6.14) * 808.5; } function Y(a) { return (46.54 - a) * 1165.5; }
@@ -291,7 +293,7 @@ function onSession(s, ev) {
 
 /* ================= PROFIL ================= */
 var o0 = el("option", 0, "— choisir —"); o0.value = ""; $("pPort").appendChild(o0);
-Z.forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("pPort").appendChild(o); });
+ZA().forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("pPort").appendChild(o); });
 function pfClose() { if (prevView && prevView !== "profil" && prevView !== "compte") location.hash = prevView === "accueil" ? "" : prevView; else location.hash = ""; }
 $("pfClose").onclick = pfClose;
 function fillProfile() {
@@ -508,7 +510,7 @@ $("nfCorneTest").onclick = horn;
 
 /* ================= PANNE ================= */
 var gp = null, pbv = "", PB = ["Panne moteur", "Batterie / électricité", "Panne de carburant", "Échouement", "Hélice / safran", "Autre"];
-Z.forEach(function (z, i) { var o = el("option", 0, "Zone : " + z[0]); o.value = i; $("pnZone").appendChild(o); });
+Z.map(function (z, i) { return [z, i]; }).sort(function (a, b) { return alpha(a[0][0], b[0][0]); }).forEach(function (x) { var o = el("option", 0, "Zone : " + x[0][0]); o.value = x[1]; $("pnZone").appendChild(o); });
 (function () { var p = ls("nc-zone"); if (p !== "") $("pnZone").value = p; })();
 PB.forEach(function (t) { var b = el("button", 0, t); b.onclick = function () { pbv = t; Array.prototype.forEach.call($("pnPbs").children, function (x) { x.className = ""; }); b.className = "on"; }; $("pnPbs").appendChild(b); });
 function pnPos() { if (gp) return gp; var z = Z[+$("pnZone").value] || Z[0]; return { nom: z[0], lat: z[1], lon: z[2] }; }
@@ -1287,7 +1289,7 @@ function portStatus(id) { var best = null, n = 0, lim = Date.now() - 12 * 36e5; 
 function renderPorts() {
   Array.prototype.forEach.call($("poChips").children, function (b) { b.classList.toggle("on", b.dataset.z === poZone); });
   var L = $("poList"); L.textContent = ""; var last = null, shown = 0;
-  PORTS.filter(function (p) { return (poZone === "Tous" || (poZone === "Favoris" ? favs[p.id] : poZone === "Carburant" ? FUEL[p.id] : p.z === poZone)) && (!poQ || norm(p.n + " " + p.r).indexOf(poQ) >= 0); }).forEach(function (p) {
+  PORTS.slice().sort(function (a, b) { return (poZone === "Tous" ? PZ.indexOf(a.z) - PZ.indexOf(b.z) : 0) || alpha(a.n, b.n); }).filter(function (p) { return (poZone === "Tous" || (poZone === "Favoris" ? favs[p.id] : poZone === "Carburant" ? FUEL[p.id] : p.z === poZone)) && (!poQ || norm(p.n + " " + p.r).indexOf(poQ) >= 0); }).forEach(function (p) {
     if (p.z !== last && poZone !== "Favoris" && poZone !== "Carburant") { L.appendChild(el("h3", "sub", p.z)); last = p.z; }
     shown++; var s = portStatus(p.id), c = el("div", "port");
     var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n)); nm.appendChild(el("span", 0, p.r));
@@ -1310,7 +1312,7 @@ function renderPorts() {
 
 /* ================= MÉTÉO ================= */
 var MZ = ["Genève – Petit-Lac", "Nyon – Coppet", "Rolle – Morges", "Lausanne – Lutry", "Lavaux – Vevey", "Montreux – Villeneuve", "Le Bouveret – Saint-Gingolph", "Évian – Thonon", "Yvoire – Sciez", "Large du Grand-Lac"];
-MZ.forEach(function (z, i) { var o = el("option", 0, z); o.value = "z" + i; $("mZone").appendChild(o); });
+MZ.map(function (z, i) { return [z, i]; }).sort(function (a, b) { return alpha(a[0], b[0]); }).forEach(function (x) { var o = el("option", 0, x[0]); o.value = "z" + x[1]; $("mZone").appendChild(o); });
 (function () { var z = ls("nc-mzone"); if (z) $("mZone").value = z; })();
 $("mZone").onchange = function () { ls("nc-mzone", this.value); };
 $("mAdd").onclick = function () { pickPhoto("meteo-" + $("mZone").value, "Zone : " + $("mZone").options[$("mZone").selectedIndex].text); };
@@ -1529,6 +1531,7 @@ function allRestos() {
 function renderRestos() {
   Array.prototype.forEach.call($("reChips").children, function (b) { b.classList.toggle("on", b.dataset.k === reFilt); });
   var S = allRestos().filter(function (x) { return reFilt === "tous" || (reFilt === "offres" ? hasOffer(x) : reFilt === "bateau" ? (x.a === "ponton" || x.a === "port") : reFilt === "user" ? !!x.u : x.r === reFilt); });
+  S.sort(function (a, b) { return (b.pa && paActive(b.pa) ? 1 : 0) - (a.pa && paActive(a.pa) ? 1 : 0) || alpha(a.n, b.n); }); /* partenaires d'abord, puis A → Z */
   var g = detailedLake($("reMap"));
   S.forEach(function (x) { if (x.la == null) return; var n = svgEl("g", { class: "pin" + (x.u ? " user" : "") + (x.pa ? " star" : "") + (x.id === reCur ? " on" : ""), transform: "translate(" + X2(x.lo).toFixed(1) + "," + Y2(x.la).toFixed(1) + ")" }, g);
     svgEl("circle", { r: 18, style: "fill:transparent" }, n); svgEl("circle", { class: "pb", r: x.id === reCur ? 10 : 8 }, n);
@@ -2172,7 +2175,7 @@ function renderHomeSorties() {
   $("homeSoAll").textContent = up.length > 2 ? "Voir les " + up.length + " sorties" : "Voir les sorties";
 }
 function soMsg(t, ok) { $("soMsg").className = ok ? "okm" : "err"; $("soMsg").textContent = t || ""; }
-(function () { var dl = $("soPorts"); if (dl) Z.forEach(function (z) { var o = document.createElement("option"); o.value = z[0]; dl.appendChild(o); }); })();
+(function () { var dl = $("soPorts"); if (dl) ZA().forEach(function (z) { var o = document.createElement("option"); o.value = z[0]; dl.appendChild(o); }); })();
 $("soAdd").onclick = function () {
   soMsg(); if (!requireProfile($("soMsg"), "Pour proposer une sortie, créez votre compte gratuit.")) return;
   var f = $("soForm"); f.hidden = false; if (!$("soJo").value) $("soJo").value = today(); $("soJo").min = today();
@@ -2346,7 +2349,7 @@ function mbForm(m) {
   F.appendChild(el("label", "l", "Type")); var ty = el("select", "f");
   ["Voilier", "Bateau à moteur", "Jet / semi-rigide", "Planche / paddle", "Autre"].forEach(function (x) { var o = el("option", 0, x); ty.appendChild(o); }); ty.value = m.type || "Voilier"; F.appendChild(ty);
   F.appendChild(el("label", "l", "Port")); var po = el("select", "f"); var o0 = el("option", 0, "— aucun —"); o0.value = ""; po.appendChild(o0);
-  Z.forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; po.appendChild(o); }); if (m.port && !Z.some(function (z) { return z[0] === m.port; })) { var ox = el("option", 0, m.port); ox.value = m.port; po.appendChild(ox); } po.value = m.port || ""; F.appendChild(po);
+  ZA().forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; po.appendChild(o); }); if (m.port && !Z.some(function (z) { return z[0] === m.port; })) { var ox = el("option", 0, m.port); ox.value = m.port; po.appendChild(ox); } po.value = m.port || ""; F.appendChild(po);
   var im = fld("Immatriculation", m.immat, 16);
   var ph = null;
   if (m.photo) { var lb = el("label"); lb.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px"; ph = el("input"); ph.type = "checkbox"; lb.appendChild(ph); lb.appendChild(el("span", 0, "Retirer sa photo de profil")); F.appendChild(lb); }
