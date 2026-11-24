@@ -456,6 +456,16 @@ function ncBack() {
 }
 document.addEventListener("visibilitychange", ncBack);
 window.addEventListener("pageshow", function (e) { if (e.persisted) { ncHidAt = ncHidAt || 1; ncBack(); } });
+/* ================= MENU LATÉRAL ================= */
+function mnShow(on) {
+  $("mnDr").hidden = !on; $("mnBg").hidden = !on; $("mnBtn").setAttribute("aria-expanded", on ? "true" : "false");
+  if (on) { $("mnAdm").hidden = !realAdmin; var v = cur(); Array.prototype.forEach.call($("mnDr").querySelectorAll("a"), function (a) { a.classList.toggle("on", (a.getAttribute("href").slice(1) || "accueil") === v); }); }
+}
+$("mnBtn").onclick = function () { mnShow(true); };
+$("mnX").onclick = $("mnBg").onclick = function () { mnShow(false); };
+Array.prototype.forEach.call($("mnDr").querySelectorAll("a"), function (a) { a.addEventListener("click", function () { mnShow(false); }); });
+window.addEventListener("hashchange", function () { mnShow(false); });
+
 /* ================= CORNE DE BRUME ================= */
 /* son créé directement par le téléphone (pas de fichier à télécharger) */
 var hornCtx = null, sosSeen = null;
