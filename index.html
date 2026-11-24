@@ -169,7 +169,7 @@
 <textarea class="f" id="modWel" rows="10" maxlength="1500"></textarea>
 <div class="row" style="margin-top:8px"><button class="btn g sm" id="modWelReset">Texte par défaut</button><button class="btn sm" id="modWelSave">Enregistrer</button></div></details>
 <details class="card acc" id="mbBox" hidden><summary><b>Gestion des membres</b><span class="mu">Admin · modifier ou supprimer un compte</span></summary>
-<input class="f" id="mbQ" placeholder="Rechercher : pseudo, bateau, e-mail, port" style="margin:4px 0 10px"><div id="mbList"></div></details>
+<input class="f" id="admQ" placeholder="Rechercher : pseudo, bateau, e-mail, port" style="margin:4px 0 10px"><div id="admList"></div></details>
 <details class="card acc" id="dashBox" hidden><summary><b>Tableau de bord</b><span class="mu">Admin · membres, activité, visites</span></summary><div id="dash"></div></details>
 <details class="card acc" id="pfQueueBox" hidden><summary><b>Photos de profil des membres</b><span class="mu">Admin · retirer en cas d'abus</span></summary><div id="pfQueue"></div></details>
 </section>
@@ -222,14 +222,7 @@
 </div>
 <div class="wa-pane" id="panePrive" hidden>
 <div id="pvList">
-<input class="f wa-search" id="mbSearch" type="search" maxlength="40" placeholder="Rechercher : prénom, bateau, port…" aria-label="Rechercher un plaisancier" autocomplete="off">
-<h3 class="sub" id="mbReqH" hidden>Demandes d'amis</h3><div id="mbReq"></div>
 <div id="rnThreads" class="wa-list"></div>
-<h3 class="sub" id="mbSugH" hidden>Vous connaissez peut-être</h3><div class="sgrow" id="mbSug"></div>
-<h3 class="sub" id="mbHead">Membres</h3>
-<div class="chips" id="mbChips"><button data-f="tous" class="on">Tous</button><button data-f="port">Mon port</button><button data-f="eau">Sur l'eau</button><button data-f="amis">Amis</button></div>
-<div class="mu" id="mbHint" style="margin:4px 2px"></div>
-<div id="mbList" class="wa-list"></div>
 </div>
 <div id="pvConv" hidden>
 <div class="wa-chd"><button class="wa-bk" id="pvBack" aria-label="Retour aux discussions">←</button><span id="pvWho"></span><button class="wa-clr" id="pvClr" hidden>Effacer</button></div>
@@ -240,12 +233,20 @@
 </div>
 </div>
 <div class="wa-pane" id="paneAmis" hidden>
+<input class="f wa-search" id="mbSearch" type="search" maxlength="40" placeholder="Chercher un plaisancier : prénom, bateau, port…" aria-label="Chercher un plaisancier" autocomplete="off">
+<div id="amHome">
 <div class="am-sum" id="amSum"></div>
 <h3 class="sub" id="amReqH" hidden>Demandes reçues</h3><div id="amReq"></div>
-<h3 class="sub" id="amOnH" hidden>Sur l'eau en ce moment</h3><div id="amOn" class="wa-list"></div>
+<h3 class="sub" id="mbSugH" hidden>Vous connaissez peut-être</h3><div class="sgrow" id="mbSug"></div>
+<h3 class="sub" id="amOnH" hidden>Mes amis sur l'eau en ce moment</h3><div id="amOn" class="wa-list"></div>
 <h3 class="sub" id="amAllH">Mes amis</h3><div id="amList" class="wa-list"></div>
 <h3 class="sub" id="amSentH" hidden>Demandes envoyées</h3><div id="amSent" class="wa-list"></div>
-<div class="am-act"><button class="btn" id="amFind">Trouver des amis</button><button class="btn g" data-invite>Inviter un ami sur Nauticonnect</button></div>
+</div>
+<h3 class="sub" id="mbHead">Tous les membres</h3>
+<div class="chips" id="mbChips"><button data-f="tous" class="on">Tous</button><button data-f="port">Mon port</button><button data-f="eau">Sur l'eau</button></div>
+<div class="mu" id="mbHint" style="margin:4px 2px"></div>
+<div id="mbList" class="wa-list"></div>
+<div class="am-act"><button class="btn g" data-invite>Inviter un ami sur Nauticonnect</button></div>
 </div>
 <div class="wa-pane" id="paneEau" hidden>
 <div class="stt" id="rnStt"></div>

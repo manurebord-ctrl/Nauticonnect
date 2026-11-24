@@ -725,7 +725,7 @@ function memberRow(id) {
   var rt = el("span", "wa-ir");
   if (isBl(id)) { rt.appendChild(el("span", "wa-tag", "Bloqué")); it.appendChild(rt); it.onclick = function () { openThread(id); }; return it; }
   if (onWater(id)) rt.appendChild(el("span", "wa-tag on", "Sur l'eau"));
-  var fb = el("span", "wa-add" + (r === "ami" || r === "envoye" ? " done" : ""), r === "ami" ? "Ami ✓" : r === "envoye" ? "Envoyée" : r === "recu" ? "Accepter" : "+ Ajouter");
+  var fb = el("span", "wa-add" + (r === "ami" || r === "envoye" ? " done" : ""), r === "ami" ? "Ami ✓" : r === "envoye" ? "Demande envoyée" : r === "recu" ? "Accepter" : "Ajouter en ami");
   if (!r || r === "recu") fb.onclick = function (e) { e.stopPropagation(); fb.textContent = "…"; befriend(id); };
   rt.appendChild(fb);
   it.appendChild(rt); it.onclick = function () { openThread(id); }; return it;
@@ -743,21 +743,18 @@ function renderMembers() {
   res.sort(function (a, b) { return score(b) - score(a) || norm(P[a].pseudo).localeCompare(norm(P[b].pseudo)); });
   var C = $("mbChips"); C.hidden = !!words.length;
   Array.prototype.forEach.call(C.querySelectorAll("button"), function (b) { b.classList.toggle("on", b.dataset.f === mbF); });
-  $("mbHead").textContent = words.length ? (res.length ? res.length + " résultat" + (res.length > 1 ? "s" : "") : "") : "Membres";
+  $("mbHead").textContent = words.length ? (res.length ? res.length + " résultat" + (res.length > 1 ? "s" : "") : "") : "Tous les membres";
   $("mbHint").textContent = words.length && !res.length ? "Aucun plaisancier trouvé. Essayez un prénom, un bateau ou un port (ex. « bouveret », « voilier »)."
-    : !words.length && !res.length ? (mbF === "port" ? (my.port ? "Personne d'autre à " + my.port + " pour l'instant." : "Indiquez votre port d'attache dans votre profil.") : mbF === "eau" ? "Personne n'a hissé le pavillon en ce moment." : mbF === "amis" ? "Pas encore d'amis : ouvrez une discussion et touchez « Ajouter en ami »." : "Pas encore d'autres membres.") : "";
+    : !words.length && !res.length ? (mbF === "port" ? (my.port ? "Personne d'autre à " + my.port + " pour l'instant." : "Indiquez votre port d'attache dans votre profil.") : mbF === "eau" ? "Personne n'a hissé le pavillon en ce moment." : "Pas encore d'autres membres.") : "";
   var max = mbMore || words.length ? 60 : 15;
   res.slice(0, max).forEach(function (id) { L.appendChild(memberRow(id)); });
   if (res.length > max) { var m = el("button", "linkb", "Voir les " + res.length + " membres"); m.onclick = function () { mbMore = true; renderMembers(); }; L.appendChild(m); }
-  $("rnThreads").hidden = !!words.length;
+  $("amHome").hidden = !!words.length;
   var S = $("mbSug"); S.textContent = "";
   var sug = words.length ? [] : ids.filter(function (id) { return !rel(id) && ((my.port && P[id].port === my.port) || onWater(id) || friendIds().some(function (f) { return fof(f, id); })); }).slice(0, 10);
   sug.forEach(function (id) { var pr = P[id], c = el("div", "sg"), a = avatar(id); c.appendChild(a); c.appendChild(el("b", 0, pr.pseudo)); c.appendChild(el("span", "mu", my.port && pr.port === my.port ? "Même port" : onWater(id) ? "Sur l'eau" : "Ami d'un ami"));
-    var b = el("button", "btn sm", "Ajouter"); b.onclick = function () { b.disabled = true; b.textContent = "Envoyée"; befriend(id); }; c.appendChild(b); c.onclick = function (e) { if (e.target !== b) openThread(id); }; S.appendChild(c); });
+    var b = el("button", "btn sm", "Ajouter en ami"); b.onclick = function () { b.disabled = true; b.textContent = "Demande envoyée"; befriend(id); }; c.appendChild(b); c.onclick = function (e) { if (e.target !== b) openThread(id); }; S.appendChild(c); });
   $("mbSugH").hidden = !sug.length;
-  var R = $("mbReq"); R.textContent = ""; $("mbReqH").hidden = true;
-  var nq = pendingIn().filter(function (id) { return P[id]; }).length;
-  if (nq) { var lk = el("button", "wa-reqlink", nq + (nq > 1 ? " demandes d'amis" : " demande d'ami") + " en attente ›"); lk.onclick = function () { goTab("amis"); }; R.appendChild(lk); }
 }
 Array.prototype.forEach.call(document.querySelectorAll("#mbChips button"), function (b) { b.onclick = function () { mbF = b.dataset.f; mbMore = false; renderMembers(); }; });
 $("rnMsgTxt").onchange = function () { ls("nc-msg", this.value.trim()); push(); };
@@ -1002,7 +999,7 @@ function drawJoin() {
 function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
   var keys = Object.keys(T).sort(function (a, b) { var ua = unreadOf(a, T[a]) ? 1 : 0, ub = unreadOf(b, T[b]) ? 1 : 0; return ub - ua || ts(T[b][T[b].length - 1].t) - ts(T[a][T[a].length - 1].t); });
-  if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Touchez un membre juste en dessous pour lui écrire.")); return; }
+  if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Pour écrire à quelqu'un, allez dans l'onglet Amis, cherchez-le puis touchez son nom.")); return; }
   keys.forEach(function (k) {
     var L = T[k], last = L[L.length - 1], n = unreadOf(k, L), it = el("button", "wa-it" + (n ? " unr" : ""));
     it.appendChild(avatar(k));
@@ -1054,13 +1051,12 @@ function renderAmis() {
   var O = $("amOn"); O.textContent = ""; on.forEach(function (id) { O.appendChild(friendRow(id)); }); $("amOnH").hidden = !on.length;
   var L = $("amList"); L.textContent = ""; off.forEach(function (id) { L.appendChild(friendRow(id)); });
   $("amAllH").textContent = on.length ? "Mes autres amis" : "Mes amis"; $("amAllH").hidden = !!on.length && !off.length;
-  if (!ids.length) L.appendChild(el("p", "mu", "Pas encore d'amis. Touchez « Trouver des amis » pour chercher un plaisancier par prénom, bateau ou port."));
+  if (!ids.length) L.appendChild(el("p", "mu", "Pas encore d'amis. Cherchez un plaisancier dans la barre en haut (prénom, bateau ou port), puis touchez « Ajouter en ami »."));
   var S = $("amSent"); S.textContent = "";
   pendingOut().forEach(function (id) { if (!P[id]) return; var r = el("div", "wa-it"); r.appendChild(avatar(id)); var m = el("span", "wa-im"); m.appendChild(el("b", 0, P[id].pseudo)); m.appendChild(el("span", "wa-pv", "En attente de réponse")); r.appendChild(m);
     var c = el("button", "btn g sm", "Annuler"); c.onclick = function () { c.disabled = true; befriend(id); }; r.appendChild(c); S.appendChild(r); });
   $("amSentH").hidden = !S.firstChild;
 }
-$("amFind").onclick = function () { goTab("prive"); setTimeout(function () { var i = $("mbSearch"); if (i) i.focus(); }, 100); };
 var PST = null, pstBusy = false;
 function loadPst() { if (!sb || pstBusy) return; pstBusy = true; sb.rpc("ponton_stats").then(function (r) { if (r.data) { PST = r.data; if (cur() === "ponton") renderPonton(); } }); }
 function renderPonton() {
@@ -1080,10 +1076,10 @@ function renderPonton() {
   /* privé */
   var conv = waTab === "prive" && ok && openWith && openWith !== uid;
   $("pvList").hidden = conv || !ok; $("pvConv").hidden = !conv;
-  if (ok) { if (conv) { renderConv(); slBottom(false); } else { renderThreads(); renderMembers(); } }
+  if (ok) { if (conv) { renderConv(); slBottom(false); } else renderThreads(); }
   var u = unread(); $("unreadRn").hidden = !u || (waTab === "prive" && !conv); $("unreadRn").textContent = u;
   var ua = ok ? pendingIn().filter(function (id) { return P[id]; }).length : 0; $("unreadAm").hidden = !ua; $("unreadAm").textContent = ua;
-  if (waTab === "amis" && ok) renderAmis();
+  if (waTab === "amis" && ok) { renderAmis(); renderMembers(); }
   /* sur l'eau */
   if (waTab === "eau") {
     if (!ok) { $("paneEau").hidden = true; return; }
@@ -1095,7 +1091,7 @@ function renderPonton() {
       if (x) { ex = el("div"); ex.appendChild(el("div", "okm", (p ? km(p.lat, p.lon, x.lat, x.lon).toFixed(1) + " km · " : "") + "position partagée " + ago(x.maj)));
         var a = el("a", "btn g sm", "Itinéraire"); a.href = "https://www.google.com/maps/dir/?api=1&destination=" + x.lat + "," + x.lon; a.target = "_blank"; a.rel = "noopener"; ex.appendChild(a); }
       Fr.appendChild(memberCard(id, ex)); });
-    if (!Fr.firstChild) Fr.appendChild(el("p", "mu", "Pas encore d'amis. Ouvrez une discussion privée et touchez « Ajouter en ami »."));
+    if (!Fr.firstChild) Fr.appendChild(el("p", "mu", "Pas encore d'amis. Allez dans l'onglet Amis pour en trouver."));
     var Lo = $("rnOpenList"); Lo.textContent = ""; openOthers().sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).forEach(function (x) { Lo.appendChild(personCard(x.id, x)); });
     if (!Lo.firstChild) Lo.appendChild(el("p", "mu", "Personne n'a hissé le pavillon pour l'instant."));
   }
@@ -2307,9 +2303,9 @@ function loadDash() {
 /* ================= GESTION DES MEMBRES (admin) ================= */
 var MB = null, mbOpen = null, mbDel = null;
 $("mbBox").addEventListener("toggle", function () { if (this.open) loadMb(); });
-$("mbQ").oninput = function () { renderMb(); };
+$("admQ").oninput = function () { renderMb(); };
 function loadMb() {
-  var L = $("mbList"); L.textContent = ""; L.appendChild(el("p", "mu", "Chargement…"));
+  var L = $("admList"); L.textContent = ""; L.appendChild(el("p", "mu", "Chargement…"));
   sb.rpc("admin_membres").then(function (r) {
     if (r.error) { L.textContent = ""; L.appendChild(el("p", "err", "Liste indisponible : " + r.error.message)); return; }
     MB = r.data || []; renderMb();
@@ -2317,8 +2313,8 @@ function loadMb() {
 }
 function mbDate(t) { if (!t) return "jamais"; var d = new Date(t); return d.toLocaleDateString("fr-CH", { day: "numeric", month: "short", year: "numeric" }); }
 function renderMb() {
-  var L = $("mbList"); if (!L || !MB) return; L.textContent = "";
-  var q = norm($("mbQ").value || "");
+  var L = $("admList"); if (!L || !MB) return; L.textContent = "";
+  var q = norm($("admQ").value || "");
   var list = MB.filter(function (m) { return !q || norm([m.pseudo, m.bateau, m.email, m.port, m.immat].join(" ")).indexOf(q) >= 0; });
   L.appendChild(el("p", "mu", list.length + " compte" + (list.length > 1 ? "s" : "") + (q ? " trouvé" + (list.length > 1 ? "s" : "") : " au total")));
   list.forEach(function (m) {
@@ -2488,7 +2484,7 @@ var WEL_DEF = "Bienvenue sur Le Ponton, le chat des plaisanciers du Léman !\n\n
   "• Appui long sur un de vos messages pour le sélectionner et le supprimer.\n" +
   "• Tapez @ suivi d'un prénom pour interpeller un membre : il reçoit une notification.\n" +
   "• L'appareil photo à gauche permet de partager une photo du lac.\n" +
-  "• Onglet Privé : vos discussions personnelles. Onglet Amis : vos amis. Onglet Sur l'eau : hissez le pavillon pour montrer que vous naviguez.\n" +
+  "• Onglet Privé : vos discussions personnelles. Onglet Amis : cherchez un plaisancier, ajoutez-le en ami et retrouvez vos amis. Onglet Sur l'eau : hissez le pavillon pour montrer que vous naviguez.\n" +
   "• En panne sur le lac ? Bouton rouge SOS : les plaisanciers proches sont alertés. En cas de danger, appelez d'abord le 117.\n\n" +
   "Restons courtois et bienveillants : les messages déplacés sont supprimés.\n\nBon vent ! L'équipe Nauticonnect";
 function welText() { return (REG.salon_bienvenue || "").trim() || WEL_DEF; }
