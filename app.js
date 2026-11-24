@@ -79,7 +79,7 @@ function store(t, rows) {
   rows = rows || [];
   if (t === "blocages") { BL = rows.map(function (r) { return r.bloque; }); return; }
   if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
-  else if (t === "alertes") A = rows; else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse(); else if (t === "likes") LK = rows;
+  else if (t === "alertes") { sosCheck(rows); A = rows; } else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse(); else if (t === "likes") LK = rows;
   else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
@@ -456,6 +456,40 @@ function ncBack() {
 }
 document.addEventListener("visibilitychange", ncBack);
 window.addEventListener("pageshow", function (e) { if (e.persisted) { ncHidAt = ncHidAt || 1; ncBack(); } });
+/* ================= CORNE DE BRUME ================= */
+/* son créé directement par le téléphone (pas de fichier à télécharger) */
+var hornCtx = null, sosSeen = null;
+function hornOn() { return ls("nc-corne") !== "0"; }
+function hornUnlock() { try { if (!hornCtx) hornCtx = new (window.AudioContext || window.webkitAudioContext)(); if (hornCtx.state === "suspended") hornCtx.resume(); } catch (e) {} }
+document.addEventListener("pointerdown", hornUnlock, { passive: true });
+function hornBlast(c, t0, dur) {
+  var out = c.createGain(); out.gain.setValueAtTime(0.0001, t0);
+  out.gain.exponentialRampToValueAtTime(0.9, t0 + 0.35); out.gain.setValueAtTime(0.9, t0 + dur - 0.5); out.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 650; lp.Q.value = 4;
+  lp.connect(out); out.connect(c.destination);
+  [[110, "sawtooth", 0.5], [110.8, "sawtooth", 0.4], [55, "square", 0.25], [220, "triangle", 0.15]].forEach(function (x) {
+    var o = c.createOscillator(), g = c.createGain(); o.type = x[1];
+    o.frequency.setValueAtTime(x[0] * 0.92, t0); o.frequency.exponentialRampToValueAtTime(x[0], t0 + 0.3);
+    g.gain.value = x[2]; o.connect(g); g.connect(lp); o.start(t0); o.stop(t0 + dur + 0.05);
+  });
+}
+function horn() {
+  hornUnlock(); var c = hornCtx; if (!c) return;
+  var t = c.currentTime + 0.05; hornBlast(c, t, 2.2); hornBlast(c, t + 2.8, 2.2);
+  try { navigator.vibrate && navigator.vibrate([600, 300, 600]); } catch (e) {}
+}
+function sosCheck(rows) {
+  var ids = rows.map(function (a) { return a.id; });
+  if (sosSeen) {
+    var neuf = rows.filter(function (a) { return sosSeen.indexOf(a.id) < 0 && a.auteur !== uid && a.etat === "ouverte"; });
+    if (neuf.length && hornOn() && !document.hidden) { horn(); toast("Bateau en panne : " + (neuf[0].zone || "sur le lac"), 5000); }
+  }
+  sosSeen = ids;
+}
+$("nfCorne").checked = hornOn();
+$("nfCorne").onchange = function () { ls("nc-corne", this.checked ? "1" : "0"); };
+$("nfCorneTest").onclick = horn;
+
 /* ================= PANNE ================= */
 var gp = null, pbv = "", PB = ["Panne moteur", "Batterie / électricité", "Panne de carburant", "Échouement", "Hélice / safran", "Autre"];
 Z.forEach(function (z, i) { var o = el("option", 0, "Zone : " + z[0]); o.value = i; $("pnZone").appendChild(o); });
