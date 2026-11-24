@@ -1942,7 +1942,7 @@ function renderAll() {
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
-  else if (v === "profil") { notifUI(); renderMyBadges(); $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; }
+  else if (v === "profil") { notifUI(); renderMyBadges(); $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; }
   else if (v === "sorties") renderSorties();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
@@ -2248,6 +2248,82 @@ function loadDash() {
     if (!ks.length) D.appendChild(el("p", "mu", "Pas encore de données : le compteur démarre aujourd'hui."));
     ks.forEach(function (k) { var r2 = el("div", "dsrc"); r2.appendChild(el("span", 0, SRC[k] || k)); r2.appendChild(el("b", 0, String(src[k]))); D.appendChild(r2); });
     D.appendChild(el("p", "mu", "Les visites sont comptées une fois par jour et par téléphone, sans aucune donnée personnelle."));
+  });
+}
+
+/* ================= GESTION DES MEMBRES (admin) ================= */
+var MB = null, mbOpen = null, mbDel = null;
+$("mbBox").addEventListener("toggle", function () { if (this.open) loadMb(); });
+$("mbQ").oninput = function () { renderMb(); };
+function loadMb() {
+  var L = $("mbList"); L.textContent = ""; L.appendChild(el("p", "mu", "Chargement…"));
+  sb.rpc("admin_membres").then(function (r) {
+    if (r.error) { L.textContent = ""; L.appendChild(el("p", "err", "Liste indisponible : " + r.error.message)); return; }
+    MB = r.data || []; renderMb();
+  });
+}
+function mbDate(t) { if (!t) return "jamais"; var d = new Date(t); return d.toLocaleDateString("fr-CH", { day: "numeric", month: "short", year: "numeric" }); }
+function renderMb() {
+  var L = $("mbList"); if (!L || !MB) return; L.textContent = "";
+  var q = norm($("mbQ").value || "");
+  var list = MB.filter(function (m) { return !q || norm([m.pseudo, m.bateau, m.email, m.port, m.immat].join(" ")).indexOf(q) >= 0; });
+  L.appendChild(el("p", "mu", list.length + " compte" + (list.length > 1 ? "s" : "") + (q ? " trouvé" + (list.length > 1 ? "s" : "") : " au total")));
+  list.forEach(function (m) {
+    var c = el("div", "mbit"); c.style.cssText = "border:1px solid var(--line, #ccd);border-radius:12px;padding:10px 12px;margin:8px 0";
+    var t = el("div"); t.appendChild(el("b", 0, m.pseudo || "(sans fiche bateau)"));
+    if (m.admin) t.appendChild(el("span", "mu", "  · admin"));
+    c.appendChild(t);
+    c.appendChild(el("div", "mu", [m.bateau, m.type, m.port].filter(Boolean).join(" · ") || "Aucune fiche bateau"));
+    c.appendChild(el("div", "mu", (m.email || "") + " · inscrit le " + mbDate(m.inscrit) + " · vu le " + mbDate(m.vu)));
+    var row = el("div", "row"); row.style.marginTop = "8px";
+    var be = el("button", "btn g sm", mbOpen === m.id ? "Fermer" : "Modifier");
+    be.onclick = function () { mbOpen = mbOpen === m.id ? null : m.id; mbDel = null; renderMb(); };
+    row.appendChild(be);
+    if (!m.admin && m.id !== uid) {
+      var bd = el("button", "btn g sm", mbDel === m.id ? "Confirmer la suppression" : "Supprimer"); bd.style.color = "var(--red)";
+      bd.onclick = function () { if (mbDel !== m.id) { mbDel = m.id; mbOpen = null; renderMb(); return; } mbDelete(m, bd); };
+      row.appendChild(bd);
+    }
+    c.appendChild(row);
+    if (mbDel === m.id) c.appendChild(el("p", "err", "Le compte, la fiche, les messages, annonces, avis et photos de ce membre seront effacés définitivement. Touchez encore « Confirmer » pour valider."));
+    if (mbOpen === m.id) c.appendChild(mbForm(m));
+    L.appendChild(c);
+  });
+}
+function mbForm(m) {
+  var F = el("div"); F.style.marginTop = "10px";
+  function fld(lab, val, max) { F.appendChild(el("label", "l", lab)); var i = el("input", "f"); i.value = val || ""; if (max) i.maxLength = max; F.appendChild(i); return i; }
+  var ps = fld("Pseudo *", m.pseudo, 24), bt = fld("Nom du bateau", m.bateau, 30);
+  F.appendChild(el("label", "l", "Type")); var ty = el("select", "f");
+  ["Voilier", "Bateau à moteur", "Jet / semi-rigide", "Planche / paddle", "Autre"].forEach(function (x) { var o = el("option", 0, x); ty.appendChild(o); }); ty.value = m.type || "Voilier"; F.appendChild(ty);
+  F.appendChild(el("label", "l", "Port")); var po = el("select", "f"); var o0 = el("option", 0, "— aucun —"); o0.value = ""; po.appendChild(o0);
+  Z.forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; po.appendChild(o); }); if (m.port && !Z.some(function (z) { return z[0] === m.port; })) { var ox = el("option", 0, m.port); ox.value = m.port; po.appendChild(ox); } po.value = m.port || ""; F.appendChild(po);
+  var im = fld("Immatriculation", m.immat, 16);
+  var ph = null;
+  if (m.photo) { var lb = el("label"); lb.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px"; ph = el("input"); ph.type = "checkbox"; lb.appendChild(ph); lb.appendChild(el("span", 0, "Retirer sa photo de profil")); F.appendChild(lb); }
+  var msg = el("div", "err"), sv = el("button", "btn sm", "Enregistrer"); sv.style.marginTop = "10px";
+  sv.onclick = function () {
+    var p = ps.value.trim(); if (p.length < 2) { msg.textContent = "Pseudo trop court (2 caractères min.)."; return; }
+    sv.disabled = true; msg.className = "err"; msg.textContent = "";
+    var sans = !!(ph && ph.checked), old = m.photo;
+    sb.rpc("admin_modifier_membre", { m: m.id, p_pseudo: p, p_bateau: bt.value.trim(), p_type: ty.value, p_port: po.value, p_immat: im.value.trim().toUpperCase(), p_sans_photo: sans }).then(function (r) {
+      sv.disabled = false;
+      if (r.error) { msg.textContent = "Enregistrement impossible : " + r.error.message; return; }
+      if (sans && old) sb.storage.from("photos").remove([old]).then(function () {});
+      toast("Membre mis à jour."); mbOpen = null; load("profils"); loadMb();
+    });
+  };
+  F.appendChild(sv); F.appendChild(msg);
+  return F;
+}
+function mbDelete(m, b) {
+  b.disabled = true; b.textContent = "Suppression…";
+  sb.storage.from("photos").list(m.id, { limit: 1000 }).then(function (r) {
+    var files = (r.data || []).map(function (f) { return m.id + "/" + f.name; });
+    return files.length ? sb.storage.from("photos").remove(files) : null;
+  }).catch(function () {}).then(function () { return sb.rpc("admin_supprimer_membre", { m: m.id }); }).then(function (r) {
+    if (r && r.error) { b.disabled = false; b.textContent = "Confirmer la suppression"; toast("Suppression impossible : " + r.error.message, 4000); return; }
+    toast("Membre supprimé."); mbDel = null; load("profils"); loadMb();
   });
 }
 
