@@ -2341,8 +2341,10 @@ function loadDash() {
     D.appendChild(ch);
     tiles("Activité", [["messages salon (7 j)", s.salon7], ["messages privés (7 j)", s.prives7], ].concat(SORTIES_ON ? [["sorties à venir", s.sorties], ["inscrits aux sorties", s.inscrits]] : [], [["alertes panne (30 j)", s.alertes30]]));
     tiles("Visites", [["visites (7 j)", s.visites7], ["nouveaux visiteurs (7 j)", s.nouvvis7]]);
-    var SRC = { direct: "Accès direct", affiche: "Affiche QR", partage: "Contenu partagé", invitation: "Invitation d'un membre" };
-    var src = s.sources || {}, ks = Object.keys(src).sort(function (a, b) { return src[b] - src[a]; });
+    var SRC = { direct: "Accès direct", affiche: "Affiche QR", qr: "QR d'invitation", partage: "Contenu partagé", invitation: "Invitation d'un membre", autre: "Autre" };
+    var src = {}, raw = s.sources || {};
+    Object.keys(raw).forEach(function (k) { var c = SRC[k] ? k : "autre"; src[c] = (src[c] || 0) + (Number(raw[k]) || 0); });
+    var ks = Object.keys(src).sort(function (a, b) { return a === "autre" ? 1 : b === "autre" ? -1 : src[b] - src[a]; });
     D.appendChild(el("h3", "dh", "D'où viennent les nouveaux visiteurs (30 j)"));
     if (!ks.length) D.appendChild(el("p", "mu", "Pas encore de données : le compteur démarre aujourd'hui."));
     ks.forEach(function (k) { var r2 = el("div", "dsrc"); r2.appendChild(el("span", 0, SRC[k] || k)); r2.appendChild(el("b", 0, String(src[k]))); D.appendChild(r2); });
