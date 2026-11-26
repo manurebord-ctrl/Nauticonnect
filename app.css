@@ -708,3 +708,5 @@ html.splashing .hero .mnb{display:none}
 .wa-rc{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--bg,#fff);border:1px solid var(--bd,#ccd);border-radius:12px;padding:1px 6px;font:700 11px var(--fb);color:inherit}
 .wa-rc span.on{text-decoration:underline;text-decoration-color:#0b6fa4;text-underline-offset:3px}
 .wa-re1{font-size:18px}
+
+.frpick{margin:-4px 0 10px 4px;padding:8px 10px;border-left:3px solid var(--ok,#1f8a5b);display:flex;flex-direction:column;gap:4px}

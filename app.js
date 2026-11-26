@@ -666,11 +666,27 @@ $("scSave").onclick = function () {
 
 /* ================= LE PONTON ================= */
 var rgp = null, rman = null, sel = null, lastPush = 0, openWith = ls("nc-open") || null, FR = [], watchId = null;
-try { var mm = JSON.parse(ls("nc-man") || "null"); if (mm && typeof mm.lat === "number") rman = mm; } catch (e) {}
+var SHARE_MS = 2 * 36e5; /* pavillon, partage amis et position placée à la main : 2 h */
+try { var mm = JSON.parse(ls("nc-man") || "null"); if (mm && typeof mm.lat === "number" && mm.t && Date.now() - mm.t < SHARE_MS) rman = mm; else ls("nc-man", ""); } catch (e) {}
+/* le partage ne marche que sur le Léman et ses rives (contrôlé aussi par le serveur) */
+function nearLeman(p) { return p && p.lat >= 46.17 && p.lat <= 46.57 && p.lon >= 6.09 && p.lon <= 6.98; }
+var FAR_MSG = "Vous êtes trop loin du lac : le partage de position fonctionne seulement sur le Léman et ses rives.";
+function frPour() { try { var a = JSON.parse(ls("nc-fr-pour") || "null"); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
+/* coupe le pavillon et/ou le partage amis (expiration, hors du lac) */
+function shareOff(open, fr, msg) {
+  if (open && $("rnOpen").checked) { $("rnOpen").checked = false; ls("nc-isopen", "0"); if (uid) sb.from("ouverts").delete().eq("id", uid).then(function () { load("ouverts"); }); }
+  if (fr && $("rnFr").checked) { $("rnFr").checked = false; ls("nc-isfr", "0"); if (uid) sb.from("amis").delete().eq("auteur", uid).then(function () {}); }
+  if (msg) rErr(msg); stat(); frPick();
+}
+function shareExpire() {
+  var n = Date.now(), o = $("rnOpen").checked && n - (+ls("nc-open-t") || 0) > SHARE_MS, f = $("rnFr").checked && n - (+ls("nc-fr-t") || 0) > SHARE_MS;
+  if (rman && rman.t && n - rman.t > SHARE_MS && !rgp) { rman = null; ls("nc-man", ""); }
+  if (o || f) shareOff(o, f, (o && f ? "Pavillon amené et partage avec vos amis arrêté" : o ? "Pavillon amené" : "Partage avec vos amis arrêté") + " automatiquement après 2 h. Réactivez-le si vous êtes encore sur l'eau.");
+}
 function rPos() { return rgp || rman; }
 function rErr(t) { $("rnErr").textContent = t || ""; }
 $("rnCode").value = ls("nc-code"); $("rnMsgTxt").value = ls("nc-msg");
-$("rnOpen").checked = ls("nc-isopen") === "1"; $("rnFr").checked = ls("nc-isfr") === "1";
+$("rnOpen").checked = ls("nc-isopen") === "1"; $("rnFr").checked = ls("nc-isfr") === "1"; setTimeout(shareExpire, 4000);
 function openOthers() { return openNow().filter(function (x) { return x.id !== uid; }); }
 function stat() { var o = $("rnOpen").checked, f = $("rnFr").checked, b = $("rnStt"); b.className = "stt" + (o || f ? " on" : ""); b.textContent = o && f ? "Pavillon hissé · amis et membres" : o ? "Pavillon hissé · visible par les membres (position arrondie)" : f ? "Position partagée avec mes amis uniquement" : "Pavillon baissé : votre position n'est pas partagée"; }
 function code() { return "amitie"; }
@@ -679,23 +695,44 @@ function friendIds() { return FS.filter(function (f) { return f.statut === "ok";
 function pendingIn() { return FS.filter(function (f) { return f.statut === "attente" && f.a === uid; }).map(function (f) { return f.de; }); }
 function push() {
   var p = rPos(); if (!p || !uid || !me()) return;
+  shareExpire();
+  if (!nearLeman(p)) { if ($("rnOpen").checked || $("rnFr").checked) shareOff(true, true, FAR_MSG); return; }
   if ($("rnOpen").checked) sb.from("ouverts").upsert({ id: uid, msg: $("rnMsgTxt").value.trim().slice(0, 60), lat: Math.round(p.lat * 100) / 100, lon: Math.round(p.lon * 100) / 100, maj: nowIso() }).then(function (r) { if (r.error) rErr("Partage refusé."); else load("ouverts"); });
-  var c = code(); if ($("rnFr").checked) sb.from("amis").upsert({ code: c, auteur: uid, lat: p.lat, lon: p.lon, maj: nowIso() }, { onConflict: "code,auteur" }).then(function () { loadFriends(); });
+  var c = code(); if ($("rnFr").checked) sb.from("amis").upsert({ code: c, auteur: uid, lat: p.lat, lon: p.lon, maj: nowIso(), pour: frPour() }, { onConflict: "code,auteur" }).then(function () { loadFriends(); });
 }
 function loadFriends() { if (!real()) { FR = []; return; } sb.rpc("positions_amis").then(function (r) { FR = (r.data || []).filter(function (x) { return x.auteur !== uid; }); if (cur() === "ponton") renderPonton(); }); }
-setInterval(function () { if (cur() === "ponton" && !document.hidden) { loadFriends(); if (Date.now() - lastPush > 5 * 60000) { lastPush = Date.now(); push(); } } }, 30000);
+setInterval(function () { if (!document.hidden) shareExpire(); if (cur() === "ponton" && !document.hidden) { loadFriends(); if (Date.now() - lastPush > 5 * 60000) { lastPush = Date.now(); push(); } } }, 30000);
 $("rnOpen").onchange = function () {
   rErr(); if (!requireProfile()) { this.checked = false; return; }
-  ls("nc-isopen", this.checked ? "1" : "0");
+  ls("nc-isopen", this.checked ? "1" : "0"); if (this.checked) ls("nc-open-t", String(Date.now()));
   if (this.checked) { if (!rPos()) rErr("Localisez-vous (GPS) ou touchez la carte."); push(); } else sb.from("ouverts").delete().eq("id", uid).then(function () { load("ouverts"); });
   stat();
 };
 $("rnFr").onchange = function () {
   rErr(); if (!requireProfile()) { this.checked = false; return; }
   var c = code(); ls("nc-code", c);
+  ls("nc-isfr", this.checked ? "1" : "0"); if (this.checked) ls("nc-fr-t", String(Date.now()));
   if (this.checked) { if (!friendIds().length) rErr("Ajoutez d'abord des amis (recherche ci-dessus)."); if (!rPos()) rErr("Localisez-vous (GPS) ou touchez la carte."); push(); }
   else sb.from("amis").delete().eq("auteur", uid).then(function () { FR = []; renderPonton(); });
-  ls("nc-isfr", this.checked ? "1" : "0"); stat();
+  stat(); frPick();
+};
+/* choisir les amis qui voient ma position (tous par défaut) */
+function frPick() {
+  var B = $("rnFrPick"); if (!B) return; B.textContent = "";
+  var ids = friendIds().filter(function (id) { return P[id]; });
+  B.hidden = !$("rnFr").checked || !ids.length; if (B.hidden) return;
+  var sel0 = frPour(), on = function (id) { return !sel0 || sel0.indexOf(id) >= 0; };
+  B.appendChild(el("div", "mu", "Visible par :"));
+  ids.sort(function (a, b) { return norm(P[a].pseudo).localeCompare(norm(P[b].pseudo)); }).forEach(function (id) {
+    var l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.checked = on(id);
+    c.onchange = function () {
+      var cur1 = ids.filter(function (k) { return k === id ? c.checked : on(k); });
+      sel0 = cur1.length === ids.length ? null : cur1; ls("nc-fr-pour", sel0 ? JSON.stringify(sel0) : "");
+      if (!cur1.length) rErr("Aucun ami coché : personne ne voit votre position."); else rErr("");
+      push();
+    };
+    l.appendChild(c); l.appendChild(document.createTextNode(" " + P[id].pseudo)); B.appendChild(l);
+  });
 };
 /* ---- trouver des plaisanciers & amis ---- */
 function befriend(id) {
@@ -769,7 +806,7 @@ $("rnGps").onclick = function () {
   watchId = navigator.geolocation.watchPosition(function (p) { rgp = { lat: p.coords.latitude, lon: p.coords.longitude }; $("rnGps").textContent = "Position GPS active"; if (Date.now() - lastPush > 20000) { lastPush = Date.now(); push(); } renderPonton(); },
     function () { watchId = null; rErr("GPS refusé ou indisponible : touchez la carte pour vous placer."); }, { enableHighAccuracy: true });
 };
-$("rnMap").onclick = function (e) { if (rgp) return; rman = svgPoint(this, e); ls("nc-man", JSON.stringify(rman)); push(); renderPonton(); };
+$("rnMap").onclick = function (e) { if (rgp) return; rman = svgPoint(this, e); rman.t = Date.now(); ls("nc-man", JSON.stringify(rman)); push(); renderPonton(); };
 function drawRnMap() {
   var s = $("rnMap"), mk = baseMap(s, true);
   function pt(x, fill, lab, onc) { var cx2 = X(x.lon), cy2 = Y(x.lat); mk("circle", { cx: cx2, cy: cy2, r: 9 }, "fill:" + fill + ";stroke:#fff;stroke-width:3");
@@ -1133,7 +1170,7 @@ function renderPonton() {
   /* sur l'eau */
   if (waTab === "eau") {
     if (!ok) { $("paneEau").hidden = true; return; }
-    stat(); drawRnMap();
+    stat(); frPick(); drawRnMap();
     var D = $("rnDet"); D.textContent = ""; openOthers().forEach(function (x) { if (x.id === sel) D.appendChild(personCard(x.id, x)); });
     var Fr = $("rnFriends"); Fr.textContent = ""; var p = rPos();
     friendIds().filter(function (id) { return P[id]; }).forEach(function (id) {
