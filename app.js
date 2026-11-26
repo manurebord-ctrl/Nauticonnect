@@ -792,6 +792,8 @@ function dayLabel(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) ==
 function listTime(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) === dayKey(n)) return hhmm(v); n.setDate(n.getDate() - 1); if (dayKey(d) === dayKey(n)) return "Hier"; return ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2); }
 function avatar(id) { var a = el("span", "wa-av", initial(id)); a.style.backgroundColor = ncol(id); return putPhoto(a, id); }
 /* lu / non lu par discussion */
+/* téléphone neuf, appli réinstallée ou données effacées : rien n'est mémorisé, on part de « tout lu » au lieu d'afficher tout l'historique en non lu */
+if (!ls("nc-seen") && !ls("nc-seenmap") && !ls("nc-slseen")) { ls("nc-seen", String(Date.now())); ls("nc-slseen", String(Date.now())); }
 function seenMap() { try { return JSON.parse(ls("nc-seenmap") || "{}"); } catch (e) { return {}; } }
 function seenOf(id) { var m = seenMap(); return m[id] || +ls("nc-seen") || 0; }
 function markThread(id) { var m = seenMap(); m[id] = Date.now(); ls("nc-seenmap", JSON.stringify(m)); }
