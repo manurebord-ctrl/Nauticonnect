@@ -1876,7 +1876,11 @@ function pushSave(s, prefs) {
   return sb.from("push_abos").upsert(o, { onConflict: "endpoint" }).select().maybeSingle().then(function (r) { if (r.error) throw r.error; myAbo = r.data; mySub = s; pushKnown = true; notifUI(); });
 }
 /* navigateur Samsung ou Chrome : le chemin des réglages n'est pas le même */
+/* appli Play Store (TWA) : Android ouvre la page avec un referrer android-app://, on s'en souvient */
+try { if (/^android-app:\/\//.test(document.referrer)) ls("nc-twa", "1"); } catch (e) {}
+function isTwa() { return ls("nc-twa") === "1"; }
 function notifHelp() {
+  if (isTwa()) return "Autorisez-les dans les réglages du téléphone : Applications › Nauticonnect Léman › Notifications › Activer. Revenez ensuite ici et appuyez sur « Réparer les notifications ».";
   return /SamsungBrowser/.test(navigator.userAgent)
     ? "Autorisez-les dans Samsung Internet : menu ☰ › Paramètres › Sites et téléchargements › Notifications, puis autorisez Nauticonnect (et vérifiez Réglages du téléphone › Applications › Samsung Internet › Notifications)."
     : "Autorisez-les dans les réglages du téléphone : Applications › Chrome › Notifications, puis dans Chrome : ⋮ › Paramètres › Paramètres des sites › Notifications.";
@@ -2452,7 +2456,7 @@ function vdOn() { return !!(mySub && myAbo && myAbo.vent) && real(); }
 function vaudaireOn() {
   if (!requireProfile(null, "Pour recevoir l'alerte vaudaire sur votre téléphone, créez votre compte gratuit. Vous serez prévenu avant que le foehn se lève sur le Haut-Lac.")) return;
   if (!pushOk) { toast("Installez d'abord l'appli sur l'écran d'accueil de votre téléphone (menu de Chrome › Ajouter à l'écran d'accueil)."); return; }
-  if (Notification.permission === "denied") { toast("Notifications bloquées : autorisez-les dans les réglages du téléphone (Applications › Chrome › Notifications)."); return; }
+  if (Notification.permission === "denied") { toast("Notifications bloquées. " + notifHelp()); return; }
   if (mySub && myAbo) { pushSave(mySub, { vent: true }).then(function () { toast("Alerte vaudaire activée sur ce téléphone !"); renderVd(); }); return; }
   pushEnable({ vent: true });
 }
