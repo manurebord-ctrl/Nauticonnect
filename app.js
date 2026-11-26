@@ -1257,9 +1257,10 @@ function squareJpeg(file, size) {
 }
 function drawPfPhoto() {
   var p = me(), A = $("pfAv"); A.className = "pfav"; A.style.backgroundImage = ""; A.textContent = p ? initial(uid) : "?";
-  if (p) putPhoto(A, uid);
+  A.onclick = null; A.style.cursor = ""; A.removeAttribute("role"); A.removeAttribute("aria-label");
+  if (p) zoomable(putPhoto(A, uid), uid);
   $("pfPhRm").hidden = !(p && p.photo);
-  $("pfPhSt").textContent = !p ? "Enregistrez d'abord votre fiche, puis ajoutez une photo." : !p.photo ? "Une photo de vous ou de votre bateau, visible par les membres." : "Votre photo est visible par les membres.";
+  $("pfPhSt").textContent = !p ? "Enregistrez d'abord votre profil, puis ajoutez une photo." : !p.photo ? "Une photo de vous ou de votre bateau, visible par les membres." : "Votre photo est visible par les membres.";
   $("pfPhLb").hidden = !p;
   drawPfQueue();
 }
