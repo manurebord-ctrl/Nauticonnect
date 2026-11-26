@@ -4,6 +4,10 @@
 "use strict";
 var $ = function (i) { return document.getElementById(i); };
 function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+/* une erreur inattendue s'affiche en bas de l'écran (pour pouvoir la signaler) au lieu de bloquer l'appli en silence */
+function showErr(e) { try { console.error(e); var m = (e && (e.message || e.reason && e.reason.message)) || String(e), w = document.getElementById("ncErr"); if (!w) { w = document.createElement("div"); w.id = "ncErr"; w.style.cssText = "position:fixed;left:8px;right:8px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:200;background:#7a1010;color:#fff;font:12px/1.35 monospace;padding:8px 10px;border-radius:8px;white-space:pre-wrap"; w.onclick = function () { w.remove(); }; document.body.appendChild(w); } var st = (e && e.stack ? String(e.stack).split("\n").slice(0, 3).join("\n") : ""); w.textContent = "Erreur (touchez pour fermer) : " + m + (st ? "\n" + st : ""); } catch (x) {} }
+window.addEventListener("error", function (ev) { showErr(ev.error || ev.message); });
+window.addEventListener("unhandledrejection", function (ev) { showErr(ev.reason); });
 function ls(k, v) { try { if (v == null) return localStorage.getItem(k) || ""; localStorage.setItem(k, v); } catch (e) { return ""; } }
 function km(a, b, c, d) { var r = Math.PI / 180, x = Math.sin((c - a) * r / 2), y = Math.sin((d - b) * r / 2), h = x * x + Math.cos(a * r) * Math.cos(c * r) * y * y; return 12742 * Math.asin(Math.sqrt(h)); }
 function ts(v) { return typeof v === "number" ? v : Date.parse(v) || 0; }
@@ -2169,11 +2173,12 @@ if (!configured || !sb) {
   if (configured && !window.supabase) warn.innerHTML = "<b>Connexion impossible.</b> Vérifiez votre connexion internet puis rechargez la page.";
   document.body.insertBefore(warn, document.body.firstChild);
 }
-route();
+/* la connexion passe AVANT l'affichage : une erreur d'affichage ne doit jamais empêcher de se connecter */
 if (sb) {
-  sb.auth.getSession().then(function (r) { onSession(r.data.session, "INITIAL"); if (!r.data.session) { subscribeAll(); loadAll(); } });
-  sb.auth.onAuthStateChange(function (ev, s) { if (ev === "INITIAL_SESSION") return; if (ev === "TOKEN_REFRESHED") { session = s; return; } onSession(s, ev); });
+  sb.auth.onAuthStateChange(function (ev, s) { if (ev === "INITIAL_SESSION") return; if (ev === "TOKEN_REFRESHED") { session = s; return; } try { onSession(s, ev); } catch (e) { showErr(e); } });
+  sb.auth.getSession().then(function (r) { try { onSession(r.data.session, "INITIAL"); } catch (e) { showErr(e); } if (!r.data.session) { subscribeAll(); loadAll(); } });
 }
+try { route(); } catch (e) { showErr(e); }
 
 /* ================= ÉVÉNEMENTS (publication payante) ================= */
 var MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."], JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
