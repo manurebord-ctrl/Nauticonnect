@@ -949,7 +949,15 @@ function photoBlock(m) {
     last = n; };
   return w;
 }
-function viewPhoto(src) { var o = el("div", "wa-view"), im = el("img"); im.src = src; o.appendChild(im); o.appendChild(el("button", "wa-vx", "✕")); o.onclick = function () { o.remove(); }; document.body.appendChild(o); }
+function viewPhoto(src) {
+  var o = el("div", "wa-view"), im = el("img"), x = el("button", "wa-vx", "✕"); x.type = "button"; x.setAttribute("aria-label", "Fermer la photo");
+  im.src = src; o.appendChild(im); o.appendChild(x); document.body.appendChild(o);
+  /* le bouton « retour » du téléphone ferme aussi la photo */
+  var pushed = false; try { history.pushState({ ncView: 1 }, ""); pushed = true; } catch (e) {}
+  function gone() { window.removeEventListener("popstate", gone); o.remove(); }
+  window.addEventListener("popstate", gone);
+  o.onclick = function () { if (pushed && history.state && history.state.ncView) history.back(); else gone(); };
+}
 $("slPhIn").onchange = function () {
   var f = this.files && this.files[0]; this.value = ""; if (!f || !me()) return;
   var i = $("slIn"), cap = i.value.trim().slice(0, 300), path = uid + "/salon-" + Date.now() + ".jpg"; toast("Envoi de la photo…");

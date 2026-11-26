@@ -454,7 +454,7 @@ details.kn summary::-webkit-details-marker{display:none}details.kn summary b{fon
 .wa-like.sm{margin-top:2px;gap:6px}.wa-like.sm .wa-lk{font-size:12px}.wa-like.sm .wa-lk svg{width:16px;height:16px}.wa-like.sm small{font-size:11px}
 .wa-view{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center}
 .wa-view img{max-width:100%;max-height:100%}
-.wa-vx{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:20px}
+.wa-vx{position:absolute;z-index:2;top:calc(16px + env(safe-area-inset-top,0px));right:16px;width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.65);color:#fff;font:800 22px/1 var(--fb);box-shadow:0 2px 10px rgba(0,0,0,.5)}
 /* réponses */
 .wa-q{display:flex;flex-direction:column;background:rgba(0,0,0,.05);border-left:4px solid #0b6fa4;border-radius:8px;padding:5px 8px;margin:2px 0 4px;font-size:13px;line-height:1.3;cursor:pointer;max-width:100%}
 .wa-q b{font-size:12.5px}.wa-q span{opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
