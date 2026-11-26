@@ -346,7 +346,17 @@ $("pDelete").onclick = function () {
 };
 
 /* ================= ACCUEIL ================= */
+/* coordonnées façon carnet de bord sous le titre : port d'attache du membre, sinon le Léman */
+function dms(v, pos, neg) { var a = Math.abs(v), d = Math.floor(a), m = Math.round((a - d) * 60); if (m === 60) { d++; m = 0; } return d + "°" + ("0" + m).slice(-2) + "′" + (v >= 0 ? pos : neg); }
+function renderCoord() {
+  var e = $("heroCoord"); if (!e) return;
+  var p = me(), z = p && p.port ? Z.filter(function (x) { return x[0] === p.port; })[0] : null;
+  var lat = z ? z[1] : 46.45, lon = z ? z[2] : 6.55, nom = z ? z[0].replace(/\s*\((F|CH)\)\s*$/, "") : "Le Léman";
+  var d = new Date(), J = ["DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM"], M = ["JANV", "FÉVR", "MARS", "AVR", "MAI", "JUIN", "JUIL", "AOÛT", "SEPT", "OCT", "NOV", "DÉC"];
+  e.textContent = dms(lat, "N", "S") + " " + dms(lon, "E", "O") + " · " + nom.toUpperCase() + " · " + J[d.getDay()] + " " + d.getDate() + " " + M[d.getMonth()];
+}
 function renderChip() {
+  renderCoord();
   var c = $("meChip"), p = me(); c.textContent = "";
   if (p) { c.className = "me"; c.href = "#profil"; c.appendChild(putPhoto(el("span", "av", initial(uid)), uid)); c.appendChild(el("span", 0, p.pseudo)); }
   else if (real()) { c.className = "me new"; c.href = "#profil"; c.textContent = "Mon profil"; }
