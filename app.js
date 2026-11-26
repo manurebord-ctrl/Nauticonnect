@@ -2180,12 +2180,12 @@ if (sb) {
 }
 try { route(); } catch (e) { showErr(e); }
 
-/* ================= ÉVÉNEMENTS (publication payante) ================= */
+/* ================= ÉVÉNEMENTS (publication gratuite, vérifiée par l'admin ; paiement retiré pour la règle de facturation Google Play) ================= */
 var MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."], JOURS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 function dFr(d) { var x = new Date(d + "T12:00:00"); return JOURS[x.getDay()] + " " + x.getDate() + " " + MOIS[x.getMonth()]; }
 function evDates(e) { return e.debut === e.fin ? dFr(e.debut) : "du " + dFr(e.debut) + " au " + dFr(e.fin); }
 function evPrice() { return REG.ev_prix || "30"; }
-var STE = { attente: "En attente de paiement / validation", publie: "Publié", refuse: "Refusé" };
+var STE = { attente: "En attente de validation", publie: "Publié", refuse: "Refusé" };
 function evCard(e, adm) {
   var c = el("div", "card evcard"), x = new Date(e.debut + "T12:00:00");
   var dt = el("div", "evdate"); dt.appendChild(el("b", 0, String(x.getDate()))); dt.appendChild(el("span", 0, MOIS[x.getMonth()])); c.appendChild(dt);
@@ -2201,7 +2201,7 @@ function evCard(e, adm) {
   b.appendChild(A);
   if (adm && isAdmin) {
     var R = el("div", "row"); R.style.marginTop = "8px";
-    if (e.statut !== "publie") { var ok = el("button", "btn sm", "Publier (payé)"); ok.onclick = function () { evSet(e.id, "publie"); }; R.appendChild(ok); }
+    if (e.statut !== "publie") { var ok = el("button", "btn sm", "Publier"); ok.onclick = function () { evSet(e.id, "publie"); }; R.appendChild(ok); }
     if (e.statut !== "refuse") { var no = el("button", "btn g sm", "Refuser"); no.onclick = function () { evSet(e.id, "refuse"); }; R.appendChild(no); }
     var del = el("button", "btn g sm", "Supprimer"); del.onclick = function () { if (del.dataset.ok !== "1") { del.dataset.ok = "1"; del.textContent = "Confirmer"; return; } sb.from("evenements").delete().eq("id", e.id).then(function () { load("evenements"); }); }; R.appendChild(del);
     if (e.contact) R.appendChild(el("div", "mu", "Contact : " + e.contact));
@@ -2212,15 +2212,7 @@ function evCard(e, adm) {
   c.appendChild(b); return c;
 }
 function evSet(id, st) { sb.from("evenements").update({ statut: st }).eq("id", id).then(function (r) { if (r.error) toast("Action impossible."); else { toast(st === "publie" ? "Événement publié" : "Événement refusé"); load("evenements"); } }); }
-function payBox() {
-  var w = $("evPay"); w.textContent = "";
-  w.appendChild(el("div", 0, "Publication : " + evPrice() + " CHF par événement."));
-  var pay = REG.ev_paiement || "";
-  if (/^https?:\/\//.test(pay)) { var a = el("a", "btn", "Payer " + evPrice() + " CHF"); a.href = pay; a.target = "_blank"; a.rel = "noopener"; a.style.marginTop = "8px"; w.appendChild(a); }
-  else if (pay) w.appendChild(el("div", "okm", pay));
-  else w.appendChild(el("div", "mu", "Les infos de paiement vous seront envoyées par l'équipe Nauticonnect au contact indiqué."));
-  w.appendChild(el("div", "mu", "Votre événement est publié dès réception du paiement."));
-}
+function payBox() { var w = $("evPay"); if (w) { w.textContent = ""; w.style.display = "none"; } }
 function renderEvents() {
   var d = today(), L = $("evList"); L.textContent = "";
   var pub = EV.filter(function (e) { return e.statut === "publie" && e.fin >= d; });
@@ -2228,8 +2220,7 @@ function renderEvents() {
   if (!pub.length) L.appendChild(el("p", "mu", "Aucun événement à venir pour l'instant."));
   var M = $("evMine"); M.textContent = "";
   EV.filter(function (e) { return uid && e.auteur === uid && e.statut !== "publie"; }).forEach(function (e) { M.appendChild(evCard(e)); });
-  $("evMineH").hidden = !M.firstChild; $("evPay").style.display = EV.some(function (e) { return uid && e.auteur === uid && e.statut === "attente"; }) ? "" : "none"; payBox();
-  $("evPrice").textContent = evPrice();
+  $("evMineH").hidden = !M.firstChild; payBox();
   $("evAdmin").hidden = !isAdmin;
   if (isAdmin) {
     var Q2 = $("evQueue"); Q2.textContent = "";
@@ -2237,8 +2228,6 @@ function renderEvents() {
     if (!Q2.firstChild) Q2.appendChild(el("p", "mu", "Aucune demande en attente."));
     var O2 = $("evAll"); O2.textContent = "";
     EV.filter(function (e) { return e.statut !== "attente"; }).forEach(function (e) { O2.appendChild(evCard(e, true)); });
-    if (document.activeElement !== $("evSetP")) $("evSetP").value = evPrice();
-    if (document.activeElement !== $("evSetL")) $("evSetL").value = REG.ev_paiement || "";
   }
 }
 function evMsg(t, ok) { $("evMsg").className = ok ? "okm" : "err"; $("evMsg").textContent = t || ""; }
@@ -2259,7 +2248,7 @@ $("evSv").onclick = function () {
     if (r.error) { evMsg("Envoi impossible : " + r.error.message); return; }
     ["evTi", "evLi", "evD1", "evD2", "evHe", "evDs", "evSi", "evCt"].forEach(function (k) { $(k).value = ""; });
     $("evForm").hidden = true; load("evenements");
-    toast(isAdmin ? "Événement publié" : "Demande envoyée ! Réglez la publication ci-dessous.");
+    toast(isAdmin ? "Événement publié" : "Merci ! Votre événement sera publié après vérification.");
     setTimeout(function () { var h = $("evMineH"); if (h && !h.hidden) h.scrollIntoView({ behavior: "smooth" }); }, 600);
   }).then(function () { $("evSv").disabled = false; });
 };

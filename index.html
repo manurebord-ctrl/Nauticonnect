@@ -507,7 +507,7 @@
 <div id="evList"></div>
 <h2 id="evMineH" hidden>Mes demandes</h2><div id="evMine"></div><div id="evPay" class="card" style="display:none"></div>
 <h2>Vous organisez un événement ?</h2>
-<div class="card"><div>Faites-le connaître aux plaisanciers du Léman : <b><span id="evPrice">30</span> CHF</b> par événement, publié jusqu'à sa date de fin.</div>
+<div class="card"><div>Faites-le connaître <b>gratuitement</b> aux plaisanciers du Léman. Chaque événement est vérifié avant publication, puis reste visible jusqu'à sa date de fin.<span id="evPrice" hidden></span></div>
 <button class="btn" id="evAdd" style="margin-top:10px">+ Proposer un événement</button></div>
 <div id="evForm" class="card" hidden>
 <label class="l" for="evTi">Nom de l'événement</label><input class="f" id="evTi" maxlength="80" placeholder="Ex. Fête du port du Bouveret">
@@ -521,11 +521,11 @@
 <div class="err" id="evMsg"></div>
 <div id="evAdmin" hidden>
 <h2>Admin · demandes à valider</h2>
-<div class="mu">Publiez un événement une fois le paiement reçu.</div><div id="evQueue"></div>
-<h2>Admin · réglages</h2>
+<div class="mu">Vérifiez puis publiez les événements proposés.</div><div id="evQueue"></div>
+<div hidden><h2>Admin · réglages</h2>
 <div class="card"><label class="l" for="evSetP">Prix de publication (CHF)</label><input class="f" id="evSetP" inputmode="numeric" maxlength="4">
 <label class="l" for="evSetL">Lien de paiement (Stripe, SumUp…) ou instructions (ex. TWINT au 079…)</label><input class="f" id="evSetL" maxlength="300">
-<button class="btn" id="evSetSv">Enregistrer</button></div>
+<button class="btn" id="evSetSv">Enregistrer</button></div></div>
 <h2>Admin · tous les événements</h2><div id="evAll"></div>
 </div>
 </section>
@@ -552,7 +552,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=66"></script>
+<script src="app.js?v=67"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>
