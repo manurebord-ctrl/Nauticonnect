@@ -85,6 +85,7 @@
   var on = false;
   function boucle() {
     if (!on) return;
+    if (hero.classList.contains("compact")) { on = false; return; } /* dans l'appli : pas de neige */
     bouge(); dessine();
     requestAnimationFrame(boucle);
   }
@@ -94,5 +95,5 @@
   window.addEventListener("resize", function () { taille(); if (calme) dessine(); });
   document.addEventListener("visibilitychange", function () { if (document.hidden) on = false; else demarre(); });
   /* la bannière change de taille quand on entre dans l'appli */
-  if (window.ResizeObserver) new ResizeObserver(function () { taille(); if (calme) dessine(); }).observe(hero);
+  if (window.ResizeObserver) new ResizeObserver(function () { taille(); if (calme) dessine(); else demarre(); }).observe(hero);
 })();

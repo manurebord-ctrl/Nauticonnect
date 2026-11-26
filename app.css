@@ -651,10 +651,11 @@ html.previewing body{padding-top:48px}
 .noel-guirlande .nb{animation:noelBrille 1.8s ease-in-out infinite alternate}
 @keyframes noelBrille{from{opacity:1}to{opacity:.45}}
 .noel .hero-in{padding-top:34px}
-.noel .hero.compact .hero-in{padding-top:30px}
+.noel .hero.compact .hero-in{padding-top:12px}
+.hero.compact .noel-guirlande,.hero.compact .noel-neige{display:none!important} /* Noël seulement sur la page d'accueil plein écran */
 .noel-voeux{display:inline-block;align-self:flex-start;width:fit-content;margin:12px 0 0;padding:6px 14px;border-radius:20px;background:#b3221b;color:#fff;font-weight:700;font-size:14px;border:2px solid #ffd34d;box-shadow:0 4px 14px rgba(5,20,35,.35)}
 .hero.compact .noel-voeux{display:none}
-.noel nav{border-top:3px solid transparent;border-image:repeating-linear-gradient(90deg,#d62f2f 0 18px,#fff 18px 24px,#1f8a4c 24px 42px,#fff 42px 48px) 3}
+html.noel.splashing nav{border-top:3px solid transparent;border-image:repeating-linear-gradient(90deg,#d62f2f 0 18px,#fff 18px 24px,#1f8a4c 24px 42px,#fff 42px 48px) 3}
 @media (prefers-reduced-motion:reduce){.noel-guirlande .nb{animation:none}}
 
 .qrimg{display:block;width:240px;height:240px;margin:10px auto;background:#fff;border-radius:14px;padding:6px}
