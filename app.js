@@ -428,14 +428,19 @@ function applyBanner() {
   $("heroPh").style.backgroundImage = 'url("' + (p ? photoUrl(p) : "fond-accueil.svg?v=1") + '")'; h.classList.add("photo"); h.classList.toggle("art", !p);
 }
 $("phIn").onchange = function () {
-  var f = this.files && this.files[0], inp = this; if (!f || !isAdmin) return; var lb = $("phBtn"); lb.firstChild.textContent = "Envoi… ";
+  var f = this.files && this.files[0], inp = this; if (!f || !isAdmin) return; var lb = $("phPick"); lb.firstChild.textContent = "Envoi… ";
   shrink(f, 2000).then(function (blob) {
     var path = uid + "/banniere-" + Date.now() + ".jpg";
     return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }).then(function (r) {
       if (r.error) throw r.error; var old = REG.banniere;
       return sb.from("reglages").upsert({ k: "banniere", v: path }).then(function (r2) { if (r2.error) throw r2.error; REG.banniere = path; applyBanner(); if (old && old.indexOf(uid + "/") === 0) sb.storage.from("photos").remove([old]); });
     });
-  }).then(function () { lb.firstChild.textContent = "Photo de la bannière"; }, function () { lb.firstChild.textContent = "Échec, réessayer"; }).then(function () { inp.value = ""; });
+  }).then(function () { lb.firstChild.textContent = "Choisir une photo"; toast("Bannière mise à jour"); }, function () { lb.firstChild.textContent = "Échec, réessayer"; }).then(function () { inp.value = ""; });
+};
+$("phReset").onclick = function () {
+  if (!isAdmin || !confirm("Remettre l'image de bannière par défaut pour tout le monde ?")) return;
+  var old = REG.banniere;
+  sb.from("reglages").upsert({ k: "banniere", v: "" }).then(function (r) { if (r.error) { toast("Action impossible."); return; } REG.banniere = ""; applyBanner(); toast("Image par défaut remise"); if (old && old.indexOf(uid + "/") === 0) sb.storage.from("photos").remove([old]); });
 };
 /* installation */
 var deferredInstall = null;
