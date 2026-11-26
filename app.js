@@ -39,7 +39,9 @@ function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · 
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
 function photoOf(id) { var p = P[id]; return p && p.photo ? photoUrl(p.photo) : ""; }
 function putPhoto(a, id) { var u = photoOf(id); if (u) { a.textContent = ""; a.style.backgroundImage = "url(\"" + u + "\")"; a.classList.add("ph"); } return a; }
-function badge(id, fb) { var b = el("span", "badge"); b.appendChild(putPhoto(el("span", "av", initial(id)), id)); b.appendChild(document.createTextNode(nameOf(id, fb))); return b; }
+/* toucher une photo de profil l'agrandit (chat, amis, listes) */
+function zoomable(a, id) { var u = photoOf(id); if (u) { a.style.cursor = "zoom-in"; a.setAttribute("role", "button"); a.setAttribute("aria-label", "Agrandir la photo"); a.onclick = function (e) { e.preventDefault(); e.stopPropagation(); viewPhoto(u); }; } return a; }
+function badge(id, fb) { var b = el("span", "badge"); b.appendChild(zoomable(putPhoto(el("span", "av", initial(id)), id), id)); b.appendChild(document.createTextNode(nameOf(id, fb))); return b; }
 
 var Q = {
   profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat,photo,photo_ok").limit(5000); },
@@ -840,7 +842,7 @@ function hhmm(v) { var d = new Date(ts(v)); return ("0" + d.getHours()).slice(-2
 function dayKey(v) { var d = new Date(ts(v)); return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate(); }
 function dayLabel(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) === dayKey(n)) return "Aujourd'hui"; n.setDate(n.getDate() - 1); if (dayKey(d) === dayKey(n)) return "Hier"; return d.toLocaleDateString("fr-CH", { weekday: "long", day: "numeric", month: "long" }); }
 function listTime(v) { var d = new Date(ts(v)), n = new Date(); if (dayKey(d) === dayKey(n)) return hhmm(v); n.setDate(n.getDate() - 1); if (dayKey(d) === dayKey(n)) return "Hier"; return ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2); }
-function avatar(id) { var a = el("span", "wa-av", initial(id)); a.style.backgroundColor = ncol(id); return putPhoto(a, id); }
+function avatar(id) { var a = el("span", "wa-av", initial(id)); a.style.backgroundColor = ncol(id); return zoomable(putPhoto(a, id), id); }
 /* lu / non lu par discussion */
 /* téléphone neuf, appli réinstallée ou données effacées : rien n'est mémorisé, on part de « tout lu » au lieu d'afficher tout l'historique en non lu */
 if (!ls("nc-seen") && !ls("nc-seenmap") && !ls("nc-slseen")) { ls("nc-seen", String(Date.now())); ls("nc-slseen", String(Date.now())); }
@@ -883,7 +885,7 @@ function drawBubbles(box, list, group) {
     var dk = dayKey(m.t); if (dk !== lastDay) { box.appendChild(el("div", "wa-day", dayLabel(m.t))); lastDay = dk; lastDe = ""; }
     var mine = m.de === uid, cont = m.de === lastDe && ts(m.t) - lastT < 5 * 6e4;
     var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : "") + (isSel(m, group) ? " sel" : "")); row.id = (group ? "sl-" : "pm-") + m.id;
-    if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de]) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
+    if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de] && !photoOf(m.de)) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
     var b = el("div", "wa-b");
     if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && subOf(pr)) nm.appendChild(el("span", 0, " · " + subOf(pr))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
     if (m.reponse) { var q = list.filter(function (x) { return x.id === m.reponse; })[0]; b.appendChild(quoteBlock(q, box)); }
