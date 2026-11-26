@@ -863,6 +863,17 @@ function openThread(id, txt) {
 }
 $("pvBack").onclick = function () { setReply("prive", null); openWith = null; ls("nc-open", ""); renderPonton(); };
 /* rendu des bulles, commun au salon et au privé */
+/* bandeaux jaunes en bas du salon : qui a hissé le pavillon, près de quel port */
+function nearPort(lat, lon) { var best = null, bd = 1e9; Z.forEach(function (z) { var d = km(lat, lon, z[1], z[2]); if (d < bd) { bd = d; best = z[0]; } }); return best ? best.replace(/\s*\((F|CH)\)\s*$/, "") : "le lac"; }
+function pavBanners(box) {
+  openOthers().filter(function (x) { return P[x.id] && !isBl(x.id); }).sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).slice(0, 3).forEach(function (x) {
+    var b = el("button", "wa-pav"); b.type = "button";
+    b.appendChild(el("i", 0, "")); var t = el("span"); t.appendChild(el("b", 0, P[x.id].pseudo)); t.appendChild(document.createTextNode(" a hissé le pavillon près de " + nearPort(x.lat, x.lon)));
+    if (x.msg) t.appendChild(el("em", 0, "« " + x.msg + " »")); t.appendChild(el("small", 0, ago(x.maj))); b.appendChild(t);
+    b.onclick = function () { var tb = document.querySelector('.wa-tabs button[data-t="eau"]'); if (tb) tb.click(); window.scrollTo(0, 0); };
+    box.appendChild(b);
+  });
+}
 function drawBubbles(box, list, group) {
   var atBottom = box.dataset.n !== String(list.length) ? null : true;
   box.textContent = ""; var lastDay = "", lastDe = "", lastT = 0;
@@ -1168,6 +1179,7 @@ function renderPonton() {
   $("waNotif").hidden = !(ok && pushOk && !(mySub && myAbo) && Notification.permission !== "denied");
   /* salon : membres uniquement */
   drawBubbles($("slMsgs"), SL.filter(function (m) { return !isBl(m.de); }), true); $("slBar").hidden = !ok;
+  if (ok) pavBanners($("slMsgs"));
   if (waTab === "salon") { if (SL.length) ls("nc-slseen", String(ts(SL[SL.length - 1].t))); slBottom(false); }
   var su = slUnread(); $("unreadSl").hidden = !su || waTab === "salon"; $("unreadSl").textContent = su;
   /* privé */

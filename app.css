@@ -743,3 +743,7 @@ html.splashing .hero .mnb{display:none}
 .wa-day{color:#b9c7d0;border-color:#3d5563}
 .wa-chip{color:#e8f0f5;border-color:#3d5563;background:#182630}
 }
+.wa-pav{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;margin:10px 0 2px;padding:10px 12px;border-radius:8px;background:#FBEBC2;border:1.5px solid #0E2A3B;color:#0E2A3B;font:14px/1.35 var(--fb)}
+.wa-pav i{flex:none;width:14px;height:14px;margin-top:2px;background:#F2C230;border:1.5px solid #0E2A3B}
+.wa-pav span{display:flex;flex-direction:column;gap:2px}.wa-pav em{font-style:normal;opacity:.85}.wa-pav small{font:500 11px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.4px;opacity:.75}
+@media (prefers-color-scheme:dark){.wa-pav{background:#3a2f14;border-color:#6b5520;color:#f5e6c4}}
