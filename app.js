@@ -1039,7 +1039,7 @@ var marking = {};
 function renderConv() {
   var k = openWith, L = threads()[k] || [];
   $("pvClr").hidden = !L.length;
-  var W = $("pvWho"); W.textContent = ""; W.appendChild(avatar(k)); var t = el("span", "wa-ti"); t.appendChild(el("b", 0, (P[k] && P[k].pseudo) || "Plaisancier")); var pr = P[k] || {}; t.appendChild(el("span", 0, [pr.bateau, pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); W.appendChild(t);
+  var W = $("pvWho"); W.textContent = ""; W.appendChild(avatar(k)); var t = el("span", "wa-ti"); t.appendChild(el("b", 0, (P[k] && P[k].pseudo) || "Plaisancier")); var pr = P[k] || {}; t.appendChild(el("span", 0, [pr.bateau || (NOBOAT(pr.type) ? subOf({ type: pr.type }) : ""), pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); W.appendChild(t);
   var f = el("button", "wa-fr", rel(k) === "ami" ? "Ami" : rel(k) === "envoye" ? "Demande envoyée" : rel(k) === "recu" ? "Accepter en ami" : "Ajouter en ami"); f.onclick = function () { befriend(k); }; W.appendChild(f);
   var bk = el("button", "wa-fr", isBl(k) ? "Débloquer" : "Bloquer"); bk.onclick = function () { toggleBlock(k); }; W.appendChild(bk);
   $("pvBar").hidden = isBl(k);
