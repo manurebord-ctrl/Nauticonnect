@@ -2406,6 +2406,15 @@ function renderMb() {
     var be = el("button", "btn g sm", mbOpen === m.id ? "Fermer" : "Modifier");
     be.onclick = function () { mbOpen = mbOpen === m.id ? null : m.id; mbDel = null; renderMb(); };
     row.appendChild(be);
+    if (!m.pseudo && m.email) {
+      var bm = el("button", "btn g sm", "Envoyer un e-mail");
+      bm.onclick = function () {
+        var sub = "Ton inscription sur Nauticonnect ⛵";
+        var body = "Salut !\n\nMerci de t'être inscrit sur Nauticonnect, l'appli des plaisanciers du Léman.\n\nIl ne te manque qu'une étape : ouvre l'appli, va dans Chat et choisis ton prénom (ou un pseudo). Ça prend 10 secondes, et tu pourras ensuite discuter sur le Ponton, écrire en privé aux autres membres et recevoir les alertes (panne, vaudaire).\n\nLien de l'appli : " + location.origin + location.pathname + "\n\nÀ bientôt sur l'eau !\nManu – Nauticonnect";
+        location.href = "mailto:" + encodeURIComponent(m.email) + "?subject=" + encodeURIComponent(sub) + "&body=" + encodeURIComponent(body);
+      };
+      row.appendChild(bm);
+    }
     if (!m.admin && m.id !== uid) {
       var bd = el("button", "btn g sm", mbDel === m.id ? "Confirmer la suppression" : "Supprimer"); bd.style.color = "var(--red)";
       bd.onclick = function () { if (mbDel !== m.id) { mbDel = m.id; mbOpen = null; renderMb(); return; } mbDelete(m, bd); };
