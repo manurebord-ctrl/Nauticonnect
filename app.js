@@ -1002,8 +1002,9 @@ function drawJoin() {
 }
 function renderThreads() {
   var W = $("rnThreads"); W.textContent = ""; var T = threads();
+  var nb0 = el("button", "btn sm wa-newmsg", "✏️ Nouveau message"); nb0.type = "button"; nb0.style.margin = "4px 0 10px"; nb0.onclick = newMsgPicker; W.appendChild(nb0);
   var keys = Object.keys(T).sort(function (a, b) { var ua = unreadOf(a, T[a]) ? 1 : 0, ub = unreadOf(b, T[b]) ? 1 : 0; return ub - ua || ts(T[b][T[b].length - 1].t) - ts(T[a][T[a].length - 1].t); });
-  if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Pour écrire à quelqu'un, allez dans l'onglet Amis, cherchez-le puis touchez son nom.")); return; }
+  if (!keys.length) { W.appendChild(el("p", "mu wa-empty", "Pas encore de discussion privée. Touchez « Nouveau message » pour écrire à un membre.")); return; }
   keys.forEach(function (k) {
     var L = T[k], last = L[L.length - 1], n = unreadOf(k, L), it = el("button", "wa-it" + (n ? " unr" : ""));
     it.appendChild(avatar(k));
@@ -1011,6 +1012,25 @@ function renderThreads() {
     var rt = el("span", "wa-ir"); rt.appendChild(el("small", 0, listTime(last.t))); if (n) rt.appendChild(el("span", "wa-n", String(n))); it.appendChild(rt);
     it.onclick = function () { openThread(k); }; W.appendChild(it);
   });
+}
+/* choisir un membre pour lancer une discussion privée */
+function newMsgPicker() {
+  var md = modal("Nouveau message"), bx = md.bx;
+  var q = el("input", "f"); q.type = "search"; q.placeholder = "Prénom, bateau ou port"; q.setAttribute("aria-label", "Chercher un membre"); q.style.cssText = "width:100%;margin:6px 0 10px"; bx.appendChild(q);
+  var L = el("div", "wa-list"); L.style.cssText = "max-height:60vh;overflow-y:auto"; bx.appendChild(L);
+  var ids = Object.keys(P).filter(function (id) { return id !== uid && P[id] && P[id].pseudo && !isBl(id); });
+  ids.sort(function (a, b) { var fa = rel(a) === "ami" ? 1 : 0, fb = rel(b) === "ami" ? 1 : 0; return fb - fa || norm(P[a].pseudo).localeCompare(norm(P[b].pseudo)); });
+  function draw() {
+    L.textContent = ""; var w = norm(q.value.trim()).split(/\s+/).filter(Boolean);
+    var res = ids.filter(function (id) { var p = P[id], h = norm([p.pseudo, p.bateau, p.type, p.port].join(" ")); return w.every(function (x) { return h.indexOf(x) >= 0; }); });
+    if (!res.length) { L.appendChild(el("p", "mu", w.length ? "Aucun membre trouvé." : "Pas encore d'autres membres.")); return; }
+    res.slice(0, 80).forEach(function (id) {
+      var p = P[id], it = el("button", "wa-it"); it.type = "button"; it.appendChild(avatar(id));
+      var mid = el("span", "wa-im"); mid.appendChild(el("b", 0, p.pseudo + (p.bateau ? " · " + p.bateau : ""))); mid.appendChild(el("span", "wa-pv", [rel(id) === "ami" ? "Ami" : "", p.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); it.appendChild(mid);
+      it.onclick = function () { md.close(); openThread(id); }; L.appendChild(it);
+    });
+  }
+  q.oninput = draw; draw(); setTimeout(function () { try { q.focus(); } catch (e) {} }, 50);
 }
 var marking = {};
 function renderConv() {
