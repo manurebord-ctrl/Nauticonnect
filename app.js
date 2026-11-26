@@ -32,6 +32,9 @@ function real() { return !!uid && !guest && !(realAdmin && viewAs === "invite");
 var SORTIES_ON = false;
 var SO = [], SI = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
+/* sous-titre d'un membre : son bateau, sinon « Sans bateau » / « Je loue des bateaux », sinon son port */
+function NOBOAT(t) { return t === "Sans bateau (équipier, passager)" || t === "Je loue des bateaux"; }
+function subOf(p) { p = p || {}; return p.bateau || (NOBOAT(p.type) ? (p.type === "Je loue des bateaux" ? "Loue des bateaux" : "Sans bateau") : "") || p.port || ""; }
 function nameOf(id, fb) { var p = P[id]; return p ? p.pseudo + (p.bateau ? " · " + p.bateau : "") : (fb || "Plaisancier"); }
 function initial(id) { var p = P[id]; return ((p && p.pseudo) || "?").charAt(0).toUpperCase(); }
 function photoOf(id) { var p = P[id]; return p && p.photo ? photoUrl(p.photo) : ""; }
@@ -143,7 +146,7 @@ function memberOk(msgEl, why) {
 function requireProfile(msgEl, why) {
   if (!sb) { if (msgEl) msgEl.textContent = "L'appli n'est pas encore configurée."; return false; }
   if (!real()) { goAuth(cur(), why); return false; }
-  if (!me()) { try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "profil"; toast("Créez d'abord votre fiche bateau"); return false; }
+  if (!me()) { try { sessionStorage.setItem("nc-ret", cur()); } catch (e) {} location.hash = "profil"; toast("Choisissez d'abord votre prénom"); return false; }
   return true;
 }
 /* Fonctions ouvertes à tous : sans compte, on crée en silence une session invité */
@@ -300,9 +303,9 @@ function fillProfile() {
   drawPfPhoto();
   var pp = me(); $("accFiche").open = !pp; $("pfLead").hidden = !!pp;
   $("accFicheSum").textContent = pp ? [pp.pseudo, pp.bateau, pp.port].filter(Boolean).join(" · ") : "À remplir pour rejoindre le chat";
-  var p = me(); $("pfTitle").textContent = p ? "Mon profil" : "Créez votre fiche bateau";
+  var p = me(); $("pfTitle").textContent = p ? "Mon profil" : "Créez votre profil";
   $("pSave").textContent = p ? "Mettre à jour" : "Rejoindre l'équipage";
-  if (p) { $("pPseudo").value = p.pseudo || ""; $("pBoat").value = p.bateau || ""; $("pType").value = p.type || "Voilier"; $("pPort").value = p.port || ""; $("pImm").value = p.immat || ""; }
+  if (p) { $("pPseudo").value = p.pseudo || ""; $("pBoat").value = p.bateau || ""; $("pType").value = p.type || ""; $("pPort").value = p.port || ""; $("pImm").value = p.immat || ""; }
   $("pEmail").textContent = session ? "Connecté avec " + session.user.email : "";
   $("pMsg").textContent = "";
 }
@@ -312,7 +315,7 @@ $("pSave").onclick = function () {
   var ps = $("pPseudo").value.trim(), bt = $("pBoat").value.trim();
   if (ps.length < 2) { m.textContent = "Indiquez un prénom ou un pseudo (2 caractères min.)."; return; }
   var taken = Object.keys(P).some(function (k) { return k !== uid && norm(P[k].pseudo) === norm(ps) && norm(P[k].bateau) === norm(bt); });
-  if (taken) { m.textContent = "Ce pseudo est déjà pris avec ce nom de bateau. Ajoutez votre bateau ou changez de pseudo."; return; }
+  if (taken) { m.textContent = bt ? "Ce pseudo est déjà pris avec ce nom de bateau. Changez de pseudo." : "Ce pseudo est déjà pris. Ajoutez une initiale (ex. Julien B.) ou le nom de votre bateau."; return; }
   var first = !me();
   var d = { id: uid, pseudo: ps, bateau: bt, type: $("pType").value, port: $("pPort").value, immat: $("pImm").value.trim().toUpperCase(), maj: nowIso() };
   $("pSave").disabled = true;
@@ -346,7 +349,7 @@ $("pDelete").onclick = function () {
 function renderChip() {
   var c = $("meChip"), p = me(); c.textContent = "";
   if (p) { c.className = "me"; c.href = "#profil"; c.appendChild(putPhoto(el("span", "av", initial(uid)), uid)); c.appendChild(el("span", 0, p.pseudo)); }
-  else if (real()) { c.className = "me new"; c.href = "#profil"; c.textContent = "Ma fiche bateau"; }
+  else if (real()) { c.className = "me new"; c.href = "#profil"; c.textContent = "Mon profil"; }
   else { c.className = "me new"; c.href = "#compte"; c.textContent = "Se connecter"; }
 }
 var AVC = ["#f29a5b", "#9fe3c4", "#a9c8f5", "#f5d07a", "#e9a8d0", "#c7b8f5"];
@@ -824,7 +827,7 @@ function drawBubbles(box, list, group) {
     var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : "") + (isSel(m, group) ? " sel" : "")); row.id = (group ? "sl-" : "pm-") + m.id;
     if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de]) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
     var b = el("div", "wa-b");
-    if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && (pr.bateau || pr.port)) nm.appendChild(el("span", 0, " · " + (pr.bateau || pr.port))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
+    if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && subOf(pr)) nm.appendChild(el("span", 0, " · " + subOf(pr))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
     if (m.reponse) { var q = list.filter(function (x) { return x.id === m.reponse; })[0]; b.appendChild(quoteBlock(q, box)); }
     if (group && m.photo) b.appendChild(photoBlock(m));
     if (m.txt) b.appendChild(mentionText(m));
@@ -964,7 +967,7 @@ $("slIn").oninput = function () {
   var q = norm(mt[1]), ids = Object.keys(P).filter(function (id) { return id !== uid && P[id].pseudo && norm(P[id].pseudo).indexOf(q) === 0; }).slice(0, 6);
   if (!ids.length && q) ids = Object.keys(P).filter(function (id) { return id !== uid && P[id].pseudo && norm(P[id].pseudo).indexOf(q) >= 0; }).slice(0, 6);
   if (isAdmin && "tous".indexOf(q) === 0) { var bt = el("button", "wa-sg"); bt.type = "button"; var tt = el("span"); tt.appendChild(el("b", 0, "@tous")); tt.appendChild(el("small", 0, "Prévenir tous les membres")); bt.appendChild(tt); bt.onclick = function () { var i = $("slIn"), v = i.value.replace(/@([^\s@]*)$/, ""); i.value = (v && !/\s$/.test(v) ? v + " " : v) + "@tous "; S.hidden = true; i.focus(); }; S.appendChild(bt); }
-  ids.forEach(function (id) { var b = el("button", "wa-sg"); b.type = "button"; b.appendChild(avatar(id)); var t = el("span"); t.appendChild(el("b", 0, P[id].pseudo)); if (P[id].bateau || P[id].port) t.appendChild(el("small", 0, P[id].bateau || P[id].port)); b.appendChild(t); b.onclick = function () { tagUser(id); }; S.appendChild(b); });
+  ids.forEach(function (id) { var b = el("button", "wa-sg"); b.type = "button"; b.appendChild(avatar(id)); var t = el("span"); t.appendChild(el("b", 0, P[id].pseudo)); if (subOf(P[id])) t.appendChild(el("small", 0, subOf(P[id]))); b.appendChild(t); b.onclick = function () { tagUser(id); }; S.appendChild(b); });
   S.hidden = !S.firstChild;
 };
 
@@ -2360,7 +2363,7 @@ function loadDash() {
       list.forEach(function (x) { var c = el("div", "dt"); c.appendChild(el("b", 0, String(x[1]))); c.appendChild(el("span", 0, x[0])); g.appendChild(c); });
       D.appendChild(g);
     }
-    tiles("Membres", [["inscrits", s.membres], ["nouveaux cette semaine", s.nouveaux7], ["nouveaux sur 30 jours", s.nouveaux30], ["actifs cette semaine", s.actifs7], ["avec fiche bateau", s.fiches], ["notifications activées", s.notifs]]);
+    tiles("Membres", [["inscrits", s.membres], ["nouveaux cette semaine", s.nouveaux7], ["nouveaux sur 30 jours", s.nouveaux30], ["actifs cette semaine", s.actifs7], ["avec profil", s.fiches], ["notifications activées", s.notifs]]);
     D.appendChild(el("h3", "dh", "Inscriptions par semaine"));
     var ch = el("div", "dchart"), W = s.semaines || [], mx = Math.max.apply(null, W.map(function (w) { return w.n; }).concat([1]));
     W.forEach(function (w) { var c = el("div", "dcol"); c.appendChild(el("small", 0, String(w.n))); var bar = el("i"); bar.style.height = Math.max(3, Math.round(w.n / mx * 90)) + "px"; c.appendChild(bar); c.appendChild(el("span", 0, w.s)); ch.appendChild(c); });
@@ -2397,10 +2400,10 @@ function renderMb() {
   L.appendChild(el("p", "mu", list.length + " compte" + (list.length > 1 ? "s" : "") + (q ? " trouvé" + (list.length > 1 ? "s" : "") : " au total")));
   list.forEach(function (m) {
     var c = el("div", "mbit"); c.style.cssText = "border:1px solid var(--line, #ccd);border-radius:12px;padding:10px 12px;margin:8px 0";
-    var t = el("div"); t.appendChild(el("b", 0, m.pseudo || "(sans fiche bateau)"));
+    var t = el("div"); t.appendChild(el("b", 0, m.pseudo || "(sans profil)"));
     if (m.admin) t.appendChild(el("span", "mu", "  · admin"));
     c.appendChild(t);
-    c.appendChild(el("div", "mu", [m.bateau, m.type, m.port].filter(Boolean).join(" · ") || "Aucune fiche bateau"));
+    c.appendChild(el("div", "mu", [m.bateau, m.type, m.port].filter(Boolean).join(" · ") || "Profil pas encore créé"));
     c.appendChild(el("div", "mu", (m.email || "") + " · inscrit le " + mbDate(m.inscrit) + " · vu le " + mbDate(m.vu)));
     var row = el("div", "row"); row.style.marginTop = "8px";
     var be = el("button", "btn g sm", mbOpen === m.id ? "Fermer" : "Modifier");
@@ -2431,7 +2434,7 @@ function mbForm(m) {
   function fld(lab, val, max) { F.appendChild(el("label", "l", lab)); var i = el("input", "f"); i.value = val || ""; if (max) i.maxLength = max; F.appendChild(i); return i; }
   var ps = fld("Pseudo *", m.pseudo, 24), bt = fld("Nom du bateau", m.bateau, 30);
   F.appendChild(el("label", "l", "Type")); var ty = el("select", "f");
-  ["Voilier", "Bateau à moteur", "Jet / semi-rigide", "Planche / paddle", "Autre"].forEach(function (x) { var o = el("option", 0, x); ty.appendChild(o); }); ty.value = m.type || "Voilier"; F.appendChild(ty);
+  ["", "Sans bateau (équipier, passager)", "Je loue des bateaux", "Voilier", "Bateau à moteur", "Jet / semi-rigide", "Planche / paddle", "Autre"].forEach(function (x) { var o = el("option", 0, x || "— Non précisé —"); o.value = x; ty.appendChild(o); }); ty.value = m.type || ""; F.appendChild(ty);
   F.appendChild(el("label", "l", "Port")); var po = el("select", "f"); var o0 = el("option", 0, "— aucun —"); o0.value = ""; po.appendChild(o0);
   ZA().forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; po.appendChild(o); }); if (m.port && !Z.some(function (z) { return z[0] === m.port; })) { var ox = el("option", 0, m.port); ox.value = m.port; po.appendChild(ox); } po.value = m.port || ""; F.appendChild(po);
   var im = fld("Immatriculation", m.immat, 16);

@@ -71,7 +71,7 @@
 <div class="p-now" id="pNow"></div>
 <div class="p-stats"><div><b id="stMembers">–</b><span>membres</span></div><div><b id="stOpen">–</b><span>sur l'eau</span></div><div><b>31</b><span>ports du lac</span></div></div>
 <ol class="p-how">
-<li><b>Créez votre fiche bateau</b><span>Pseudo, bateau, port d'attache.</span></li>
+<li><b>Créez votre profil</b><span>Juste un prénom : avec ou sans bateau, tout le monde est le bienvenu.</span></li>
 <li><b>Hissez le pavillon</b><span>Montrez que vous êtes ouvert à la rencontre.</span></li>
 <li><b>Chattez, amarrez-vous</b><span>Écrivez aux membres en privé, et on se retrouve au port.</span></li>
 </ol>
@@ -120,19 +120,19 @@
 <!-- ===================== PROFIL ===================== -->
 <section id="v-profil" hidden>
 <div class="hd pfhd"><a class="back" href="#">← Accueil</a><button class="pfx" id="pfClose" aria-label="Fermer">✕</button></div>
-<h1 class="ph1" id="pfTitle">Ma fiche bateau</h1>
+<h1 class="ph1" id="pfTitle">Mon profil</h1>
 <p class="lead" id="pfLead">Elle vous identifie dans Le Ponton et dans les alertes de panne. Elle est visible par les membres.</p>
 <div class="card pfph"><span class="pfav" id="pfAv">?</span><div><b>Photo de profil</b><div class="mu" id="pfPhSt"></div>
 <div class="pfbtns" id="pfPhLb"><label class="btn">Galerie<input type="file" id="pfPhIn" accept="image/jpeg,image/png,image/webp" hidden></label><label class="btn g">Appareil photo<input type="file" id="pfPhCam" accept="image/*" capture="user" hidden></label></div><button class="linkb" id="pfPhRm" hidden>Retirer ma photo</button></div></div></div>
-<details class="card acc" id="accFiche"><summary><b>Ma fiche bateau</b><span class="mu" id="accFicheSum">Pseudo, bateau, port d'attache</span></summary>
+<details class="card acc" id="accFiche"><summary><b>Mon profil</b><span class="mu" id="accFicheSum">Prénom, bateau, port d'attache</span></summary>
 <label class="l" for="pPseudo">Prénom ou pseudo *</label><input class="f" id="pPseudo" maxlength="24" placeholder="ex. Julien">
-<label class="l" for="pBoat">Nom du bateau</label><input class="f" id="pBoat" maxlength="30" placeholder="ex. Mistral">
-<div class="row"><div><label class="l" for="pType">Type</label><select class="f" id="pType"><option>Voilier</option><option>Bateau à moteur</option><option>Jet / semi-rigide</option><option>Planche / paddle</option><option>Autre</option></select></div>
+<label class="l" for="pBoat">Nom du bateau (facultatif)</label><input class="f" id="pBoat" maxlength="30" placeholder="Pas de bateau ? Laissez vide">
+<div class="row"><div><label class="l" for="pType">Type</label><select class="f" id="pType"><option value="">— Choisir —</option><option>Sans bateau (équipier, passager)</option><option>Je loue des bateaux</option><option>Voilier</option><option>Bateau à moteur</option><option>Jet / semi-rigide</option><option>Planche / paddle</option><option>Autre</option></select></div>
 <div><label class="l" for="pPort">Port d'attache</label><select class="f" id="pPort"></select></div></div>
 <label class="l" for="pImm">Immatriculation (facultatif)</label><input class="f" id="pImm" maxlength="16" placeholder="ex. VS 1234">
 <button class="btn" id="pSave">Enregistrer</button>
 <div class="err" id="pMsg"></div>
-<p class="mu" style="margin:8px 0 0">N'indiquez ni adresse ni numéro de téléphone dans votre fiche.</p>
+<p class="mu" style="margin:8px 0 0">N'indiquez ni adresse ni numéro de téléphone dans votre profil.</p>
 </details>
 <details class="card acc" id="notifCard"><summary><b>Notifications</b><span class="mu" id="nfSum"></span></summary><div class="mu" id="nfState" style="margin:4px 0 10px"></div>
 <button class="btn" id="nfOn">Activer les notifications</button>
@@ -548,7 +548,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=54"></script>
+<script src="app.js?v=55"></script>
 <script src="noel.js?v=2"></script>
 </body>
 </html>
