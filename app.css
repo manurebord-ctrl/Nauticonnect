@@ -754,3 +754,13 @@ html.splashing .hero .mnb{display:none}
 .brand{letter-spacing:-.2px}
 .hero-t{letter-spacing:-.8px}
 .ph1{letter-spacing:-.4px}
+
+/* menu ⋮ des discussions privées */
+.wa-chd{position:sticky}
+.wa-more{margin-left:auto;flex:none;width:44px;height:44px;border:0;background:none;color:var(--tx);font:800 22px/1 var(--fb);border-radius:8px}
+.wa-dd{position:absolute;right:8px;top:calc(100% - 4px);z-index:40;min-width:220px;background:var(--card);border:1.5px solid var(--bd);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column}
+.wa-dd button{text-align:left;background:none;border:0;border-radius:6px;padding:12px;font:600 15px var(--fb);color:var(--tx)}
+.wa-dd button:disabled{color:var(--mu)}
+.wa-dd button.red{color:var(--red)}
+.wa-dd button:not(:disabled):active{background:var(--bg)}
+.wa-amitag{margin-left:8px;vertical-align:2px;font:700 11px var(--fb);padding:2px 7px;border-radius:9px;background:#dff5e8;color:#1f7a47}

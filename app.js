@@ -1121,12 +1121,10 @@ function newMsgPicker() {
 var marking = {};
 function renderConv() {
   var k = openWith, L = threads()[k] || [];
-  $("pvClr").hidden = !L.length;
   var W = $("pvWho"); W.textContent = ""; W.appendChild(avatar(k)); var t = el("span", "wa-ti"); t.appendChild(el("b", 0, (P[k] && P[k].pseudo) || "Plaisancier")); var pr = P[k] || {}; t.appendChild(el("span", 0, [pr.bateau || (NOBOAT(pr.type) ? subOf({ type: pr.type }) : ""), pr.port].filter(Boolean).join(" · ") || "Membre Nauticonnect")); W.appendChild(t);
-  var f = el("button", "wa-fr", rel(k) === "ami" ? "Ami" : rel(k) === "envoye" ? "Demande envoyée" : rel(k) === "recu" ? "Accepter en ami" : "Ajouter en ami"); f.onclick = function () { befriend(k); }; W.appendChild(f);
-  var bk = el("button", "wa-fr", isBl(k) ? "Débloquer" : "Bloquer"); bk.onclick = function () { toggleBlock(k); }; W.appendChild(bk);
+  if (rel(k) === "ami") t.firstChild.appendChild(el("span", "wa-amitag", "Ami"));
   $("pvBar").hidden = isBl(k);
-  if (isBl(k)) { $("pvMsgs").textContent = ""; $("pvMsgs").appendChild(el("div", "wa-empty", "Vous avez bloqué ce membre. Touchez « Débloquer » pour lui écrire à nouveau.")); $("pvPre").hidden = true; return; }
+  if (isBl(k)) { $("pvMsgs").textContent = ""; $("pvMsgs").appendChild(el("div", "wa-empty", "Vous avez bloqué ce membre. Touchez ⋮ en haut à droite, puis « Débloquer ce membre » pour lui écrire à nouveau.")); $("pvPre").hidden = true; return; }
   drawBubbles($("pvMsgs"), L, false); markThread(k);
   if (L.some(function (m) { return m.de === k && !m.lu; }) && !document.hidden && !marking[k]) { marking[k] = 1; sb.rpc("marquer_lus", { autre: k }).then(function () { marking[k] = 0; L.forEach(function (m) { if (m.de === k) m.lu = m.lu || nowIso(); }); }); }
   var Pp = $("pvPre"); Pp.textContent = ""; Pp.hidden = L.length > 0; PRESETS.forEach(function (x) { var b = el("button", "wa-chip", x); b.onclick = function () { sendMsg(k, x); }; Pp.appendChild(b); });
@@ -2645,7 +2643,24 @@ function delMsgs(ids, group, list) {
     selEnd(); load(group ? "salon" : "messages");
   });
 }
-$("pvClr").onclick = function () {
+/* menu ⋮ de la discussion privée : ami, bloquer, effacer */
+function pvMenuClose() { var m = document.querySelector(".wa-dd"); if (m) m.remove(); document.removeEventListener("click", pvMenuOut, true); }
+function pvMenuOut(e) { var m = document.querySelector(".wa-dd"); if (m && !m.contains(e.target) && e.target !== $("pvMore")) pvMenuClose(); }
+$("pvMore").onclick = function (e) {
+  e.stopPropagation(); if (document.querySelector(".wa-dd")) { pvMenuClose(); return; }
+  var k = openWith; if (!k) return;
+  var M = el("div", "wa-dd"); M.setAttribute("role", "menu");
+  var add = function (t, f, cls, off) { var b = el("button", cls || 0, t); b.type = "button"; b.setAttribute("role", "menuitem"); if (off) b.disabled = true; b.onclick = function () { pvMenuClose(); f(); }; M.appendChild(b); };
+  var r = rel(k);
+  if (r === "ami") add("✓ Vous êtes amis", function () {}, 0, true);
+  else if (r === "envoye") add("Demande d'ami envoyée", function () {}, 0, true);
+  else add(r === "recu" ? "Accepter en ami" : "Ajouter en ami", function () { befriend(k); });
+  if ((threads()[k] || []).length) add("Effacer la discussion", clearConv);
+  add(isBl(k) ? "Débloquer ce membre" : "Bloquer ce membre", function () { toggleBlock(k); }, "red");
+  $("pvMore").parentNode.appendChild(M);
+  setTimeout(function () { document.addEventListener("click", pvMenuOut, true); }, 0);
+};
+function clearConv() {
   var k = openWith; if (!k) return;
   if (!confirm("Effacer cette discussion de votre téléphone ? L'autre personne la garde. Vos propres messages restent visibles chez elle.")) return;
   ls("nc-clr-" + k, String(Date.now())); toast("Discussion effacée"); renderPonton();
