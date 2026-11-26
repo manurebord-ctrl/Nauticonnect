@@ -45,7 +45,7 @@ var Q = {
   profils: function () { return sb.from("profils").select("id,pseudo,bateau,type,port,immat,photo,photo_ok").limit(5000); },
   alertes: function () { return sb.from("alertes").select("*").gte("maj", iso(12 * 36e5)); },
   ouverts: function () { return sb.from("ouverts").select("*").gte("maj", iso(2 * 36e5)); },
-  likes: function () { return sb.from("salon_likes").select("salon_id,uid").limit(5000); },
+  likes: function () { return sb.from("salon_likes").select("salon_id,uid,emoji").limit(5000); },
   salon: function () { return sb.from("salon").select("*").order("t", { ascending: false }).limit(200); },
   messages: function () { return uid ? sb.from("messages").select("*").gte("t", iso(7 * 864e5)).order("t").limit(800) : null; },
   avis: function () { return sb.from("avis").select("*").order("t", { ascending: false }).limit(300); },
@@ -831,8 +831,7 @@ function drawBubbles(box, list, group) {
     if (m.reponse) { var q = list.filter(function (x) { return x.id === m.reponse; })[0]; b.appendChild(quoteBlock(q, box)); }
     if (group && m.photo) b.appendChild(photoBlock(m));
     if (m.txt) b.appendChild(mentionText(m));
-    if (group && (m.photo || likesOf(m.id).length)) b.appendChild(likeRow(m, !m.photo));
-    if (!group && m.likes && m.likes.length) b.appendChild(pmLikeRow(m));
+    var rr = reactRow(m, group); if (rr) b.appendChild(rr);
     if (group && m.cites && m.cites.indexOf(uid) >= 0 && !mine) b.classList.add("cited");
     var meta = el("small", "wa-meta", hhmm(m.t)); if (mine && !group) meta.appendChild(el("span", "wa-tick" + (m.lu ? " lu" : ""), " ✓✓")); b.appendChild(meta);
     bindBubble(b, row, m, group, mine);
@@ -881,8 +880,7 @@ function bubbleMenu(b, m, group, mine) {
   if (!me()) return;
   var M = el("div", "wa-menu"), add = function (t, f, cls) { var x = el("button", cls || 0, t); x.type = "button"; x.onclick = function (e) { e.stopPropagation(); M.remove(); f(); }; M.appendChild(x); };
   add("Répondre", function () { setReply(group ? "salon" : "prive", m); });
-  if (group) { var liked = likesOf(m.id).some(function (l) { return l.uid === uid; }); add(liked ? "Je n'aime plus" : "J'aime", function () { toggleLike(m); }); }
-  else { var pl = (m.likes || []).indexOf(uid) >= 0; add(pl ? "Je n'aime plus" : "J'aime", function () { pmLike(m); }); }
+  var mr = myReact(m, group), eb = el("div", "wa-emo"); EMO.forEach(function (e) { var x = el("button", e === mr ? "on" : 0, e); x.type = "button"; x.setAttribute("aria-label", "Réagir " + e); x.onclick = function (ev) { ev.stopPropagation(); M.remove(); react(m, group, e); }; eb.appendChild(x); }); M.appendChild(eb);
   if (canSel(m, group)) add("Sélectionner", function () { selStart(m, group); });
   if (!group && mine) add("Supprimer", function () { delMsgs([m.id], false); }, "red");
   if (group && m.de !== uid && P[m.de]) add("Message privé", function () { openThread(m.de); });
@@ -895,14 +893,53 @@ function bubbleMenu(b, m, group, mine) {
 
 /* photos du salon façon Instagram */
 var HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3.2 4.5 6.9 4.5c2.1 0 3.6 1.2 5.1 3 1.5-1.8 3-3 5.1-3 3.7 0 6 3.7 4.5 7.2C19.5 16.4 12 21 12 21z"/></svg>';
+/* réactions smileys : salon (table salon_likes) et privé (colonne reactions) */
+var EMO = ["❤️", "👍", "😂", "😮", "⛵", "🙏"];
 function likesOf(id) { return LK.filter(function (l) { return l.salon_id === id; }); }
-function toggleLike(m, force) {
-  if (!me()) { toast("Créez votre compte pour aimer les messages et les photos"); return; }
-  var mine = likesOf(m.id).some(function (l) { return l.uid === uid; });
-  if (mine && force) return;
-  if (mine) { LK = LK.filter(function (l) { return !(l.salon_id === m.id && l.uid === uid); }); sb.from("salon_likes").delete().eq("salon_id", m.id).eq("uid", uid).then(function () {}); }
-  else { LK.push({ salon_id: m.id, uid: uid }); sb.from("salon_likes").insert({ salon_id: m.id }).then(function () {}); }
-  renderPonton();
+function reactsOf(m, group) {
+  if (group) return likesOf(m.id).map(function (l) { return { uid: l.uid, e: l.emoji || "❤️" }; });
+  var R = m.reactions || {}, out = Object.keys(R).map(function (k) { return { uid: k, e: R[k] }; });
+  (m.likes || []).forEach(function (k) { if (!R[k]) out.push({ uid: k, e: "❤️" }); });
+  return out;
+}
+function myReact(m, group) { var r = reactsOf(m, group).filter(function (x) { return x.uid === uid; })[0]; return r ? r.e : ""; }
+function react(m, group, e, force) {
+  if (!me()) { toast("Créez votre profil pour réagir aux messages"); return; }
+  var cur0 = myReact(m, group);
+  if (force && cur0) return;
+  if (group) {
+    if (cur0 === e) { LK = LK.filter(function (l) { return !(l.salon_id === m.id && l.uid === uid); }); sb.from("salon_likes").delete().eq("salon_id", m.id).eq("uid", uid).then(function () {}); }
+    else if (cur0) { LK.forEach(function (l) { if (l.salon_id === m.id && l.uid === uid) l.emoji = e; }); sb.from("salon_likes").update({ emoji: e }).eq("salon_id", m.id).eq("uid", uid).then(function (r) { if (r.error) { toast("Action impossible. Réessayez."); load("likes"); } }); }
+    else { LK.push({ salon_id: m.id, uid: uid, emoji: e }); sb.from("salon_likes").insert({ salon_id: m.id, emoji: e }).then(function (r) { if (r.error) { toast("Action impossible. Réessayez."); load("likes"); } }); }
+    renderPonton(); return;
+  }
+  var oldR = m.reactions, oldL = m.likes, R = Object.assign({}, m.reactions || {});
+  (m.likes || []).forEach(function (k) { if (!R[k]) R[k] = "❤️"; });
+  if (cur0 === e) delete R[uid]; else R[uid] = e;
+  m.reactions = R; m.likes = (m.likes || []).filter(function (k) { return k !== uid; }).concat(R[uid] === "❤️" ? [uid] : []); renderPonton();
+  sb.rpc("reagir_message", { mid: m.id, emo: e }).then(function (r) { if (r.error) { m.reactions = oldR; m.likes = oldL; renderPonton(); toast("Action impossible. Réessayez."); } else load("messages"); });
+}
+function toggleLike(m, force) { react(m, true, "❤️", force); }
+function reactRow(m, group) {
+  var L = reactsOf(m, group), photo = group && m.photo;
+  if (!L.length && !photo) return null;
+  var mine = myReact(m, group), r = el("div", "wa-like" + (photo ? "" : " sm"));
+  if (photo) { var b = el("button", "wa-lk" + (mine === "❤️" ? " on" : "")); b.type = "button"; b.innerHTML = HEART; b.setAttribute("aria-label", mine === "❤️" ? "Je n'aime plus" : "J'aime"); b.onclick = function (e) { e.stopPropagation(); react(m, true, "❤️"); }; r.appendChild(b); }
+  if (L.length) {
+    var C = {}; L.forEach(function (x) { C[x.e] = (C[x.e] || 0) + 1; });
+    var ch = el("button", "wa-rc"); ch.type = "button"; ch.setAttribute("aria-label", "Voir qui a réagi");
+    EMO.forEach(function (e) { if (C[e]) { var s2 = el("span", e === mine ? "on" : 0, e + (C[e] > 1 ? " " + C[e] : "")); ch.appendChild(s2); } });
+    ch.onclick = function (ev) { ev.stopPropagation(); whoReacted(L); }; r.appendChild(ch);
+  }
+  return r;
+}
+function whoReacted(L) {
+  var md = modal("Réactions"), W = el("div", "wa-list");
+  L.slice().sort(function (a, b) { return (b.uid === uid) - (a.uid === uid) || EMO.indexOf(a.e) - EMO.indexOf(b.e); }).forEach(function (x) {
+    var it = el("div", "wa-it"); it.appendChild(avatar(x.uid)); var mid = el("span", "wa-im"); mid.appendChild(el("b", 0, x.uid === uid ? "Vous" : (P[x.uid] && P[x.uid].pseudo) || "Plaisancier")); it.appendChild(mid);
+    var rt = el("span", "wa-ir"); rt.appendChild(el("span", "wa-re1", x.e)); it.appendChild(rt); W.appendChild(it);
+  });
+  md.bx.appendChild(W);
 }
 function photoBlock(m) {
   var w = el("div", "wa-ph"), im = el("img"); im.src = photoUrl(m.photo); im.alt = "Photo de " + ((P[m.de] && P[m.de].pseudo) || "un plaisancier"); im.loading = "lazy"; w.appendChild(im);
@@ -911,28 +948,6 @@ function photoBlock(m) {
     else w._t = setTimeout(function () { viewPhoto(im.src); }, 330);
     last = n; };
   return w;
-}
-/* J'aime dans les messages privés (stocké dans le message, modifiable seulement par les deux personnes) */
-function pmLike(m) {
-  if (!me()) return;
-  var L = m.likes || [], on = L.indexOf(uid) >= 0;
-  m.likes = on ? L.filter(function (x) { return x !== uid; }) : L.concat([uid]); renderPonton();
-  sb.rpc("aimer_message", { mid: m.id }).then(function (r) { if (r.error) { m.likes = L; renderPonton(); toast("Action impossible. Réessayez."); } else load("messages"); });
-}
-function pmLikeRow(m) {
-  var L = m.likes || [], mine = L.indexOf(uid) >= 0, r = el("div", "wa-like sm"), b = el("button", "wa-lk" + (mine ? " on" : ""));
-  b.type = "button"; b.innerHTML = HEART; b.setAttribute("aria-label", mine ? "Je n'aime plus" : "J'aime");
-  b.onclick = function (e) { e.stopPropagation(); pmLike(m); }; r.appendChild(b);
-  var who = L.map(function (id) { return id === uid ? "vous" : (P[id] && P[id].pseudo); }).filter(Boolean);
-  if (who.length) r.appendChild(el("small", 0, "Aimé par " + who.join(" et ")));
-  return r;
-}
-function likeRow(m, small) {
-  var L = likesOf(m.id), mine = L.some(function (l) { return l.uid === uid; }), r = el("div", "wa-like" + (small ? " sm" : "")), b = el("button", "wa-lk" + (mine ? " on" : ""));
-  b.innerHTML = HEART; b.appendChild(el("span", 0, L.length ? String(L.length) : "")); b.setAttribute("aria-label", mine ? "Je n'aime plus" : "J'aime");
-  b.onclick = function (e) { e.stopPropagation(); toggleLike(m); }; r.appendChild(b);
-  if (L.length) { var who = L.slice().sort(function (a, b) { return (b.uid === uid) - (a.uid === uid); }).map(function (l) { return l.uid === uid ? "vous" : (P[l.uid] && P[l.uid].pseudo); }).filter(Boolean); r.appendChild(el("small", 0, "Aimé par " + who.slice(0, 2).join(", ") + (who.length > 2 ? " et " + (who.length - 2) + " autre" + (who.length > 3 ? "s" : "") : ""))); }
-  return r;
 }
 function viewPhoto(src) { var o = el("div", "wa-view"), im = el("img"); im.src = src; o.appendChild(im); o.appendChild(el("button", "wa-vx", "✕")); o.onclick = function () { o.remove(); }; document.body.appendChild(o); }
 $("slPhIn").onchange = function () {
