@@ -702,9 +702,9 @@ html.splashing .hero .mnb{display:none}
 .hero.splash .cta{margin-top:auto}
 
 /* réactions smileys */
-.wa-emo{display:flex;gap:4px;width:100%;margin-bottom:2px}
-.wa-emo button{font-size:22px;line-height:1;padding:6px 8px;border-radius:20px;border:1px solid var(--bd);background:var(--bg)}
+.wa-emo{display:flex;gap:3px;width:100%;margin-bottom:2px}
+.wa-emo button{font-size:17px;line-height:1;padding:4px 6px;border-radius:20px;border:1px solid var(--bd);background:var(--bg)}
 .wa-emo button.on{background:#dbeafe;border-color:#0b6fa4}
-.wa-rc{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--bg,#fff);border:1px solid var(--bd,#ccd);border-radius:14px;padding:2px 8px;font:700 13px var(--fb);color:inherit}
+.wa-rc{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--bg,#fff);border:1px solid var(--bd,#ccd);border-radius:12px;padding:1px 6px;font:700 11px var(--fb);color:inherit}
 .wa-rc span.on{text-decoration:underline;text-decoration-color:#0b6fa4;text-underline-offset:3px}
-.wa-re1{font-size:22px}
+.wa-re1{font-size:18px}
