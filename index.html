@@ -171,6 +171,15 @@
 <details class="card acc" id="phBtn" hidden><summary><b>Bannière de l'accueil</b><span class="mu">Admin · photo en haut de l'appli, pour tout le monde</span></summary>
 <div class="mu" style="margin:4px 0 10px">Choisissez une photo en format paysage. Elle remplace l'image en haut de l'accueil pour tous les membres.</div>
 <div class="row"><label class="btn" id="phPick">Choisir une photo<input type="file" id="phIn" accept="image/jpeg,image/png,image/webp" hidden></label><button class="btn g" id="phReset" type="button">Image par défaut</button></div></details>
+<details class="card acc" id="evAdmin" hidden><summary><b>Événements à valider</b><span class="mu" id="evAdmSum">Admin · propositions des organisateurs</span></summary>
+<h2 style="margin-top:6px">Demandes à valider</h2>
+<div class="mu">Vérifiez puis publiez les événements proposés.</div><div id="evQueue"></div>
+<div hidden><h2>Admin · réglages</h2>
+<div class="card"><label class="l" for="evSetP">Prix de publication (CHF)</label><input class="f" id="evSetP" inputmode="numeric" maxlength="4">
+<label class="l" for="evSetL">Lien de paiement (Stripe, SumUp…) ou instructions (ex. TWINT au 079…)</label><input class="f" id="evSetL" maxlength="300">
+<button class="btn" id="evSetSv">Enregistrer</button></div></div>
+<h2>Tous les événements</h2><div id="evAll"></div>
+</details>
 <details class="card acc" id="mbBox" hidden><summary><b>Gestion des membres</b><span class="mu">Admin · modifier ou supprimer un compte</span></summary>
 <input class="f" id="admQ" placeholder="Rechercher : pseudo, bateau, e-mail, port" style="margin:4px 0 10px"><div id="admList"></div></details>
 <details class="card acc" id="dashBox" hidden><summary><b>Tableau de bord</b><span class="mu">Admin · membres, activité, visites</span></summary><div id="dash"></div></details>
@@ -519,15 +528,7 @@
 <label class="l" for="evCt">E-mail ou téléphone de contact (affiché sur l'événement)</label><input class="f" id="evCt" maxlength="120">
 <div class="row"><button class="btn g" id="evCx">Annuler</button><button class="btn" id="evSv">Envoyer</button></div></div>
 <div class="err" id="evMsg"></div>
-<div id="evAdmin" hidden>
-<h2>Admin · demandes à valider</h2>
-<div class="mu">Vérifiez puis publiez les événements proposés.</div><div id="evQueue"></div>
-<div hidden><h2>Admin · réglages</h2>
-<div class="card"><label class="l" for="evSetP">Prix de publication (CHF)</label><input class="f" id="evSetP" inputmode="numeric" maxlength="4">
-<label class="l" for="evSetL">Lien de paiement (Stripe, SumUp…) ou instructions (ex. TWINT au 079…)</label><input class="f" id="evSetL" maxlength="300">
-<button class="btn" id="evSetSv">Enregistrer</button></div></div>
-<h2>Admin · tous les événements</h2><div id="evAll"></div>
-</div>
+
 </section>
 
 <!-- ===================== NAVIGATION ===================== -->
@@ -552,7 +553,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=67"></script>
+<script src="app.js?v=68"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>

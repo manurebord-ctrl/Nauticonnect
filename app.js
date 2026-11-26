@@ -2162,7 +2162,7 @@ function renderAll() {
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
   else if (v === "profil") { notifUI(); renderMyBadges(); }
-  else if (v === "admin") { $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; drawPfQueue(); }
+  else if (v === "admin") { $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; drawPfQueue(); renderEvAdmin(); }
   else if (v === "sorties") renderSorties();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
@@ -2221,7 +2221,14 @@ function renderEvents() {
   var M = $("evMine"); M.textContent = "";
   EV.filter(function (e) { return uid && e.auteur === uid && e.statut !== "publie"; }).forEach(function (e) { M.appendChild(evCard(e)); });
   $("evMineH").hidden = !M.firstChild; payBox();
-  $("evAdmin").hidden = !isAdmin;
+  renderEvAdmin();
+}
+/* validation des événements : dans l'Espace modérateur (la page Événements reste la même pour tous) */
+function renderEvAdmin() {
+  var box = $("evAdmin"); if (!box) return;
+  box.hidden = !isAdmin;
+  var n = EV.filter(function (e) { return e.statut === "attente"; }).length, sm = $("evAdmSum");
+  if (sm) sm.textContent = n ? "Admin · " + n + " demande" + (n > 1 ? "s" : "") + " en attente" : "Admin · aucune demande en attente";
   if (isAdmin) {
     var Q2 = $("evQueue"); Q2.textContent = "";
     EV.filter(function (e) { return e.statut === "attente"; }).forEach(function (e) { Q2.appendChild(evCard(e, true)); });
