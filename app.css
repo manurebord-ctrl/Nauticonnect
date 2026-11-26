@@ -747,3 +747,9 @@ html.splashing .hero .mnb{display:none}
 .wa-pav i{flex:none;width:14px;height:14px;margin-top:2px;background:#F2C230;border:1.5px solid #0E2A3B}
 .wa-pav span{display:flex;flex-direction:column;gap:2px}.wa-pav em{font-style:normal;opacity:.85}.wa-pav small{font:500 11px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.4px;opacity:.75}
 @media (prefers-color-scheme:dark){.wa-pav{background:#3a2f14;border-color:#6b5520;color:#f5e6c4}}
+
+/* ===== Titres en Fraunces (nov. 2026) — pour revenir en arrière, supprimer ce bloc ===== */
+.brand,.hero-t,.ph1{font-family:"Fraunces",Georgia,serif}
+.brand{letter-spacing:-.2px}
+.hero-t{letter-spacing:-.8px}
+.ph1{letter-spacing:-.4px}
