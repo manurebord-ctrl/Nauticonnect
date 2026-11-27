@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=52">
+<link rel="stylesheet" href="app.css?v=53">
 </head>
 <body>
 
@@ -312,6 +312,7 @@
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
 <h1 class="ph1">Météo Léman</h1>
 <p class="lead">Les balises vent en direct, les alertes, l'état du lac en photos, les vents, les feux de tempête et les bonnes sources avant de partir.</p>
+<a class="btn g" href="#boussole" style="margin:0 0 14px">Boussole et cap vers mon port</a>
 <h2>Le lac en ce moment</h2>
 <div id="lacBox"><p class="mu">Chargement…</p></div>
 <h2>Alertes vent</h2>
@@ -435,6 +436,31 @@
 </section>
 
 <!-- ===================== NŒUDS ===================== -->
+<section id="v-boussole" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Boussole</h1>
+<div class="card bs-card">
+<div class="bs-cap"><b id="bsDeg">—</b><span id="bsDir">Touchez « Activer »</span></div>
+<div class="bs-wrap">
+<svg class="bs-svg" viewBox="0 0 300 300" role="img" aria-label="Rose des vents">
+<g id="bsRose">
+<circle cx="150" cy="150" r="138" fill="#0E2A3B"/>
+<circle cx="150" cy="150" r="138" fill="none" stroke="#F2C230" stroke-width="2"/>
+<g id="bsTicks"></g>
+<g font-family="Fraunces,Georgia,serif" font-weight="800" text-anchor="middle" fill="#F4F1EA">
+<text x="150" y="52" font-size="26" fill="#ff6b5b">N</text><text x="252" y="159" font-size="22">E</text><text x="150" y="264" font-size="22">S</text><text x="48" y="159" font-size="22">O</text></g>
+<path d="M150 66 L162 150 L150 142 L138 150 Z" fill="#ff6b5b"/><path d="M150 234 L162 150 L150 158 L138 150 Z" fill="#F4F1EA" opacity=".85"/>
+<g id="bsPort" style="display:none"><path d="M150 18 l9 16 h-18 z" fill="#F2C230" stroke="#0E2A3B" stroke-width="1.5"/></g>
+</g>
+<circle cx="150" cy="150" r="7" fill="#F2C230" stroke="#0E2A3B" stroke-width="2"/>
+<path d="M150 4 L160 22 L140 22 Z" fill="#F2C230"/>
+</svg></div>
+<div class="row" style="margin-top:12px"><button class="btn" id="bsGo" type="button">Activer la boussole</button><button class="btn g" id="bsGps" type="button">Repère vers mon port (GPS)</button></div>
+<div class="mu" id="bsPortTxt" style="margin-top:10px"></div>
+<div class="err" id="bsMsg"></div>
+</div>
+<div class="card mu" style="font-size:14px">Tenez le téléphone à plat. Si le cap semble faux, éloignez-vous du moteur et des objets métalliques, puis dessinez quelques <b>8</b> dans l'air avec le téléphone pour le calibrer. <b>Indicatif seulement : ne remplace pas un compas de navigation.</b></div>
+</section>
 <section id="v-noeuds" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
 <h1 class="ph1">Nœuds marins</h1>
@@ -536,7 +562,7 @@
 <aside id="mnDr" hidden aria-label="Menu">
 <div class="mnhd"><b>Nauti<span>connect</span></b><button id="mnX" aria-label="Fermer">✕</button></div>
 <a href="#">Accueil</a><a href="#ponton">Chat · Le Ponton</a><a href="#panne" class="mnsos">SOS panne</a>
-<div class="mnt">Sur l'eau</div><a href="#meteo">Météo et vent</a><a href="#ports">Ports</a><a href="#webcams">Webcams</a><a href="#vitesse">Vitesse</a>
+<div class="mnt">Sur l'eau</div><a href="#meteo">Météo et vent</a><a href="#ports">Ports</a><a href="#webcams">Webcams</a><a href="#vitesse">Vitesse</a><a href="#boussole">Boussole</a>
 <div class="mnt">Entre membres</div><a href="#location">Location</a><a href="#annonces">À vendre</a><a href="#evenements">Événements</a><a href="#restos">Escales</a>
 <div class="mnt">Découvrir</div><a href="#noeuds">Nœuds</a><a href="#epaves">Épaves</a>
 <div class="mnt">Mon compte</div><a href="#profil">Mon profil</a><a href="#admin" id="mnAdm" hidden>Espace modérateur</a>
@@ -553,7 +579,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=68"></script>
+<script src="app.js?v=69"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>

@@ -132,7 +132,7 @@ function loadAll() { loadBadges(); return Promise.all(Object.keys(Q).map(load));
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "annonces", "location", "evenements", "admin"].concat(SORTIES_ON ? ["sorties"] : []);
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "boussole", "annonces", "location", "evenements", "admin"].concat(SORTIES_ON ? ["sorties"] : []);
 var NEEDS_AUTH = { profil: 1, admin: 1, location: 1, annonces: 1, vitesse: 1, epaves: 1, noeuds: 1 };
 var WHYV = {
   location: "La location de bateaux entre plaisanciers est réservée aux membres. Créez votre compte gratuit pour voir les bateaux disponibles.",
@@ -175,13 +175,14 @@ function route() {
   if (h !== "compte" && prevView === "compte") { try { sessionStorage.removeItem("nc-why"); } catch (e) {} }
   if (NEEDS_AUTH[h] && !real() && sb) { goAuth(h, WHYV[h]); return; }
   if (h === "admin" && !realAdmin && sb) { if (uid) { location.hash = "profil"; return; } }
-  VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== h; });
+  VIEWS.forEach(function (v) { var e = $("v-" + v); if (e) e.hidden = v !== h; });
   Array.prototype.forEach.call($("nav").querySelectorAll("a[data-v]"), function (a) { a.classList.toggle("on", a.dataset.v === h); });
   if (h === "profil") fillProfile();
   if (h === "compte" && authMode !== "reset") setAuthMode(real() ? "in" : preview() ? "up" : uid && !guest ? "in" : authMode);
   if (h === "ponton") markRead();
   if (h === "webcams") wcFromHash();
   renderAll(); window.scrollTo(0, 0); heroStart();
+  if (h === "boussole") bsEnter(); else bsLeave();
 }
 /* écran d'ouverture : l'en-tête avec le chat en démo, puis bouton « Entrer » */
 function enterApp() {
@@ -2702,3 +2703,75 @@ $("modWelSave").onclick = function () {
 };
 $("modWelReset").onclick = function () { $("modWel").value = WEL_DEF; };
 $("modWel").value = welText();
+
+/* ================= BOUSSOLE (capteur du téléphone) + repère vers le port d'attache ================= */
+var BS = { on: false, cap: null, shown: null, pos: null, wid: null, raf: 0, abs: false, last: 0 };
+var BSDIR = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSO", "SO", "OSO", "O", "ONO", "NO", "NNO"];
+(function () {
+  var T = $("bsTicks"); if (!T) return; var ns = "http://www.w3.org/2000/svg", out = "";
+  for (var d = 0; d < 360; d += 5) { var big = d % 30 === 0, r1 = 138, r2 = big ? 120 : 129, a = d * Math.PI / 180;
+    out += '<line x1="' + (150 + r1 * Math.sin(a)).toFixed(1) + '" y1="' + (150 - r1 * Math.cos(a)).toFixed(1) + '" x2="' + (150 + r2 * Math.sin(a)).toFixed(1) + '" y2="' + (150 - r2 * Math.cos(a)).toFixed(1) + '" stroke="#F4F1EA" stroke-width="' + (big ? 2.2 : 1) + '" opacity="' + (big ? 0.95 : 0.55) + '"/>';
+    if (big && d % 90) out += '<text x="' + (150 + 104 * Math.sin(a)).toFixed(1) + '" y="' + (155 - 104 * Math.cos(a)).toFixed(1) + '" font-size="12" text-anchor="middle" fill="#B9C7CF" font-family="IBM Plex Mono,monospace">' + d + '</text>'; }
+  T.innerHTML = out;
+})();
+function bsMsg(t) { var m = $("bsMsg"); if (m) m.textContent = t || ""; }
+function bsSensor(e) {
+  var c = null;
+  if (typeof e.webkitCompassHeading === "number") c = e.webkitCompassHeading; /* iPhone */
+  else if (e.alpha != null && (e.absolute || e.type === "deviceorientationabsolute")) { c = 360 - e.alpha; BS.abs = true; }
+  if (c == null) return;
+  var sa = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  c = ((c + sa) % 360 + 360) % 360;
+  BS.cap = BS.cap == null ? c : (function (o, n) { var d = ((n - o + 540) % 360) - 180; return (o + d * 0.25 + 360) % 360; })(BS.cap, c); /* lissage */
+  BS.last = Date.now();
+  if (!BS.raf) BS.raf = requestAnimationFrame(bsDraw);
+}
+function bsDraw() {
+  BS.raf = 0; var r = $("bsRose"); if (!r || BS.cap == null) return;
+  r.setAttribute("transform", "rotate(" + (-BS.cap).toFixed(1) + " 150 150)");
+  var c = Math.round(BS.cap) % 360; $("bsDeg").textContent = c + "°"; $("bsDir").textContent = BSDIR[Math.round(c / 22.5) % 16] + (BS.abs || typeof window.DeviceOrientationEvent === "undefined" ? "" : "");
+}
+function bsStart() {
+  if (BS.on) return; BS.on = true; bsMsg("");
+  if ("ondeviceorientationabsolute" in window) window.addEventListener("deviceorientationabsolute", bsSensor);
+  else window.addEventListener("deviceorientation", bsSensor);
+  $("bsGo").textContent = "Boussole active"; $("bsGo").disabled = true;
+  setTimeout(function () { if (BS.on && BS.cap == null) bsMsg("Pas de cap reçu : ce téléphone n'a peut-être pas de boussole, ou le capteur est bloqué. Essayez de bouger un peu le téléphone."); }, 3000);
+}
+function bsLeave() {
+  if (!BS.on && BS.wid == null) return;
+  window.removeEventListener("deviceorientationabsolute", bsSensor); window.removeEventListener("deviceorientation", bsSensor); BS.on = false;
+  if (BS.wid != null && navigator.geolocation) { navigator.geolocation.clearWatch(BS.wid); BS.wid = null; }
+  var g = $("bsGo"); if (g) { g.disabled = false; g.textContent = "Activer la boussole"; }
+}
+function bsEnter() {
+  bsPort();
+  /* Android : démarre tout seul ; iPhone : il faut toucher le bouton (autorisation) */
+  if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== "function") bsStart();
+}
+function bsBearing(a, b, c, d) { var r = Math.PI / 180, y = Math.sin((d - b) * r) * Math.cos(c * r), x = Math.cos(a * r) * Math.sin(c * r) - Math.sin(a * r) * Math.cos(c * r) * Math.cos((d - b) * r); return (Math.atan2(y, x) / r + 360) % 360; }
+function bsPort() {
+  var t = $("bsPortTxt"), g = $("bsPort"); if (!t || !g) return;
+  var p = me(), z = p && p.port ? Z.filter(function (x) { return x[0] === p.port; })[0] : null;
+  if (!z) { g.style.display = "none"; t.textContent = real() ? "Choisissez votre port d'attache dans Mon profil pour avoir le repère jaune vers votre port." : "Avec un compte, le repère jaune vous indique la direction de votre port d'attache."; return; }
+  var nom = z[0].replace(/\s*\((F|CH)\)\s*$/, "");
+  if (!BS.pos) { g.style.display = "none"; t.textContent = "Touchez « Repère vers mon port » pour voir la direction et la distance de " + nom + "."; return; }
+  var b = bsBearing(BS.pos.lat, BS.pos.lon, z[1], z[2]), dk = km(BS.pos.lat, BS.pos.lon, z[1], z[2]);
+  g.style.display = ""; g.setAttribute("transform", "rotate(" + b.toFixed(1) + " 150 150)");
+  t.textContent = (dk < 0.15 ? "Vous êtes à " + nom + "." : "Repère jaune : " + nom + " · " + (dk < 10 ? dk.toFixed(1).replace(".", ",") : Math.round(dk)) + " km · cap " + Math.round(b) + "° " + BSDIR[Math.round(b / 22.5) % 16]);
+}
+(function () {
+  var go = $("bsGo"), gp = $("bsGps"); if (!go || !gp) return;
+  go.onclick = function () {
+    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") {
+      DeviceOrientationEvent.requestPermission().then(function (r) { if (r === "granted") bsStart(); else bsMsg("Accès au capteur refusé. Autorisez « Mouvement et orientation » dans les réglages."); }).catch(function () { bsMsg("Impossible d'activer le capteur."); });
+    } else if (window.DeviceOrientationEvent) bsStart();
+    else bsMsg("Ce téléphone ou ce navigateur ne fournit pas de boussole.");
+  };
+  gp.onclick = function () {
+    if (!navigator.geolocation) { bsMsg("GPS indisponible."); return; }
+    if (BS.wid != null) return; $("bsPortTxt").textContent = "Recherche de votre position…";
+    BS.wid = navigator.geolocation.watchPosition(function (p) { BS.pos = { lat: p.coords.latitude, lon: p.coords.longitude }; bsPort(); },
+      function (e) { BS.wid = null; bsMsg(e.code === 1 ? "GPS refusé : autorisez la position pour Nauticonnect." : "Position indisponible, réessayez en extérieur."); }, { enableHighAccuracy: true, maximumAge: 10000 });
+  };
+})();
