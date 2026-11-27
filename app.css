@@ -815,3 +815,6 @@ html.splashing .hero .mnb{display:none}
 
 .vp-p{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd)}.vp-p .btn{width:auto;margin:0}
 #vpBox .chk{margin-top:10px}
+
+.ck-fr{font-size:13px;font-weight:700;color:#1f7a47;margin:4px 0}
+@media (prefers-color-scheme:dark){.ck-fr{color:#7fe0a9}}

@@ -698,6 +698,8 @@ try { var mm = JSON.parse(ls("nc-man") || "null"); if (mm && typeof mm.lat === "
 /* le partage ne marche que sur le Léman et ses rives (contrôlé aussi par le serveur) */
 function nearLeman(p) { return p && p.lat >= 46.17 && p.lat <= 46.57 && p.lon >= 6.09 && p.lon <= 6.98; }
 var FAR_MSG = "Vous êtes trop loin du lac : le partage de position fonctionne seulement sur le Léman et ses rives.";
+/* durée du partage avec les amis : 2 h, 4 h ou sans limite (-1) */
+function frDur() { var v = +ls("nc-fr-dur"); if (!isPremium() && (v === -1 || v > SHARE_MS)) v = SHARE_MS; return v === -1 ? -1 : (v > 0 ? v : SHARE_MS); }
 function frPour() { try { var a = JSON.parse(ls("nc-fr-pour") || "null"); return Array.isArray(a) ? a : null; } catch (e) { return null; } }
 /* coupe le pavillon et/ou le partage amis (expiration, hors du lac) */
 function shareOff(open, fr, msg) {
@@ -706,9 +708,9 @@ function shareOff(open, fr, msg) {
   if (msg) rErr(msg); stat(); frPick();
 }
 function shareExpire() {
-  var n = Date.now(), o = $("rnOpen").checked && n - (+ls("nc-open-t") || 0) > SHARE_MS, f = $("rnFr").checked && n - (+ls("nc-fr-t") || 0) > SHARE_MS;
+  var n = Date.now(), fd = frDur(), o = $("rnOpen").checked && n - (+ls("nc-open-t") || 0) > SHARE_MS, f = $("rnFr").checked && fd > 0 && n - (+ls("nc-fr-t") || 0) > fd;
   if (rman && rman.t && n - rman.t > SHARE_MS && !rgp) { rman = null; ls("nc-man", ""); }
-  if (o || f) shareOff(o, f, (o && f ? "Pavillon amené et partage avec vos amis arrêté" : o ? "Pavillon amené" : "Partage avec vos amis arrêté") + " automatiquement après 2 h. Réactivez-le si vous êtes encore sur l'eau.");
+  if (o || f) shareOff(o, f, (o && f ? "Pavillon amené et partage avec vos amis arrêté" : o ? "Pavillon amené" : "Partage avec vos amis arrêté") + " automatiquement" + (o ? " après 2 h" : "") + ". Réactivez-le si vous êtes encore sur l'eau.");
 }
 function rPos() { return rgp || rman; }
 function rErr(t) { $("rnErr").textContent = t || ""; }
@@ -749,6 +751,10 @@ function frPick() {
   var ids = friendIds().filter(function (id) { return P[id]; });
   B.hidden = !$("rnFr").checked || !ids.length; if (B.hidden) return;
   var sel0 = frPour(), on = function (id) { return !sel0 || sel0.indexOf(id) >= 0; };
+  var dl = el("label", "l", "Durée du partage"), ds = el("select", "f"); ds.setAttribute("aria-label", "Durée du partage");
+  [[SHARE_MS, "2 heures"], [2 * SHARE_MS, "4 heures"], [-1, "Jusqu'à ce que je l'arrête"]].forEach(function (x) { var op = el("option", 0, x[1]); op.value = String(x[0]); ds.appendChild(op); });
+  ds.value = String(frDur()); ds.onchange = function () { ls("nc-fr-dur", this.value); ls("nc-fr-t", String(Date.now())); rErr(this.value === "-1" ? "Partage sans limite : pensez à le couper en rentrant au port." : ""); };
+  B.appendChild(dl); B.appendChild(ds);
   B.appendChild(el("div", "mu", "Visible par :"));
   ids.sort(function (a, b) { return norm(P[a].pseudo).localeCompare(norm(P[b].pseudo)); }).forEach(function (id) {
     var l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.checked = on(id);
@@ -2975,6 +2981,9 @@ function ckCard(x) {
   c.appendChild(el("div", "ck-s", fKm(+x.km) + " km · " + fDurTxt(dur) + " · max " + fKn(x.vmax) + " nd · moy " + fKn(x.vmoy) + " nd"));
   var sv = document.createElementNS(NS, "svg"); sv.setAttribute("viewBox", "0 0 680 300"); sv.setAttribute("class", "cb-map"); sv.setAttribute("role", "img"); sv.setAttribute("aria-label", "Trajet"); c.appendChild(sv); drawTrip(sv, x.trace, !mine);
   if (x.note) c.appendChild(el("div", 0, x.note));
+  if (mine) { var fr = friendIds(), a0 = ts(x.debut), b0 = ts(x.fin), w2 = {};
+    CK.forEach(function (y) { if (y.auteur !== uid && y.public && fr.indexOf(y.auteur) >= 0 && ts(y.debut) < b0 && ts(y.fin) > a0 && P[y.auteur]) w2[P[y.auteur].pseudo] = 1; });
+    var nm2 = Object.keys(w2); if (nm2.length) c.appendChild(el("div", "ck-fr", "Sur l'eau en même temps : " + nm2.join(", "))); }
   if (x.photos && x.photos.length) { var g = el("div", "ck-ph"); x.photos.forEach(function (p) { var im = el("img"); im.src = photoUrl(p); im.alt = "Photo de la sortie"; im.loading = "lazy"; im.onclick = function () { viewPhoto(im.src); }; g.appendChild(im); }); c.appendChild(g); }
   var A = el("div", "row"); A.style.marginTop = "8px";
   if (mine) {
