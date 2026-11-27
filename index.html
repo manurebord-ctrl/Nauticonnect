@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=54">
+<link rel="stylesheet" href="app.css?v=55">
 </head>
 <body>
 
@@ -52,9 +52,9 @@
 <div class="joinbar" id="joinBar" hidden><div><b id="joinTxt">Rejoignez les plaisanciers du Léman</b><span>Compte gratuit : chat, offres membres chez les restos partenaires, alerte vaudaire sur votre téléphone.</span></div><div class="jb-row"><a class="btn" id="joinGo" href="#compte">Créer mon compte</a><button class="linkb" id="joinLater">Plus tard</button></div></div>
 
 <section class="hso">
-<h2 class="sec">Prochaines sorties</h2>
+<h2 class="sec">Places à bord</h2>
 <div id="homeSo"></div>
-<div class="row"><a class="btn g" id="homeSoAll" href="#sorties">Voir les sorties</a><button class="btn" id="homeSoAdd">+ Proposer</button></div>
+<div class="row"><a class="btn g" id="homeSoAll" href="#sorties">Voir tout</a><button class="btn" id="homeSoAdd">+ Proposer</button></div>
 </section>
 
 <h2 class="sec">Avant de partir</h2>
@@ -494,16 +494,17 @@
 <!-- ===================== SORTIES ===================== -->
 <section id="v-sorties" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
-<h1 class="ph1">Sorties sur le lac</h1>
-<p class="lead">Une balade, un apéro au large, une virée à Yvoire… Proposez une sortie ou rejoignez celle d'un autre plaisancier.</p>
-<button class="btn" id="soAdd">+ Proposer une sortie</button>
+<h1 class="ph1">Places à bord</h1>
+<p class="lead">Vous avez de la place sur votre bateau ? Proposez-la. Pas de bateau ? Demandez une place : l'organisateur accepte les équipiers qu'il veut.</p>
+<button class="btn" id="soAdd">+ Proposer des places à bord</button>
 <div id="soForm" class="card" hidden style="margin-top:10px">
-<label class="l" for="soTi">Titre</label><input class="f" id="soTi" maxlength="80" placeholder="Ex. Apéro au large de Saint-Gingolph">
+<label class="l" for="soTi">Titre</label><input class="f" id="soTi" maxlength="80" placeholder="Ex. Balade vers Yvoire, apéro au large…">
 <div class="row"><div><label class="l" for="soDe">Départ</label><input class="f" id="soDe" maxlength="50" list="soPorts" placeholder="Port de départ"></div><div><label class="l" for="soDs">Destination (facultatif)</label><input class="f" id="soDs" maxlength="50" list="soPorts" placeholder="Ex. Yvoire"></div></div>
 <datalist id="soPorts"></datalist>
 <div class="row"><div><label class="l" for="soJo">Date</label><input class="f" id="soJo" type="date"></div><div><label class="l" for="soHe">Heure</label><input class="f" id="soHe" type="time"></div></div>
-<label class="l" for="soPl">Nombre de bateaux ou de places (facultatif)</label><input class="f" id="soPl" type="number" min="1" max="50" inputmode="numeric" placeholder="Laisser vide si illimité">
-<label class="l" for="soTx">Détails (facultatif)</label><textarea class="f" id="soTx" rows="3" maxlength="400" placeholder="Ex. On se retrouve devant la capitainerie, chacun amène quelque chose à grignoter."></textarea>
+<label class="l" for="soPl">Places disponibles à bord</label><input class="f" id="soPl" type="number" min="1" max="50" inputmode="numeric" placeholder="Ex. 2">
+<label class="l" for="soFr">Participation aux frais (facultatif)</label><input class="f" id="soFr" maxlength="60" placeholder="Ex. 20 CHF pour l'essence, à régler sur place">
+<label class="l" for="soTx">Détails (facultatif)</label><textarea class="f" id="soTx" rows="3" maxlength="400" placeholder="Ex. Rendez-vous ponton C, prévoyez un coupe-vent. Débutants bienvenus."></textarea>
 <div class="row"><button class="btn g" id="soCx">Annuler</button><button class="btn" id="soSv">Publier</button></div></div>
 <div class="err" id="soMsg"></div>
 <div id="soList" style="margin-top:12px"></div>
@@ -563,7 +564,7 @@
 <div class="mnhd"><b>Nauti<span>connect</span></b><button id="mnX" aria-label="Fermer">✕</button></div>
 <a href="#">Accueil</a><a href="#ponton">Chat · Le Ponton</a><a href="#panne" class="mnsos">SOS panne</a>
 <div class="mnt">Sur l'eau</div><a href="#meteo">Météo et vent</a><a href="#ports">Ports</a><a href="#webcams">Webcams</a><a href="#vitesse">Vitesse</a><a href="#boussole">Boussole</a>
-<div class="mnt">Entre membres</div><a href="#location">Location</a><a href="#annonces">À vendre</a><a href="#evenements">Événements</a><a href="#restos">Escales</a>
+<div class="mnt">Entre membres</div><a href="#sorties">Places à bord</a><a href="#location">Location</a><a href="#annonces">À vendre</a><a href="#evenements">Événements</a><a href="#restos">Escales</a>
 <div class="mnt">Découvrir</div><a href="#noeuds">Nœuds</a><a href="#epaves">Épaves</a>
 <div class="mnt">Mon compte</div><a href="#profil">Mon profil</a><a href="#admin" id="mnAdm" hidden>Espace modérateur</a>
 </aside>
@@ -579,7 +580,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=71"></script>
+<script src="app.js?v=72"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>

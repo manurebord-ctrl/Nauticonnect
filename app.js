@@ -33,7 +33,7 @@ function real() { return !!uid && !guest && !(realAdmin && viewAs === "invite");
 
 /* ---------------- données ---------------- */
 /* sorties : mises en pause (true pour les réactiver) */
-var SORTIES_ON = false;
+var SORTIES_ON = true; /* réactivé en « Place à bord » (nov. 2026) */
 var SO = [], SI = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 /* sous-titre d'un membre : son bateau, sinon « Sans bateau » / « Je loue des bateaux », sinon son port */
@@ -878,7 +878,17 @@ $("pvBack").onclick = function () { setReply("prive", null); openWith = null; ls
 /* rendu des bulles, commun au salon et au privé */
 /* bandeaux jaunes en bas du salon : qui a hissé le pavillon, près de quel port */
 function nearPort(lat, lon) { var best = null, bd = 1e9; Z.forEach(function (z) { var d = km(lat, lon, z[1], z[2]); if (d < bd) { bd = d; best = z[0]; } }); return best ? best.replace(/\s*\((F|CH)\)\s*$/, "") : "le lac"; }
+function soBanners(box) {
+  if (!SORTIES_ON) return; var lim = Date.now() - 2 * 864e5;
+  soUp().filter(function (x) { return ts(x.t) > lim && x.auteur !== uid && P[x.auteur] && !isBl(x.auteur); }).slice(0, 2).forEach(function (x) {
+    var b = el("button", "wa-pav wa-so"); b.type = "button"; b.appendChild(el("i", 0, ""));
+    var t = el("span"); t.appendChild(el("b", 0, P[x.auteur].pseudo)); t.appendChild(document.createTextNode(" propose " + (x.places ? x.places + " place" + (x.places > 1 ? "s" : "") : "des places") + " à bord · " + dFr(x.jour) + " · départ " + x.depart));
+    t.appendChild(el("em", 0, x.titre)); t.appendChild(el("small", 0, "Touchez pour demander une place")); b.appendChild(t);
+    b.onclick = function () { location.hash = "sorties"; }; box.appendChild(b);
+  });
+}
 function pavBanners(box) {
+  soBanners(box);
   openOthers().filter(function (x) { return P[x.id] && !isBl(x.id); }).sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).slice(0, 3).forEach(function (x) {
     var b = el("button", "wa-pav"); b.type = "button";
     b.appendChild(el("i", 0, "")); var t = el("span"); t.appendChild(el("b", 0, P[x.id].pseudo)); t.appendChild(document.createTextNode(" a hissé le pavillon près de " + nearPort(x.lat, x.lon)));
@@ -2182,7 +2192,7 @@ function feedItems() {
   AN.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: (x.type === "Recherche" ? "Recherché : " : "Petite annonce : ") + x.titre + (x.prix ? " · " + (x.type === "Recherche" ? "budget " : "") + x.prix + " CHF" : ""), go: "annonces", k: "an" }); });
   LO.filter(function (x) { return x.actif !== false && ts(x.maj) > wk; }).slice(0, 3).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Bateau à louer : " + x.nom + (x.port ? " à " + x.port : ""), go: "location", k: "lo" }); });
   EP.filter(function (x) { return ts(x.maj) > wk; }).slice(0, 2).forEach(function (x) { I.push({ t: ts(x.maj), who: x.auteur, txt: "Épave ajoutée sur la carte : " + x.nom, go: "epaves", k: "ep" }); });
-  SO.filter(function (x) { return ts(x.t) > wk && x.jour >= today; }).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: ((P[x.auteur] && P[x.auteur].pseudo) || "Un membre") + " propose une sortie : " + x.titre + " · " + dFr(x.jour), go: "sorties", k: "so" }); });
+  SO.filter(function (x) { return ts(x.t) > wk && x.jour >= today; }).forEach(function (x) { I.push({ t: ts(x.t), who: x.auteur, txt: ((P[x.auteur] && P[x.auteur].pseudo) || "Un membre") + " propose des places à bord : " + x.titre + " · " + dFr(x.jour), go: "sorties", k: "so" }); });
   var n = SL.filter(function (m) { return Date.now() - ts(m.t) < 864e5; }).length;
   if (n) I.push({ t: Math.max.apply(null, SL.map(function (m) { return ts(m.t); })), txt: n + " message" + (n > 1 ? "s" : "") + " sur le Ponton ces dernières 24 h", go: "ponton", k: "sl" });
   return I.sort(function (a, b) { return b.t - a.t; }).slice(0, 6);
@@ -2336,7 +2346,10 @@ function offerCard(x) {
 
 /* ================= SORTIES ================= */
 function soUp() { var d = today(); return SO.filter(function (x) { return x.jour >= d; }).sort(function (a, b) { return (a.jour + a.heure).localeCompare(b.jour + b.heure); }); }
-function soWho(id) { return SI.filter(function (i) { return i.sortie_id === id; }).map(function (i) { return i.uid; }); }
+function soWho(id) { return SI.filter(function (i) { return i.sortie_id === id && (i.statut || "ok") === "ok"; }).map(function (i) { return i.uid; }); }
+function soReq(id) { return SI.filter(function (i) { return i.sortie_id === id && i.statut === "demande"; }); }
+function soMine(id) { return SI.filter(function (i) { return i.sortie_id === id && i.uid === uid; })[0] || null; }
+function soDecide(x, u, st, btn) { if (btn) btn.disabled = true; sb.from("sortie_inscrits").update({ statut: st }).eq("sortie_id", x.id).eq("uid", u).then(function (r) { if (r.error) toast(/complet/.test(r.error.message || "") ? "Toutes les places sont déjà prises." : "Action impossible. Réessayez."); else toast(st === "ok" ? "Accepté : l'équipier est prévenu." : "Demande refusée."); load("sortie_inscrits"); }); }
 function soCard(x, small) {
   var c = el("div", "card evcard socard" + (x.auteur === uid ? " mine" : "")), d = new Date(x.jour + "T12:00:00");
   var dt = el("div", "evdate"); dt.appendChild(el("b", 0, String(d.getDate()))); dt.appendChild(el("span", 0, MOIS[d.getMonth()])); c.appendChild(dt);
@@ -2345,35 +2358,54 @@ function soCard(x, small) {
   var w = el("div"); w.style.margin = "6px 0"; w.appendChild(badge(x.auteur)); b.appendChild(w);
   var ins = soWho(x.id), full = x.places && ins.length >= x.places, inn = ins.indexOf(uid) >= 0;
   if (!small && x.descr) b.appendChild(el("div", 0, x.descr));
+  if (x.frais) b.appendChild(el("div", "so-fr", "Participation aux frais : " + x.frais));
   var pl = el("div", "so-pl");
   if (ins.length) { var st = el("span", "stack"); ins.slice(0, 6).forEach(function (u) { st.appendChild(putPhoto(el("span", "av", initial(u)), u)); }); pl.appendChild(st); }
-  pl.appendChild(el("span", "mu", ins.length ? ins.length + " participant" + (ins.length > 1 ? "s" : "") + (x.places ? " sur " + x.places : "") + (small ? "" : " : " + ins.map(function (u) { return (P[u] && P[u].pseudo) || "?"; }).join(", ")) : x.places ? x.places + " place" + (x.places > 1 ? "s" : "") + " · soyez le premier" : "Soyez le premier à rejoindre"));
+  pl.appendChild(el("span", "mu", ins.length ? ins.length + " à bord" + (x.places ? " sur " + x.places : "") + (small ? "" : " : " + ins.map(function (u) { return (P[u] && P[u].pseudo) || "?"; }).join(", ")) : x.places ? x.places + " place" + (x.places > 1 ? "s" : "") + " · soyez le premier" : "Soyez le premier à rejoindre"));
   b.appendChild(pl);
   if (small) { c.onclick = function () { location.hash = "sorties"; }; c.appendChild(b); return c; }
   var A = el("div", "row"); A.style.marginTop = "8px";
   if (x.auteur !== uid) {
-    var j = el("button", "btn sm" + (inn ? " g" : ""), inn ? "Je ne viens plus" : full ? "Complet" : "Je viens");
-    j.disabled = !inn && full;
+    var my = soMine(x.id), mst = my ? (my.statut || "ok") : "";
+    if (mst) b.appendChild(el("div", mst === "ok" ? "okm" : mst === "refuse" ? "err" : "mu", mst === "ok" ? "Vous êtes à bord ✓" : mst === "refuse" ? "Demande refusée par l'organisateur" : "Demande envoyée : l'organisateur va vous répondre"));
+    var j = el("button", "btn sm" + (mst ? " g" : ""), mst === "ok" ? "Je ne viens plus" : mst === "demande" ? "Annuler ma demande" : mst === "refuse" ? "Demande refusée" : full ? "Complet" : "Je demande une place");
+    j.disabled = mst === "refuse" || (!mst && full);
     j.onclick = function () {
-      if (!requireProfile(null, "Pour rejoindre une sortie, créez votre compte gratuit : l'organisateur saura qui vient.")) return;
+      if (!requireProfile(null, "Pour demander une place à bord, créez votre compte gratuit : l'organisateur saura qui vous êtes.")) return;
       j.disabled = true;
-      (inn ? sb.from("sortie_inscrits").delete().eq("sortie_id", x.id).eq("uid", uid) : sb.from("sortie_inscrits").insert({ sortie_id: x.id }))
-        .then(function (r) { if (r.error) toast(full ? "Cette sortie est complète." : "Action impossible. Réessayez."); else toast(inn ? "Désinscrit" : "Inscrit ! L'organisateur est prévenu."); load("sortie_inscrits"); });
+      (mst ? sb.from("sortie_inscrits").delete().eq("sortie_id", x.id).eq("uid", uid) : sb.from("sortie_inscrits").insert({ sortie_id: x.id }))
+        .then(function (r) { if (r.error) toast(full ? "Toutes les places sont prises." : "Action impossible. Réessayez."); else toast(mst ? "C'est noté." : "Demande envoyée ! L'organisateur est prévenu."); load("sortie_inscrits"); });
     };
     A.appendChild(j);
     if (real() && P[x.auteur]) { var wr = el("button", "btn g sm", "Écrire"); wr.onclick = function () { openThread(x.auteur, "Bonjour, à propos de la sortie « " + x.titre + " »… "); }; A.appendChild(wr); }
   } else {
+    var rq = soReq(x.id);
+    if (rq.length) {
+      var R = el("div", "so-req"); R.appendChild(el("b", 0, rq.length + " demande" + (rq.length > 1 ? "s" : "") + " de place"));
+      rq.forEach(function (i) {
+        var r = el("div", "so-rq"); r.appendChild(badge(i.uid));
+        var ok = el("button", "btn sm", "Accepter"), no = el("button", "btn g sm", "Refuser");
+        ok.disabled = !!full; ok.onclick = function () { soDecide(x, i.uid, "ok", ok); }; no.onclick = function () { soDecide(x, i.uid, "refuse", no); };
+        r.appendChild(ok); r.appendChild(no); R.appendChild(r);
+      });
+      b.appendChild(R);
+    }
+    if (ins.length) {
+      var Rk = el("div", "so-req"); Rk.appendChild(el("b", 0, "À bord"));
+      ins.forEach(function (u) { var r = el("div", "so-rq"); r.appendChild(badge(u)); var w2 = el("button", "btn g sm", "Écrire"); w2.onclick = function () { openThread(u); }; var rm = el("button", "btn g sm", "Retirer"); rm.onclick = function () { if (rm.dataset.ok !== "1") { rm.dataset.ok = "1"; rm.textContent = "Confirmer"; return; } sb.from("sortie_inscrits").delete().eq("sortie_id", x.id).eq("uid", u).then(function () { load("sortie_inscrits"); }); }; r.appendChild(w2); r.appendChild(rm); Rk.appendChild(r); });
+      b.appendChild(Rk);
+    }
     var del = el("button", "btn g sm", "Annuler la sortie");
     del.onclick = function () { if (del.dataset.ok !== "1") { del.dataset.ok = "1"; del.textContent = "Confirmer l'annulation"; return; } sb.from("sorties").delete().eq("id", x.id).then(function () { toast("Sortie annulée"); load("sorties"); }); };
     A.appendChild(del);
   }
   if (isAdmin && x.auteur !== uid) { var ad = el("button", "btn g sm", "Retirer (admin)"); ad.onclick = function () { if (confirm("Retirer cette sortie ?")) sb.from("sorties").delete().eq("id", x.id).then(function () { load("sorties"); }); }; A.appendChild(ad); }
-  var sh = el("button", "btn g sm", "Partager"); sh.onclick = function () { shareIt("Sortie sur le Léman : " + x.titre + ", " + dFr(x.jour) + (x.heure ? " à " + x.heure : "") + ", départ " + x.depart + ". Tu viens ? Inscris-toi sur Nauticonnect", "sorties", "Partager la sortie"); }; A.appendChild(sh);
+  var sh = el("button", "btn g sm", "Partager"); sh.onclick = function () { shareIt("Places à bord sur le Léman : " + x.titre + ", " + dFr(x.jour) + (x.heure ? " à " + x.heure : "") + ", départ " + x.depart + ". Demande ta place sur Nauticonnect", "sorties", "Partager la sortie"); }; A.appendChild(sh);
   b.appendChild(A); c.appendChild(b); return c;
 }
 function renderSorties() {
   var L = $("soList"); L.textContent = ""; var up = soUp();
-  if (!up.length) L.appendChild(el("p", "mu", "Aucune sortie prévue pour l'instant. Lancez la première : une balade, un apéro au large, une virée à Yvoire…"));
+  if (!up.length) L.appendChild(el("p", "mu", "Aucune place à bord proposée pour l'instant. Vous avez de la place sur votre bateau ? Proposez-la : une balade, un apéro au large, une virée à Yvoire…"));
   up.forEach(function (x) { L.appendChild(soCard(x)); });
 }
 function renderHomeSorties() {
@@ -2381,13 +2413,13 @@ function renderHomeSorties() {
   document.querySelector(".hso").hidden = !SORTIES_ON; if (!SORTIES_ON) return;
   var up = sb ? soUp() : [];
   up.slice(0, 2).forEach(function (x) { H.appendChild(soCard(x, true)); });
-  if (!up.length) H.appendChild(el("p", "mu", "Aucune sortie prévue. Proposez la première !"));
-  $("homeSoAll").textContent = up.length > 2 ? "Voir les " + up.length + " sorties" : "Voir les sorties";
+  if (!up.length) H.appendChild(el("p", "mu", "Aucune place à bord proposée. De la place sur votre bateau ? Proposez-la !"));
+  $("homeSoAll").textContent = up.length > 2 ? "Voir les " + up.length + " sorties" : "Voir tout";
 }
 function soMsg(t, ok) { $("soMsg").className = ok ? "okm" : "err"; $("soMsg").textContent = t || ""; }
 (function () { var dl = $("soPorts"); if (dl) ZA().forEach(function (z) { var o = document.createElement("option"); o.value = z[0]; dl.appendChild(o); }); })();
 $("soAdd").onclick = function () {
-  soMsg(); if (!requireProfile($("soMsg"), "Pour proposer une sortie, créez votre compte gratuit.")) return;
+  soMsg(); if (!requireProfile($("soMsg"), "Pour proposer des places à bord, créez votre compte gratuit.")) return;
   var f = $("soForm"); f.hidden = false; if (!$("soJo").value) $("soJo").value = today(); $("soJo").min = today();
   if (!$("soDe").value && me().port) $("soDe").value = me().port; $("soTi").focus();
 };
@@ -2395,15 +2427,15 @@ $("homeSoAdd").onclick = function () { location.hash = "sorties"; setTimeout(fun
 $("soCx").onclick = function () { $("soForm").hidden = true; soMsg(); };
 $("soSv").onclick = function () {
   soMsg(); if (!requireProfile($("soMsg"))) return;
-  var d = { titre: $("soTi").value.trim(), depart: $("soDe").value.trim(), dest: $("soDs").value.trim(), jour: $("soJo").value, heure: $("soHe").value, places: +$("soPl").value || null, descr: $("soTx").value.trim() };
+  var d = { titre: $("soTi").value.trim(), depart: $("soDe").value.trim(), dest: $("soDs").value.trim(), jour: $("soJo").value, heure: $("soHe").value, places: +$("soPl").value || null, descr: $("soTx").value.trim() }; var frEl = $("soFr"); if (frEl && frEl.value.trim()) d.frais = frEl.value.trim().slice(0, 60);
   if (d.titre.length < 3) { soMsg("Donnez un titre à la sortie (ex. Apéro au large de Saint-Gingolph)."); return; }
   if (d.depart.length < 2) { soMsg("Indiquez le port de départ."); return; }
   if (!d.jour || d.jour < today()) { soMsg("Choisissez une date à venir."); return; }
   $("soSv").disabled = true;
   sb.from("sorties").insert(d).then(function (r) {
     if (r.error) { soMsg("Publication impossible. Réessayez."); return; }
-    $("soForm").hidden = true; ["soTi", "soDs", "soHe", "soPl", "soTx"].forEach(function (k) { $(k).value = ""; });
-    toast("Sortie publiée ! Vos amis sont prévenus."); load("sorties");
+    $("soForm").hidden = true; ["soTi", "soDs", "soHe", "soPl", "soTx", "soFr"].forEach(function (k) { if ($(k)) $(k).value = ""; });
+    toast("C'est publié ! Les membres sont prévenus."); load("sorties");
   }).then(function () { $("soSv").disabled = false; });
 };
 
@@ -2429,8 +2461,8 @@ function welcome(ret) {
     });
   }
   if (SORTIES_ON) {
-  var s3 = step(L.length ? 3 : 2, "Retrouvez-vous sur l'eau", soUp().length ? soUp().length + " sortie" + (soUp().length > 1 ? "s" : "") + " prévue" + (soUp().length > 1 ? "s" : "") + " : rejoignez-en une ou proposez la vôtre." : "Proposez une sortie, ou dites bonjour sur le Ponton.");
-  var r3 = el("div", "row"), a = el("button", "btn sm", "Voir les sorties"), b2 = el("button", "btn g sm", "Ouvrir le chat");
+  var s3 = step(L.length ? 3 : 2, "Retrouvez-vous sur l'eau", soUp().length ? soUp().length + " sortie" + (soUp().length > 1 ? "s" : "") + " avec des places à bord : demandez la vôtre, ou proposez de la place sur votre bateau." : "Proposez de la place sur votre bateau, ou dites bonjour sur le Ponton.");
+  var r3 = el("div", "row"), a = el("button", "btn sm", "Places à bord"), b2 = el("button", "btn g sm", "Ouvrir le chat");
   a.onclick = function () { md.close(); location.hash = "sorties"; }; b2.onclick = function () { md.close(); location.hash = "ponton"; };
   r3.appendChild(a); r3.appendChild(b2); s3.appendChild(r3);
   } else {

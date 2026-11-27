@@ -781,3 +781,10 @@ html.splashing .hero .mnb{display:none}
 .cbdel{margin-left:8px;background:none;border:0;color:var(--red);font:700 12px var(--fb);padding:4px}
 .cbgo{width:auto;align-self:flex-start}
 .cbf{display:flex;flex-direction:column;gap:6px}.cbf .row{gap:6px}.cbf .f{margin:0}
+
+/* place à bord */
+.so-fr{font-size:14px;font-weight:700;margin:4px 0}
+.so-req{margin-top:10px;padding-top:8px;border-top:1px dashed var(--bd);display:flex;flex-direction:column;gap:6px}
+.so-rq{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.so-rq .badge{flex:1;min-width:120px}.so-rq .btn{width:auto;margin:0}
+.wa-pav.wa-so{background:#e3f1fa}.wa-pav.wa-so i{background:#0b6fa4}
+@media (prefers-color-scheme:dark){.wa-pav.wa-so{background:#12324a;color:#d6ebf7;border-color:#2f6d93}}
