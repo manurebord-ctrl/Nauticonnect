@@ -788,3 +788,14 @@ html.splashing .hero .mnb{display:none}
 .so-rq{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.so-rq .badge{flex:1;min-width:120px}.so-rq .btn{width:auto;margin:0}
 .wa-pav.wa-so{background:#e3f1fa}.wa-pav.wa-so i{background:#0b6fa4}
 @media (prefers-color-scheme:dark){.wa-pav.wa-so{background:#12324a;color:#d6ebf7;border-color:#2f6d93}}
+
+/* carnet de bord */
+.cb-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;text-align:center;margin-bottom:10px}
+.cb-stats b{display:block;font:800 22px/1.1 "Fraunces",Georgia,serif;font-variant-numeric:tabular-nums}.cb-stats span{font-size:11px;color:var(--mu)}
+.cb-map{display:block;width:100%;height:auto;border-radius:10px;margin:6px 0 10px;background:var(--bg)}
+.ck-t{display:block;font-family:"Fraunces",Georgia,serif;font-size:18px}
+.ck-s{font-weight:700;margin:4px 0}
+.ck-ph{display:flex;gap:6px;margin-top:8px}.ck-ph img{width:31%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:zoom-in}
+.ck-pub{float:right;font-size:11px;font-weight:700;padding:2px 8px;border-radius:9px;background:#dff5e8;color:#1f7a47}
+.wa-pav.wa-ck{background:#dff5e8}.wa-pav.wa-ck i{background:#1f8a5b}
+@media (prefers-color-scheme:dark){.wa-pav.wa-ck{background:#183a29;color:#d4f2df;border-color:#2c6b48}}

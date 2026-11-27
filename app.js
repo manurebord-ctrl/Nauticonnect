@@ -34,7 +34,7 @@ function real() { return !!uid && !guest && !(realAdmin && viewAs === "invite");
 /* ---------------- données ---------------- */
 /* sorties : mises en pause (true pour les réactiver) */
 var SORTIES_ON = true; /* réactivé en « Place à bord » (nov. 2026) */
-var SO = [], SI = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
+var SO = [], SI = [], CK = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 /* sous-titre d'un membre : son bateau, sinon « Sans bateau » / « Je loue des bateaux », sinon son port */
 function NOBOAT(t) { return t === "Sans bateau (équipier, passager)" || t === "Je loue des bateaux"; }
@@ -57,6 +57,7 @@ var Q = {
   avis: function () { return sb.from("avis").select("*").order("t", { ascending: false }).limit(300); },
   votes: function () { return sb.from("votes").select("*").limit(5000); },
   places: function () { return sb.from("places").select("*").gte("t", iso(12 * 36e5)); },
+  carnet: function () { return real() ? sb.from("carnet").select("*").order("debut", { ascending: false }).limit(120) : null; },
   carbu: function () { return sb.from("carbu").select("*").gte("t", iso(90 * 864e5)).order("t", { ascending: false }).limit(1000); },
   restos: function () { return sb.from("restos").select("*").order("t", { ascending: false }).limit(300); },
   epaves: function () { return sb.from("epaves").select("*").limit(500); },
@@ -90,7 +91,7 @@ function store(t, rows) {
   if (t === "blocages") { BL = rows.map(function (r) { return r.bloque; }); return; }
   if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
   else if (t === "alertes") { sosCheck(rows); A = rows; } else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse(); else if (t === "likes") LK = rows;
-  else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows; else if (t === "carbu") CB = rows;
+  else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows; else if (t === "carbu") CB = rows; else if (t === "carnet") CK = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
   else if (t === "sorties") SO = rows; else if (t === "sortie_inscrits") SI = rows;
@@ -133,7 +134,7 @@ function loadAll() { loadBadges(); return Promise.all(Object.keys(Q).map(load));
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "boussole", "annonces", "location", "evenements", "admin"].concat(SORTIES_ON ? ["sorties"] : []);
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "boussole", "carnet", "annonces", "location", "evenements", "admin"].concat(SORTIES_ON ? ["sorties"] : []);
 var NEEDS_AUTH = { profil: 1, admin: 1, location: 1, annonces: 1, vitesse: 1, epaves: 1, noeuds: 1 };
 var WHYV = {
   location: "La location de bateaux entre plaisanciers est réservée aux membres. Créez votre compte gratuit pour voir les bateaux disponibles.",
@@ -888,7 +889,7 @@ function soBanners(box) {
   });
 }
 function pavBanners(box) {
-  soBanners(box);
+  soBanners(box); ckBanners(box);
   openOthers().filter(function (x) { return P[x.id] && !isBl(x.id); }).sort(function (a, b) { return ts(b.maj) - ts(a.maj); }).slice(0, 3).forEach(function (x) {
     var b = el("button", "wa-pav"); b.type = "button";
     b.appendChild(el("i", 0, "")); var t = el("span"); t.appendChild(el("b", 0, P[x.id].pseudo)); t.appendChild(document.createTextNode(" a hissé le pavillon près de " + nearPort(x.lat, x.lon)));
@@ -2218,7 +2219,7 @@ function renderAll() {
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
   else if (v === "profil") { notifUI(); renderMyBadges(); }
   else if (v === "admin") { $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; drawPfQueue(); renderEvAdmin(); }
-  else if (v === "sorties") renderSorties();
+  else if (v === "sorties") renderSorties(); else if (v === "carnet") renderCarnet();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
 }
@@ -2852,3 +2853,157 @@ function bsPort() {
       function (e) { BS.wid = null; bsMsg(e.code === 1 ? "GPS refusé : autorisez la position pour Nauticonnect." : "Position indisponible, réessayez en extérieur."); }, { enableHighAccuracy: true, maximumAge: 10000 });
   };
 })();
+
+/* ================= CARNET DE BORD : enregistrement des sorties par GPS ================= */
+var TR = null, trWid = null, trLock = null, trTick = null, ckEnd = null; /* CK est déclaré en haut du fichier (utilisé dès le démarrage) */
+try { TR = JSON.parse(ls("nc-trip") || "null"); if (TR && (!TR.on || Date.now() - TR.start > 24 * 36e5)) { if (!TR.on) TR = null; } } catch (e) { TR = null; }
+function trSave() { try { ls("nc-trip", TR ? JSON.stringify(TR) : ""); } catch (e) {} }
+function fKm(k) { return (k < 10 ? (+k).toFixed(1) : String(Math.round(k))).replace(".", ","); }
+function fKn(v) { return (+v || 0).toFixed(1).replace(".", ","); }
+function fDur(ms) { var m = Math.max(0, Math.round(ms / 60000)), hh = Math.floor(m / 60), mm = m % 60; return hh + ":" + ("0" + mm).slice(-2); }
+function fDurTxt(ms) { var m = Math.max(1, Math.round(ms / 60000)), hh = Math.floor(m / 60), mm = m % 60; return hh ? hh + " h " + ("0" + mm).slice(-2) : mm + " min"; }
+/* dessine un trajet sur un petit plan du lac, cadré sur la sortie */
+function drawTrip(svg, pts, hideEnds) {
+  svg.textContent = ""; if (!pts || pts.length < 2) { if (svg.id === "cbMap") baseMap(svg, true); return; }
+  var P2 = pts;
+  if (hideEnds) { /* vie privée : on masque les 500 premiers et derniers mètres */
+    var acc = 0, a = 0, b = pts.length - 1;
+    for (a = 1; a < pts.length && acc < 0.5; a++) acc += km(pts[a - 1][0], pts[a - 1][1], pts[a][0], pts[a][1]);
+    acc = 0; for (b = pts.length - 2; b > a && acc < 0.5; b--) acc += km(pts[b + 1][0], pts[b + 1][1], pts[b][0], pts[b][1]);
+    P2 = pts.slice(a, b + 1); if (P2.length < 2) return;
+  }
+  var la0 = 1e9, la1 = -1e9, lo0 = 1e9, lo1 = -1e9;
+  P2.forEach(function (p) { la0 = Math.min(la0, p[0]); la1 = Math.max(la1, p[0]); lo0 = Math.min(lo0, p[1]); lo1 = Math.max(lo1, p[1]); });
+  var kx = Math.cos((la0 + la1) / 2 * Math.PI / 180), W = 680, H = +svg.getAttribute("viewBox").split(" ")[3] || 410;
+  var dLo = Math.max((lo1 - lo0) * kx, 0.03), dLa = Math.max(la1 - la0, 0.03), sc = Math.min(W / dLo, H / dLa) * 0.82;
+  var cx = (lo0 + lo1) / 2, cy = (la0 + la1) / 2;
+  function px(lo) { return (W / 2 + (lo - cx) * kx * sc).toFixed(1); } function py(la) { return (H / 2 - (la - cy) * sc).toFixed(1); }
+  function mk(t, at) { var e = document.createElementNS(NS, t); for (var k in at) e.setAttribute(k, at[k]); svg.appendChild(e); return e; }
+  mk("rect", { x: 0, y: 0, width: W, height: H, fill: "#e6efe4" });
+  mk("polygon", { points: OUT.map(function (q) { return px(q[0]) + "," + py(q[1]); }).join(" "), fill: "#bfe0f2", stroke: "#7fb6d6", "stroke-width": 2 });
+  mk("polyline", { points: P2.map(function (p) { return px(p[1]) + "," + py(p[0]); }).join(" "), fill: "none", stroke: "#0E2A3B", "stroke-width": 4, "stroke-linejoin": "round", "stroke-linecap": "round" });
+  var f = P2[0], l = P2[P2.length - 1];
+  mk("circle", { cx: px(f[1]), cy: py(f[0]), r: 8, fill: "#1f8a5b", stroke: "#fff", "stroke-width": 3 });
+  mk("circle", { cx: px(l[1]), cy: py(l[0]), r: 8, fill: "#d62f2f", stroke: "#fff", "stroke-width": 3 });
+}
+function trLive() {
+  if (!$("cbKm")) return; var on = !!(TR && TR.on);
+  $("cbStart").hidden = on; $("cbStop").hidden = !on;
+  $("cbKm").textContent = fKm(on ? TR.km : 0); $("cbDur").textContent = fDur(on ? Date.now() - TR.start : 0);
+  $("cbV").textContent = fKn(on ? TR.v : 0); $("cbVx").textContent = fKn(on ? TR.vmax : 0);
+  $("cbSt").textContent = on ? (trWid != null ? "Enregistrement en cours · " + TR.pts.length + " points" + (trLock ? " · écran maintenu allumé" : "") : "En pause : revenez dans l'appli pour reprendre") : "";
+  if (cur() === "carnet") drawTrip($("cbMap"), on ? TR.pts : null);
+}
+function trWake() { try { if (navigator.wakeLock && TR && TR.on && !document.hidden) navigator.wakeLock.request("screen").then(function (l) { trLock = l; l.addEventListener("release", function () { trLock = null; }); }, function () {}); } catch (e) {} }
+function trPoint(p) {
+  if (!TR || !TR.on) return; var c = p.coords; if (c.accuracy > 60) return;
+  var pt = [Math.round(c.latitude * 1e5) / 1e5, Math.round(c.longitude * 1e5) / 1e5, p.timestamp || Date.now()], L = TR.pts[TR.pts.length - 1];
+  var v = c.speed != null && c.speed >= 0 ? c.speed * 1.94384 : 0;
+  if (L) {
+    var d = km(L[0], L[1], pt[0], pt[1]), dt = (pt[2] - L[2]) / 36e5;
+    if (d < 0.015 && pt[2] - L[2] < 60000) { TR.v = v; trLive(); return; }
+    if (d > 3 && dt > 0 && d / dt > 110) return; /* saut GPS improbable */
+    TR.km += d; if (c.speed == null && dt > 0) v = d / dt / 1.852;
+  }
+  TR.v = v; if (c.accuracy <= 30 && v < 60) TR.vmax = Math.max(TR.vmax, v);
+  TR.pts.push(pt); if (TR.pts.length > 5000) TR.pts = TR.pts.filter(function (x, i) { return i % 2 === 0 || i === TR.pts.length - 1; });
+  trSave(); trLive();
+}
+function trWatch() {
+  if (trWid != null || !TR || !TR.on || !navigator.geolocation) return;
+  trWid = navigator.geolocation.watchPosition(trPoint, function (e) { if (e.code === 1) { $("cbErr").textContent = "GPS refusé : autorisez la position pour Nauticonnect."; } }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+  trWake(); clearInterval(trTick); trTick = setInterval(trLive, 15000); trLive();
+}
+function trUnwatch() { if (trWid != null && navigator.geolocation) navigator.geolocation.clearWatch(trWid); trWid = null; try { if (trLock) trLock.release(); } catch (e) {} trLock = null; clearInterval(trTick); }
+document.addEventListener("visibilitychange", function () { if (TR && TR.on && !document.hidden) { trWatch(); trWake(); trLive(); } });
+if (TR && TR.on) setTimeout(trWatch, 1500); /* une sortie était en cours : on reprend */
+function trSimplify(pts) { var n = pts.length, st = Math.max(1, Math.ceil(n / 400)), o = []; for (var i = 0; i < n; i += st) o.push([pts[i][0], pts[i][1]]); var l = pts[n - 1]; if (o[o.length - 1][0] !== l[0] || o[o.length - 1][1] !== l[1]) o.push([l[0], l[1]]); return o; }
+(function () {
+  var a = $("cbStart"), b = $("cbStop"); if (!a || !b) return;
+  a.onclick = function () {
+    $("cbErr").textContent = ""; if (!requireProfile($("cbErr"), "Pour enregistrer vos sorties, créez votre compte gratuit.")) return;
+    if (!navigator.geolocation) { $("cbErr").textContent = "GPS indisponible sur ce téléphone."; return; }
+    TR = { on: true, start: Date.now(), pts: [], km: 0, vmax: 0, v: 0 }; ckEnd = null; trSave(); trWatch(); renderCarnet();
+  };
+  b.onclick = function () {
+    if (b.dataset.ok !== "1") { b.dataset.ok = "1"; b.textContent = "Confirmer : terminer la sortie"; setTimeout(function () { b.dataset.ok = ""; b.textContent = "Terminer la sortie"; }, 4000); return; }
+    b.dataset.ok = ""; b.textContent = "Terminer la sortie";
+    trUnwatch(); var T = TR; TR = null; trSave();
+    ckEnd = T && T.pts.length >= 2 && T.km >= 0.05 ? T : { trop: true }; renderCarnet();
+  };
+})();
+function ckEndForm() {
+  var E = $("cbEnd"); if (!E) return; E.textContent = ""; if (!ckEnd) return;
+  var c = el("div", "card"); E.appendChild(c);
+  if (ckEnd.trop) { c.appendChild(el("b", 0, "Sortie trop courte")); c.appendChild(el("div", "mu", "Moins de 50 mètres enregistrés : elle n'est pas sauvegardée.")); var ok0 = el("button", "btn g sm", "OK"); ok0.onclick = function () { ckEnd = null; renderCarnet(); }; c.appendChild(ok0); return; }
+  var T = ckEnd, dur = (T.pts[T.pts.length - 1][2] || Date.now()) - T.start, f = T.pts[0], l = T.pts[T.pts.length - 1];
+  var dep = nearPort(f[0], f[1]), arr = nearPort(l[0], l[1]), vm = dur > 0 ? T.km / (dur / 36e5) / 1.852 : 0;
+  c.appendChild(el("b", 0, "Bravo ! Sortie terminée"));
+  c.appendChild(el("div", "mu", fKm(T.km) + " km · " + fDurTxt(dur) + " · max " + fKn(T.vmax) + " nœuds · moyenne " + fKn(vm) + " nœuds"));
+  c.appendChild(el("div", "mu", dep === arr ? "Autour de " + dep : dep + " → " + arr));
+  var ti = el("input", "f"); ti.maxLength = 80; ti.value = "Sortie du " + dFr(new Date(T.start).toISOString().slice(0, 10)); ti.setAttribute("aria-label", "Titre de la sortie");
+  var no = el("textarea", "f"); no.rows = 2; no.maxLength = 500; no.placeholder = "Un mot sur la sortie (facultatif)"; no.setAttribute("aria-label", "Note");
+  var ph = el("input"); ph.type = "file"; ph.accept = "image/*"; ph.multiple = true; ph.setAttribute("aria-label", "Photos");
+  var pl = el("label", "l", "Photos (jusqu'à 3, facultatif)"); var pu = el("label", "chk"), pc = el("input"); pc.type = "checkbox"; pu.appendChild(pc); pu.appendChild(document.createTextNode(" Partager avec les membres (le début et la fin du trajet sont masqués)"));
+  c.appendChild(ti); c.appendChild(no); c.appendChild(pl); c.appendChild(ph); c.appendChild(pu);
+  var m = el("div", "err"), sv = el("button", "btn", "Enregistrer dans mon carnet"), dl = el("button", "btn g", "Ne pas enregistrer");
+  var r = el("div", "row"); r.style.marginTop = "8px"; r.appendChild(dl); r.appendChild(sv); c.appendChild(r); c.appendChild(m);
+  dl.onclick = function () { if (dl.dataset.ok !== "1") { dl.dataset.ok = "1"; dl.textContent = "Confirmer : effacer"; return; } ckEnd = null; renderCarnet(); };
+  sv.onclick = function () {
+    if (!real()) { m.textContent = "Connectez-vous pour enregistrer."; return; }
+    sv.disabled = true; m.className = "mu"; m.textContent = "Enregistrement…";
+    var files = Array.prototype.slice.call(ph.files || [], 0, 3), paths = [];
+    var chain = Promise.resolve();
+    files.forEach(function (fi, i) { chain = chain.then(function () { var path = uid + "/carnet-" + Date.now() + "-" + i + ".jpg"; return shrink(fi, 1400).then(function (blob) { return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }); }).then(function (q) { if (!q.error) paths.push(path); }); }); });
+    chain.then(function () {
+      return sb.from("carnet").insert({ titre: ti.value.trim().slice(0, 80) || "Sortie", note: no.value.trim().slice(0, 500), debut: new Date(T.start).toISOString(), fin: new Date(T.start + dur).toISOString(),
+        km: Math.round(T.km * 100) / 100, vmax: Math.round(T.vmax * 10) / 10, vmoy: Math.round(vm * 10) / 10, depart: dep, arrivee: arr, trace: trSimplify(T.pts), photos: paths, public: pc.checked });
+    }).then(function (q) {
+      sv.disabled = false; if (q && q.error) { m.className = "err"; m.textContent = "Enregistrement impossible, réessayez."; return; }
+      ckEnd = null; toast(pc.checked ? "Sortie enregistrée et partagée !" : "Sortie enregistrée dans votre carnet"); load("carnet");
+    }, function () { sv.disabled = false; m.className = "err"; m.textContent = "Enregistrement impossible, réessayez."; });
+  };
+}
+function ckCard(x) {
+  var c = el("div", "card ck"), mine = x.auteur === uid, dur = ts(x.fin) - ts(x.debut);
+  if (!mine) { var w = el("div"); w.appendChild(badge(x.auteur)); c.appendChild(w); }
+  c.appendChild(el("b", "ck-t", x.titre || "Sortie"));
+  c.appendChild(el("div", "mu", dFr(String(x.debut).slice(0, 10)) + " · " + (x.depart === x.arrivee ? "autour de " + x.depart : x.depart + " → " + x.arrivee)));
+  c.appendChild(el("div", "ck-s", fKm(+x.km) + " km · " + fDurTxt(dur) + " · max " + fKn(x.vmax) + " nd · moy " + fKn(x.vmoy) + " nd"));
+  var sv = document.createElementNS(NS, "svg"); sv.setAttribute("viewBox", "0 0 680 300"); sv.setAttribute("class", "cb-map"); sv.setAttribute("role", "img"); sv.setAttribute("aria-label", "Trajet"); c.appendChild(sv); drawTrip(sv, x.trace, !mine);
+  if (x.note) c.appendChild(el("div", 0, x.note));
+  if (x.photos && x.photos.length) { var g = el("div", "ck-ph"); x.photos.forEach(function (p) { var im = el("img"); im.src = photoUrl(p); im.alt = "Photo de la sortie"; im.loading = "lazy"; im.onclick = function () { viewPhoto(im.src); }; g.appendChild(im); }); c.appendChild(g); }
+  var A = el("div", "row"); A.style.marginTop = "8px";
+  if (mine) {
+    var sh = el("button", "btn g sm", x.public ? "Ne plus partager" : "Partager avec les membres");
+    sh.onclick = function () { sh.disabled = true; sb.from("carnet").update({ public: !x.public }).eq("id", x.id).then(function (q) { if (q.error) toast("Action impossible."); else toast(x.public ? "Sortie redevenue privée" : "Sortie partagée avec les membres"); load("carnet"); }); };
+    var de = el("button", "btn g sm", "Supprimer"); de.style.color = "var(--red)";
+    de.onclick = function () { if (de.dataset.ok !== "1") { de.dataset.ok = "1"; de.textContent = "Confirmer"; return; } sb.from("carnet").delete().eq("id", x.id).then(function () { if (x.photos && x.photos.length) sb.storage.from("photos").remove(x.photos); load("carnet"); }); };
+    A.appendChild(sh); A.appendChild(de); if (x.public) c.insertBefore(el("span", "ck-pub", "Partagée"), c.firstChild);
+  } else {
+    if (P[x.auteur]) { var wr = el("button", "btn g sm", "Écrire"); wr.onclick = function () { openThread(x.auteur, "Belle sortie « " + (x.titre || "") + " » ! "); }; A.appendChild(wr); }
+    if (isAdmin) { var ad = el("button", "btn g sm", "Retirer (admin)"); ad.onclick = function () { if (confirm("Retirer cette sortie ?")) sb.from("carnet").delete().eq("id", x.id).then(function () { load("carnet"); }); }; A.appendChild(ad); }
+  }
+  if (A.firstChild) c.appendChild(A);
+  return c;
+}
+function renderCarnet() {
+  if (!$("cbMine")) return; trLive(); ckEndForm();
+  var M = $("cbMine"), U = $("cbPub"); M.textContent = ""; U.textContent = "";
+  if (!real()) { M.appendChild(el("p", "mu", "Créez votre compte gratuit pour garder vos sorties.")); return; }
+  var mine = CK.filter(function (x) { return x.auteur === uid; }), pub = CK.filter(function (x) { return x.auteur !== uid && x.public && !isBl(x.auteur); });
+  if (mine.length) { var tk = mine.reduce(function (a, x) { return a + (+x.km || 0); }, 0); M.appendChild(el("div", "mu", mine.length + " sortie" + (mine.length > 1 ? "s" : "") + " · " + fKm(tk) + " km au total")); }
+  mine.forEach(function (x) { M.appendChild(ckCard(x)); });
+  if (!mine.length) M.appendChild(el("p", "mu", "Aucune sortie enregistrée. Touchez « Démarrer ma sortie » en larguant les amarres !"));
+  pub.slice(0, 20).forEach(function (x) { U.appendChild(ckCard(x)); });
+  if (!pub.length) U.appendChild(el("p", "mu", "Aucune sortie partagée pour l'instant."));
+}
+/* bandeau vert dans le salon : sorties partagées dans les dernières 24 h */
+function ckBanners(box) {
+  var lim = Date.now() - 864e5;
+  CK.filter(function (x) { return x.public && x.auteur !== uid && P[x.auteur] && !isBl(x.auteur) && ts(x.t) > lim; }).slice(0, 2).forEach(function (x) {
+    var b = el("button", "wa-pav wa-ck"); b.type = "button"; b.appendChild(el("i", 0, ""));
+    var t = el("span"); t.appendChild(el("b", 0, P[x.auteur].pseudo)); t.appendChild(document.createTextNode(" a partagé sa sortie : " + fKm(+x.km) + " km · " + (x.depart === x.arrivee ? "autour de " + x.depart : x.depart + " → " + x.arrivee)));
+    t.appendChild(el("small", 0, "Touchez pour voir le trajet")); b.appendChild(t); b.onclick = function () { location.hash = "carnet"; }; box.appendChild(b);
+  });
+}

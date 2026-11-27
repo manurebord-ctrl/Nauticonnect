@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=55">
+<link rel="stylesheet" href="app.css?v=56">
 </head>
 <body>
 
@@ -461,6 +461,22 @@
 </div>
 <div class="card mu" style="font-size:14px">Tenez le téléphone à plat. Si le cap semble faux, éloignez-vous du moteur et des objets métalliques, puis dessinez quelques <b>8</b> dans l'air avec le téléphone pour le calibrer. <b>Indicatif seulement : ne remplace pas un compas de navigation.</b></div>
 </section>
+<section id="v-carnet" hidden>
+<div class="hd"><a class="back" href="#">← Accueil</a></div>
+<h1 class="ph1">Carnet de bord</h1>
+<p class="lead">Enregistrez vos sorties : trajet, distance, vitesse. Gardez-les pour vous ou partagez-les avec les membres.</p>
+<div class="card cb-live">
+<div class="cb-stats"><div><b id="cbKm">0,0</b><span>km</span></div><div><b id="cbDur">0:00</b><span>durée</span></div><div><b id="cbV">0,0</b><span>nœuds</span></div><div><b id="cbVx">0,0</b><span>max (nœuds)</span></div></div>
+<svg id="cbMap" class="cb-map" viewBox="0 0 680 410" role="img" aria-label="Trajet de la sortie"></svg>
+<button class="btn" id="cbStart" type="button">Démarrer ma sortie</button>
+<button class="btn r" id="cbStop" type="button" hidden>Terminer la sortie</button>
+<div class="mu" id="cbSt" style="margin-top:8px"></div><div class="err" id="cbErr"></div>
+</div>
+<div class="card mu" style="font-size:14px">Pendant l'enregistrement, gardez l'appli ouverte : l'écran reste allumé. Si vous quittez l'appli, l'enregistrement se met en pause et reprend à votre retour. Le GPS consomme de la batterie.</div>
+<div id="cbEnd"></div>
+<h2>Mes sorties</h2><div id="cbMine"></div>
+<h2>Sorties partagées par les membres</h2><div id="cbPub"></div>
+</section>
 <section id="v-noeuds" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
 <h1 class="ph1">Nœuds marins</h1>
@@ -563,7 +579,7 @@
 <aside id="mnDr" hidden aria-label="Menu">
 <div class="mnhd"><b>Nauti<span>connect</span></b><button id="mnX" aria-label="Fermer">✕</button></div>
 <a href="#">Accueil</a><a href="#ponton">Chat · Le Ponton</a><a href="#panne" class="mnsos">SOS panne</a>
-<div class="mnt">Sur l'eau</div><a href="#meteo">Météo et vent</a><a href="#ports">Ports</a><a href="#webcams">Webcams</a><a href="#vitesse">Vitesse</a><a href="#boussole">Boussole</a>
+<div class="mnt">Sur l'eau</div><a href="#meteo">Météo et vent</a><a href="#ports">Ports</a><a href="#webcams">Webcams</a><a href="#vitesse">Vitesse</a><a href="#boussole">Boussole</a><a href="#carnet">Carnet de bord</a>
 <div class="mnt">Entre membres</div><a href="#sorties">Places à bord</a><a href="#location">Location</a><a href="#annonces">À vendre</a><a href="#evenements">Événements</a><a href="#restos">Escales</a>
 <div class="mnt">Découvrir</div><a href="#noeuds">Nœuds</a><a href="#epaves">Épaves</a>
 <div class="mnt">Mon compte</div><a href="#profil">Mon profil</a><a href="#admin" id="mnAdm" hidden>Espace modérateur</a>
@@ -580,7 +596,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=72"></script>
+<script src="app.js?v=73"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>
