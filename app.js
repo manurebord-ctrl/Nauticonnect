@@ -2739,12 +2739,13 @@ function bsStart() {
   setTimeout(function () { if (BS.on && BS.cap == null) bsMsg("Pas de cap reçu : ce téléphone n'a peut-être pas de boussole, ou le capteur est bloqué. Essayez de bouger un peu le téléphone."); }, 3000);
 }
 function bsLeave() {
-  if (!BS.on && BS.wid == null) return;
+  if (!BS || (!BS.on && BS.wid == null)) return; /* au démarrage, BS n'existe pas encore */
   window.removeEventListener("deviceorientationabsolute", bsSensor); window.removeEventListener("deviceorientation", bsSensor); BS.on = false;
   if (BS.wid != null && navigator.geolocation) { navigator.geolocation.clearWatch(BS.wid); BS.wid = null; }
   var g = $("bsGo"); if (g) { g.disabled = false; g.textContent = "Activer la boussole"; }
 }
 function bsEnter() {
+  if (!BS) { setTimeout(bsEnter, 0); return; }
   bsPort();
   /* Android : démarre tout seul ; iPhone : il faut toucher le bouton (autorisation) */
   if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== "function") bsStart();
