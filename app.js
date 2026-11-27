@@ -2219,7 +2219,7 @@ function renderAll() {
   renderHome(); renderFeed(); renderHomeSorties(); renderVd();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
-  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); }
+  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); fcLoad(); }
   else if (v === "profil") { notifUI(); renderMyBadges(); }
   else if (v === "admin") { $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; drawPfQueue(); renderEvAdmin(); }
   else if (v === "sorties") renderSorties(); else if (v === "carnet") renderCarnet();
@@ -3041,4 +3041,53 @@ function ckGpx(x) {
   } catch (e) {}
   var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast("Fichier GPX téléchargé");
+}
+
+/* ================= PRÉVISIONS DÉTAILLÉES : mes ports, 3 jours, toutes les 3 heures ================= */
+var FC = null, fcBusy = false;
+function fcPorts() {
+  var L = [], p = me(), seen = {};
+  if (p && p.port) { var z = Z.filter(function (x) { return x[0] === p.port; })[0]; if (z) { L.push({ k: "home", n: z[0].replace(/\s*\((F|CH)\)\s*$/, ""), la: z[1], lo: z[2] }); seen[L[0].n] = 1; } }
+  Object.keys(favs || {}).forEach(function (id) { var g = PGPS[id], po = PORTS.filter(function (x) { return x.id === id; })[0]; if (g && po && !seen[po.n]) { L.push({ k: id, n: po.n, la: g[0], lo: g[1] }); seen[po.n] = 1; } });
+  return L.slice(0, 4);
+}
+function fcLoad() {
+  var box = $("fcBox"); if (!box) return;
+  var L = fcPorts(), key = L.map(function (x) { return x.k; }).join(",");
+  if (!L.length) { box.textContent = ""; box.appendChild(el("p", "mu", "Choisissez votre port d'attache dans Mon profil, ou touchez ★ sur des ports dans « Ports » : leurs prévisions s'afficheront ici.")); return; }
+  if (!FC) { try { var c = JSON.parse(ls("nc-fc") || "null"); if (c && c.key === key && Date.now() - c.at < 30 * 6e4) FC = c; } catch (e) {} }
+  if (FC && FC.key === key && Date.now() - FC.at < 30 * 6e4) { fcRender(); return; }
+  if (fcBusy) return; fcBusy = true; if (!FC) { box.textContent = ""; box.appendChild(el("p", "mu", "Chargement des prévisions…")); }
+  var u = "https://api.open-meteo.com/v1/forecast?latitude=" + L.map(function (x) { return x.la; }).join(",") + "&longitude=" + L.map(function (x) { return x.lo; }).join(",") +
+    "&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&forecast_days=3&wind_speed_unit=kn&timezone=Europe%2FZurich";
+  fetch(u).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (j) {
+    if (!Array.isArray(j)) j = [j];
+    FC = { at: Date.now(), key: key, ports: L.map(function (p, i) { var h = (j[i] && j[i].hourly) || {}; return { n: p.n, home: p.k === "home", t: h.time || [], s: h.wind_speed_10m || [], d: h.wind_direction_10m || [], g: h.wind_gusts_10m || [] }; }) };
+    ls("nc-fc", JSON.stringify(FC));
+  }).catch(function () { if (!FC) { box.textContent = ""; box.appendChild(el("p", "mu", "Prévisions indisponibles pour le moment. Réessayez plus tard.")); } }).then(function () { fcBusy = false; if (FC) fcRender(); });
+}
+function fcCat(s, g) { return g >= 25 || s >= 20 ? ["eviter", "À éviter"] : s >= 12 ? ["sport", "Sportif"] : s >= 5 ? ["bon", "Agréable"] : ["calme", "Calme"]; }
+function fcRender() {
+  var box = $("fcBox"); if (!box || !FC) return; box.textContent = "";
+  var now = Date.now() - 18e5, J = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+  var ports = isPremium() ? FC.ports : FC.ports.slice(0, 1);
+  ports.forEach(function (p) {
+    var c = el("div", "card fc"), h = el("div", "fc-h"); h.appendChild(el("b", 0, p.n)); if (p.home) h.appendChild(el("span", "fc-tag", "Mon port")); c.appendChild(h);
+    var strip = el("div", "fc-strip"), lastDay = "";
+    for (var i = 0; i < p.t.length; i++) {
+      var tt = new Date(p.t[i]).getTime(), hr = new Date(p.t[i]).getHours(); if (tt < now || hr % 3) continue;
+      var dd = new Date(p.t[i]), dk = dd.toDateString();
+      if (dk !== lastDay) { lastDay = dk; var isToday = dk === new Date().toDateString(); strip.appendChild(el("div", "fc-day", isToday ? "Auj." : J[dd.getDay()] + " " + dd.getDate())); }
+      var cat = fcCat(p.s[i], p.g[i]), cell = el("div", "fc-c " + cat[0]); cell.title = cat[1];
+      cell.appendChild(el("small", 0, hr + "h"));
+      var ar = el("span", "fc-ar", "↓"); ar.style.transform = "rotate(" + Math.round(p.d[i] || 0) + "deg)"; ar.setAttribute("aria-label", "vent du " + (BSDIR ? BSDIR[Math.round((p.d[i] || 0) / 22.5) % 16] : "")); cell.appendChild(ar);
+      cell.appendChild(el("b", 0, String(Math.round(p.s[i] || 0)))); cell.appendChild(el("small", 0, "raf. " + Math.round(p.g[i] || 0)));
+      strip.appendChild(cell);
+    }
+    c.appendChild(strip); box.appendChild(c);
+  });
+  if (ports.length < FC.ports.length) box.appendChild(el("div", "note", "Les prévisions de vos autres ports sont disponibles avec Nauticonnect+."));
+  var lg = el("div", "leg fc-leg"); [["calme", "Calme < 5 nd"], ["bon", "Agréable 5–12"], ["sport", "Sportif 12–20"], ["eviter", "À éviter 20+ ou rafales 25+"]].forEach(function (x) { var sp = el("span"); sp.appendChild(el("i", "fc-c " + x[0], "")); sp.appendChild(document.createTextNode(x[1])); lg.appendChild(sp); });
+  box.appendChild(lg);
+  box.appendChild(el("p", "mu", "Vent moyen et rafales en nœuds, toutes les 3 heures. La flèche montre où va le vent. Prévisions du modèle MétéoSuisse (via Open-Meteo), mises à jour toutes les 30 minutes."));
 }
