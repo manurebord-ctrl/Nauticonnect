@@ -312,7 +312,7 @@ ZA().forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("pP
 function pfClose() { if (prevView && prevView !== "profil" && prevView !== "compte") location.hash = prevView === "accueil" ? "" : prevView; else location.hash = ""; }
 $("pfClose").onclick = pfClose;
 function fillProfile() {
-  drawPfPhoto(); var vb = $("vpBox"); if (vb) vb.hidden = !me();
+  drawPfPhoto(); var vb = $("vpBox"); if (vb) { vb.hidden = !me(); if (vpGo && me()) { vpGo = false; vb.open = true; vpOpen(); setTimeout(function () { try { vb.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }, 250); } }
   var pp = me(); $("accFiche").open = !pp; $("pfLead").hidden = !!pp;
   $("accFicheSum").textContent = pp ? [pp.pseudo, pp.bateau, pp.port].filter(Boolean).join(" · ") : "À remplir pour rejoindre le chat";
   var p = me(); $("pfTitle").textContent = p ? "Mon profil" : "Créez votre profil";
@@ -2225,7 +2225,7 @@ function renderAll() {
   renderHome(); renderFeed(); renderHomeSorties(); renderVd();
   var v = cur();
   if (v === "panne") renderPanne(); else if (v === "ponton") renderPonton();
-  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); fcLoad(); }
+  else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); fcLoad(); renderVpMeteo(); }
   else if (v === "profil") { notifUI(); renderMyBadges(); }
   else if (v === "admin") { $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; drawPfQueue(); renderEvAdmin(); }
   else if (v === "sorties") renderSorties(); else if (v === "carnet") renderCarnet();
@@ -2458,7 +2458,8 @@ function welcome(ret) {
   var s1 = step(1, "Activez les notifications", "Alerte vaudaire, appels à l'aide sur le lac, messages et amis sur l'eau.");
   var nb = el("button", "btn", mySub ? "Notifications activées" : "Activer les notifications"); nb.disabled = !!mySub;
   nb.onclick = function () { pushEnable(); setTimeout(function () { if (mySub) { nb.textContent = "Notifications activées"; nb.disabled = true; } }, 2500); };
-  if (pushOk) s1.appendChild(nb); else s1.appendChild(el("div", "mu", "Installez l'appli sur l'écran d'accueil de votre téléphone pour les recevoir."));
+  var vw = el("button", "btn g sm", "Régler mes alertes vent"); vw.style.marginTop = "6px"; vw.onclick = function () { md.close(); vpGoTo(); };
+  if (pushOk) { s1.appendChild(nb); s1.appendChild(vw); } else s1.appendChild(el("div", "mu", "Installez l'appli sur l'écran d'accueil de votre téléphone pour les recevoir."));
   var mine = Object.keys(P).filter(function (k) { return k !== uid; }), same = p.port ? mine.filter(function (k) { return P[k].port === p.port; }) : [];
   var L = (same.length ? same : mine).slice(0, 5);
   if (L.length) {
@@ -3138,10 +3139,27 @@ function vpOpen(keep) {
       $("vpSave").disabled = false; if (r.error) { m.textContent = "Enregistrement impossible, réessayez."; return; }
       var on = $("vpOn").checked, mt = $("vpMatin").checked;
       var txt = !on && !mt ? "Alertes vent désactivées." : "Alertes vent enregistrées" + (on ? " : dès " + $("vpSeuil").value + " nœuds" : "") + (mt ? (on ? ", " : " : ") + "bulletin à " + $("vpHeure").value + "h00" : "") + ".";
-      toast(txt);
+      toast(txt); vpCacheAt = 0;
       m.className = "okm"; m.textContent = !(mySub && myAbo) ? txt + " Pensez à activer les notifications juste au-dessus, sinon vous ne recevrez rien." : txt + " Vous serez prévenu sur ce téléphone.";
       try { m.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch (e) {}
       vpOpen(true);
     });
   };
 })();
+
+/* raccourci « Mes alertes vent » dans la page Météo */
+var vpGo = false, vpCache = null, vpCacheAt = 0;
+function vpGoTo() { if (!real()) { location.hash = "compte"; return; } vpGo = true; if (cur() === "profil") fillProfile(); else location.hash = "profil"; }
+function renderVpMeteo() {
+  var B = $("vpMeteo"); if (!B) return;
+  function draw() {
+    B.textContent = ""; var v = vpCache, on = v && (v.actif || v.matin) && (v.ports || []).length;
+    B.appendChild(el("b", 0, "Mes alertes vent"));
+    if (!real()) B.appendChild(el("div", "mu", "Avec un compte gratuit, soyez prévenu quand le vent dépasse votre seuil sur vos ports, et recevez un bulletin chaque matin."));
+    else if (on) B.appendChild(el("div", "okm", "Activées" + (v.actif ? " · dès " + v.seuil + " nœuds" : "") + " · " + v.ports.map(function (p) { return p.n; }).join(", ") + (v.matin ? " · bulletin à " + v.heure + "h00" : "")));
+    else B.appendChild(el("div", "mu", "Soyez prévenu quand le vent dépasse votre seuil sur vos ports, et recevez un bulletin chaque matin."));
+    var b = el("button", "btn sm" + (on ? " g" : ""), !real() ? "Créer mon compte" : on ? "Modifier" : "Régler mes alertes"); b.type = "button"; b.onclick = vpGoTo; B.appendChild(b);
+  }
+  draw();
+  if (real() && Date.now() - vpCacheAt > 6e4) { vpCacheAt = Date.now(); sb.from("alertes_vent").select("*").eq("uid", uid).maybeSingle().then(function (r) { vpCache = r.data || null; draw(); }); }
+}

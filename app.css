@@ -818,3 +818,5 @@ html.splashing .hero .mnb{display:none}
 
 .ck-fr{font-size:13px;font-weight:700;color:#1f7a47;margin:4px 0}
 @media (prefers-color-scheme:dark){.ck-fr{color:#7fe0a9}}
+
+.vp-met{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.vp-met .btn{width:auto}
