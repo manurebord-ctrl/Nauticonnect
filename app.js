@@ -3109,8 +3109,8 @@ function vpDraw() {
   vpSel.forEach(function (n, i) { var r = el("div", "vp-p"); r.appendChild(el("b", 0, n)); var x = el("button", "btn g sm", "Retirer"); x.type = "button"; x.onclick = function () { vpSel.splice(i, 1); vpDraw(); }; r.appendChild(x); B.appendChild(r); });
   $("vpAdd").disabled = vpSel.length >= 4;
 }
-function vpOpen() {
-  if (!real()) return; $("vpMsg").textContent = "";
+function vpOpen(keep) {
+  if (!real()) return; if (!keep) $("vpMsg").textContent = "";
   sb.from("alertes_vent").select("*").eq("uid", uid).maybeSingle().then(function (r) {
     VP = r.data || null; var p = me();
     vpSel = VP ? (VP.ports || []).map(function (x) { return x.n; }) : (p && p.port ? [p.port] : []);
@@ -3136,8 +3136,12 @@ function vpOpen() {
     $("vpSave").disabled = true;
     sb.from("alertes_vent").upsert({ uid: uid, ports: ports, seuil: +$("vpSeuil").value, actif: $("vpOn").checked, matin: $("vpMatin").checked, heure: +$("vpHeure").value, maj: nowIso() }).then(function (r) {
       $("vpSave").disabled = false; if (r.error) { m.textContent = "Enregistrement impossible, réessayez."; return; }
-      m.className = "okm"; m.textContent = !(mySub && myAbo) ? "Enregistré. Pensez à activer les notifications juste au-dessus, sinon vous ne recevrez rien." : "Enregistré ! Vous serez prévenu sur ce téléphone.";
-      vpOpen();
+      var on = $("vpOn").checked, mt = $("vpMatin").checked;
+      var txt = !on && !mt ? "Alertes vent désactivées." : "Alertes vent enregistrées" + (on ? " : dès " + $("vpSeuil").value + " nœuds" : "") + (mt ? (on ? ", " : " : ") + "bulletin à " + $("vpHeure").value + "h00" : "") + ".";
+      toast(txt);
+      m.className = "okm"; m.textContent = !(mySub && myAbo) ? txt + " Pensez à activer les notifications juste au-dessus, sinon vous ne recevrez rien." : txt + " Vous serez prévenu sur ce téléphone.";
+      try { m.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch (e) {}
+      vpOpen(true);
     });
   };
 })();
