@@ -812,3 +812,6 @@ html.splashing .hero .mnb{display:none}
 .fc-c.calme{background:#eef1f3;color:#41525C}.fc-c.bon{background:#dff5e8;color:#145c34}.fc-c.sport{background:#fdebd0;color:#8a4b00}.fc-c.eviter{background:#fbd9d6;color:#8e1d14}
 @media (prefers-color-scheme:dark){.fc-c.calme{background:#22323d;color:#b9c7d0}.fc-c.bon{background:#183a29;color:#9fe3c4}.fc-c.sport{background:#3d2c14;color:#f6c27a}.fc-c.eviter{background:#3f1a17;color:#ffb0a8}}
 .fc-leg{flex-wrap:wrap;gap:8px;margin:4px 0}.fc-leg span{display:inline-flex;align-items:center;gap:5px;font-size:12px}.fc-leg i.fc-c{width:14px;height:14px;padding:0;border-radius:4px}
+
+.vp-p{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd)}.vp-p .btn{width:auto;margin:0}
+#vpBox .chk{margin-top:10px}

@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=57">
+<link rel="stylesheet" href="app.css?v=58">
 </head>
 <body>
 
@@ -145,6 +145,16 @@
 <label class="chk" style="margin-top:12px"><input type="checkbox" id="nfCorne"> Corne de brume quand un bateau est en panne (appli ouverte)</label>
 <button class="btn g sm" id="nfCorneTest">Écouter la corne</button>
 <button class="linkb" id="nfFix">Réparer les notifications</button><div class="mu" id="nfDiag" style="white-space:pre-line;font-size:12px"></div></details>
+<details class="card acc" id="vpBox" hidden><summary><b>Alertes vent sur mesure</b><span class="mu" id="vpSum">Vos ports, votre seuil, bulletin du matin</span></summary>
+<div class="mu" style="margin:4px 0 10px">Choisissez jusqu'à 4 ports et le vent à partir duquel vous voulez être prévenu. Les notifications de Nauticonnect doivent être activées sur ce téléphone.</div>
+<div id="vpPorts"></div>
+<select class="f" id="vpAdd" aria-label="Ajouter un port"></select>
+<label class="chk"><input type="checkbox" id="vpOn"> Me prévenir quand le vent dépasse</label>
+<select class="f" id="vpSeuil" aria-label="Seuil de vent"></select>
+<label class="chk"><input type="checkbox" id="vpMatin"> Bulletin du matin : le vent prévu sur mes ports</label>
+<select class="f" id="vpHeure" aria-label="Heure du bulletin"></select>
+<button class="btn" id="vpSave" type="button">Enregistrer</button><div class="err" id="vpMsg"></div>
+</details>
 <details class="card acc" id="bdgBox" hidden><summary><b>Mes badges</b><span class="mu" id="bdgSum"></span></summary><div id="myBadges"></div></details>
 <button class="btn pfinv" id="admLink" hidden onclick="location.hash='admin'">Espace modérateur</button>
 <button class="btn g pfinv" data-invite>Inviter un ami sur Nauticonnect</button>
@@ -598,7 +608,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=75"></script>
+<script src="app.js?v=76"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>

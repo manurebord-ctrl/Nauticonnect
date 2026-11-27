@@ -312,7 +312,7 @@ ZA().forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("pP
 function pfClose() { if (prevView && prevView !== "profil" && prevView !== "compte") location.hash = prevView === "accueil" ? "" : prevView; else location.hash = ""; }
 $("pfClose").onclick = pfClose;
 function fillProfile() {
-  drawPfPhoto();
+  drawPfPhoto(); var vb = $("vpBox"); if (vb) vb.hidden = !me();
   var pp = me(); $("accFiche").open = !pp; $("pfLead").hidden = !!pp;
   $("accFicheSum").textContent = pp ? [pp.pseudo, pp.bateau, pp.port].filter(Boolean).join(" · ") : "À remplir pour rejoindre le chat";
   var p = me(); $("pfTitle").textContent = p ? "Mon profil" : "Créez votre profil";
@@ -3091,3 +3091,44 @@ function fcRender() {
   box.appendChild(lg);
   box.appendChild(el("p", "mu", "Vent moyen et rafales en nœuds, toutes les 3 heures. La flèche montre où va le vent. Prévisions du modèle MétéoSuisse (via Open-Meteo), mises à jour toutes les 30 minutes."));
 }
+
+/* ================= ALERTES VENT SUR MESURE (profil) ================= */
+var VP = null, vpSel = [];
+function vpDraw() {
+  var B = $("vpPorts"); if (!B) return; B.textContent = "";
+  if (!vpSel.length) B.appendChild(el("div", "mu", "Aucun port choisi."));
+  vpSel.forEach(function (n, i) { var r = el("div", "vp-p"); r.appendChild(el("b", 0, n)); var x = el("button", "btn g sm", "Retirer"); x.type = "button"; x.onclick = function () { vpSel.splice(i, 1); vpDraw(); }; r.appendChild(x); B.appendChild(r); });
+  $("vpAdd").disabled = vpSel.length >= 4;
+}
+function vpOpen() {
+  if (!real()) return; $("vpMsg").textContent = "";
+  sb.from("alertes_vent").select("*").eq("uid", uid).maybeSingle().then(function (r) {
+    VP = r.data || null; var p = me();
+    vpSel = VP ? (VP.ports || []).map(function (x) { return x.n; }) : (p && p.port ? [p.port] : []);
+    $("vpOn").checked = VP ? !!VP.actif : true; $("vpSeuil").value = String(VP ? VP.seuil : 15);
+    $("vpMatin").checked = VP ? !!VP.matin : false; $("vpHeure").value = String(VP ? VP.heure : 7);
+    $("vpSum").textContent = VP && VP.actif ? "Activées · dès " + VP.seuil + " nœuds" : "Vos ports, votre seuil, bulletin du matin";
+    vpDraw();
+  });
+}
+(function () {
+  var box = $("vpBox"); if (!box) return;
+  var o0 = el("option", 0, "+ Ajouter un port"); o0.value = ""; $("vpAdd").appendChild(o0);
+  ZA().forEach(function (z) { var o = el("option", 0, z[0]); o.value = z[0]; $("vpAdd").appendChild(o); });
+  [8, 10, 12, 15, 18, 20, 25].forEach(function (k) { var o = el("option", 0, k + " nœuds" + (k === 15 ? " (conseillé)" : "")); o.value = String(k); $("vpSeuil").appendChild(o); });
+  [6, 7, 8, 9, 10].forEach(function (k) { var o = el("option", 0, "à " + k + "h00"); o.value = String(k); $("vpHeure").appendChild(o); });
+  $("vpAdd").onchange = function () { var v = this.value; this.value = ""; if (v && vpSel.indexOf(v) < 0 && vpSel.length < 4) { vpSel.push(v); vpDraw(); } };
+  box.addEventListener("toggle", function () { if (this.open) vpOpen(); });
+  $("vpSave").onclick = function () {
+    var m = $("vpMsg"); m.className = "err"; m.textContent = "";
+    if (!real()) { m.textContent = "Connectez-vous d'abord."; return; }
+    var ports = vpSel.map(function (n) { var z = Z.filter(function (x) { return x[0] === n; })[0]; return z ? { n: n.replace(/\s*\((F|CH)\)\s*$/, ""), la: z[1], lo: z[2] } : null; }).filter(Boolean);
+    if (($("vpOn").checked || $("vpMatin").checked) && !ports.length) { m.textContent = "Choisissez au moins un port."; return; }
+    $("vpSave").disabled = true;
+    sb.from("alertes_vent").upsert({ uid: uid, ports: ports, seuil: +$("vpSeuil").value, actif: $("vpOn").checked, matin: $("vpMatin").checked, heure: +$("vpHeure").value, maj: nowIso() }).then(function (r) {
+      $("vpSave").disabled = false; if (r.error) { m.textContent = "Enregistrement impossible, réessayez."; return; }
+      m.className = "okm"; m.textContent = !(mySub && myAbo) ? "Enregistré. Pensez à activer les notifications juste au-dessus, sinon vous ne recevrez rien." : "Enregistré ! Vous serez prévenu sur ce téléphone.";
+      vpOpen();
+    });
+  };
+})();
