@@ -820,3 +820,6 @@ html.splashing .hero .mnb{display:none}
 @media (prefers-color-scheme:dark){.ck-fr{color:#7fe0a9}}
 
 .vp-met{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.vp-met .btn{width:auto}
+
+/* mode d'emploi */
+.ai summary b{font-size:16px}.ai-st{margin:8px 0 10px;padding-left:22px}.ai-st li{margin:5px 0;line-height:1.4}.ai .btn{width:auto;display:inline-block}

@@ -137,7 +137,7 @@ function loadAll() { loadBadges(); return Promise.all(Object.keys(Q).map(load));
 setInterval(function () { if (sb && !document.hidden) { load("ouverts"); load("places"); load("alertes"); } }, 120000);
 
 /* ---------------- navigation ---------------- */
-var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "boussole", "carnet", "annonces", "location", "evenements", "admin"].concat(SORTIES_ON ? ["sorties"] : []);
+var VIEWS = ["accueil", "compte", "profil", "panne", "ponton", "avis", "ports", "meteo", "webcams", "restos", "epaves", "vitesse", "noeuds", "boussole", "carnet", "aide", "annonces", "location", "evenements", "admin"].concat(SORTIES_ON ? ["sorties"] : []);
 var NEEDS_AUTH = { profil: 1, admin: 1, location: 1, annonces: 1, vitesse: 1, epaves: 1, noeuds: 1 };
 var WHYV = {
   location: "La location de bateaux entre plaisanciers est réservée aux membres. Créez votre compte gratuit pour voir les bateaux disponibles.",
@@ -2228,7 +2228,7 @@ function renderAll() {
   else if (v === "avis") renderAvis(); else if (v === "ports") renderPorts(); else if (v === "meteo") { renderMeteoFeed(); renderPhotoMod(); loadWind(); wxRender(); loadLac(); renderLac(); fcLoad(); renderVpMeteo(); }
   else if (v === "profil") { notifUI(); renderMyBadges(); }
   else if (v === "admin") { $("dashBox").hidden = !isAdmin; $("modBox").hidden = !isAdmin; $("mbBox").hidden = !isAdmin; drawPfQueue(); renderEvAdmin(); }
-  else if (v === "sorties") renderSorties(); else if (v === "carnet") renderCarnet();
+  else if (v === "sorties") renderSorties(); else if (v === "carnet") renderCarnet(); else if (v === "aide") renderAide();
   else if (v === "webcams") renderWebcams(); else if (v === "restos") renderRestos(); else if (v === "epaves") renderEpaves();
   else if (v === "noeuds") renderNoeuds(); else if (v === "annonces") renderAnnonces(); else if (v === "location") renderLoc(); else if (v === "evenements") renderEvents();
 }
@@ -2480,6 +2480,7 @@ function welcome(ret) {
     var s3b = step(L.length ? 3 : 2, "Dites bonjour sur le Ponton", "Le chat des plaisanciers du Léman : présentez-vous et votre bateau.");
     var c3 = el("button", "btn sm", "Ouvrir le chat"); c3.onclick = function () { md.close(); location.hash = "ponton"; }; s3b.appendChild(c3);
   }
+  var gd = el("button", "linkb", "Découvrir toutes les fonctions (mode d'emploi)"); gd.onclick = function () { md.close(); location.hash = "aide"; }; bx.appendChild(gd);
   var go = el("button", "btn", "C'est parti"); go.style.marginTop = "6px"; go.onclick = function () { md.close(); location.hash = ret && ret !== "profil" ? ret : ""; }; bx.appendChild(go);
 }
 
@@ -3163,3 +3164,72 @@ function renderVpMeteo() {
   draw();
   if (real() && Date.now() - vpCacheAt > 6e4) { vpCacheAt = Date.now(); sb.from("alertes_vent").select("*").eq("uid", uid).maybeSingle().then(function (r) { vpCache = r.data || null; draw(); }); }
 }
+
+/* ================= MODE D'EMPLOI ================= */
+/* [titre, mots-clés, étapes, lien vers la fonction] */
+var AIDE = [
+["En cas de problème", [
+ ["Je suis en panne (SOS)", "panne sos aide urgence moteur batterie alerte", ["Touchez le bouton rouge SOS en bas de l'écran, ou « Je suis en panne » sur l'accueil.", "Indiquez où vous êtes : « Utiliser ma position GPS », ou touchez le port le plus proche sur la carte.", "Choisissez le problème (moteur, batterie, carburant, échouement…), ajoutez un détail et votre numéro si vous voulez être appelé.", "Touchez « Envoyer l'alerte » : les membres qui ont activé les notifications SOS sont prévenus.", "Danger pour des personnes ? Appelez d'abord le 117 ou le 144, ou la VHF canal 16. Nauticonnect est un complément, pas un service de secours."], "panne"],
+ ["Aider un bateau en panne", "aider secours alerte entraide", ["Quand un bateau est en panne, vous recevez une notification (si elle est activée) et l'alerte s'affiche sur l'accueil.", "Ouvrez l'alerte pour voir où il se trouve et le problème.", "Touchez « Itinéraire » pour vous y rendre, ou appelez le numéro indiqué.", "La page indique aussi la section de sauvetage (SISL) la plus proche."], "panne"]
+]],
+["Sur l'eau", [
+ ["Météo et balises vent", "meteo vent balises rafales feux tempete", ["Ouvrez Météo (en bas de l'écran).", "« Le lac en ce moment » et les balises vent montrent le vent en direct sur la carte, et pour les 12 prochaines heures.", "Les couleurs : vert calme, bleu modéré, orange fort, rouge très fort.", "Fiez-vous toujours aux feux d'avis de tempête sur les rives."], "meteo"],
+ ["Alerte vaudaire et coups de vent", "vaudaire foehn coup de vent alerte notification", ["Dans Météo, touchez « Recevoir l'alerte vaudaire » et acceptez les notifications.", "Vous êtes prévenu quand le foehn se lève sur le Haut-Lac, ou en cas de coup de vent sur le Léman, même appli fermée."], "meteo"],
+ ["Alertes vent sur mesure et bulletin du matin", "alertes vent seuil bulletin matin ports", ["Dans Météo, carte « Mes alertes vent », touchez « Régler mes alertes » (ou Profil › Alertes vent sur mesure).", "Choisissez jusqu'à 4 ports et votre seuil (par exemple 15 nœuds).", "Cochez « Bulletin du matin » et l'heure si vous voulez le vent prévu chaque matin.", "Touchez « Enregistrer » : un message confirme le réglage."], "meteo"],
+ ["Prévisions de mes ports (3 jours)", "previsions 3 jours ports favoris", ["Dans Météo, rubrique « Prévisions de mes ports ».", "Vous voyez votre port d'attache et vos ports favoris (étoile dans Ports), toutes les 3 heures.", "Flèche = direction où va le vent ; couleur : gris calme, vert agréable, orange sportif, rouge à éviter."], "meteo"],
+ ["État du lac en photos", "photo lac etat partager", ["Dans Météo, rubrique « État du lac en photos ».", "Choisissez votre zone et partagez une photo du lac là où vous êtes.", "Les photos des dernières 48 heures aident les autres à voir les conditions."], "meteo"],
+ ["Ports, places libres et carburant", "ports places visiteurs favoris carburant essence diesel prix", ["Ouvrez Ports. Filtrez par zone, « Près de moi », « Favoris » ou « Carburant ».", "Touchez un port pour voir les infos ; touchez l'étoile pour l'ajouter à vos favoris.", "Indiquez si le ponton visiteurs est « Libre », « Peu » ou « Complet » pour aider les autres.", "Après un plein, touchez « J'ai fait le plein : signaler le prix ». Le filtre Carburant classe les ports du moins cher au plus cher."], "ports"],
+ ["Webcams du Léman", "webcam camera lac", ["Ouvrez Webcams (menu).", "Touchez une caméra sur la carte pour voir l'état du lac avant de partir."], "webcams"],
+ ["Compteur de vitesse", "vitesse noeuds gps compteur", ["Ouvrez Vitesse (menu) et autorisez le GPS.", "Vous voyez votre vitesse en nœuds et en km/h, la vitesse max et la moyenne."], "vitesse"],
+ ["Boussole", "boussole cap compas nord port", ["Ouvrez Boussole (menu, ou depuis Météo) et tenez le téléphone à plat.", "Le cap s'affiche en grand ; touchez « Repère vers mon port » pour voir la direction et la distance de votre port d'attache.", "Si le cap semble faux, éloignez-vous du moteur et dessinez quelques 8 avec le téléphone. Indicatif seulement."], "boussole"],
+ ["Carnet de bord", "carnet sortie trajet gps distance saison gpx", ["Ouvrez Carnet de bord (menu) et touchez « Démarrer ma sortie » en partant.", "Gardez l'appli ouverte : l'écran reste allumé. Si vous la quittez, l'enregistrement reprend à votre retour.", "Au retour, « Terminer la sortie » (deux fois), ajoutez un titre et des photos, puis enregistrez.", "La sortie est privée ; cochez « Partager avec les membres » pour la montrer (début et fin masqués).", "« Ma saison » résume votre année ; « Exporter (GPX) » envoie le trajet vers Google Earth ou Navionics."], "carnet"],
+ ["Hisser le pavillon et partager sa position", "pavillon position amis partager sur l'eau carte", ["Dans Chat, onglet « Sur l'eau ».", "« Hisser le pavillon » : vous apparaissez pour tous les membres pendant 2 h (position arrondie), ouvert à la rencontre.", "« Partager avec mes amis » : position exacte, seulement pour les amis cochés, pendant la durée choisie (2 h, 4 h ou sans limite).", "Activez le GPS ou touchez la carte pour indiquer où vous êtes. Fonctionne seulement sur le Léman."], "ponton"]
+]],
+["Entre membres", [
+ ["Le salon (chat de tous les membres)", "chat salon ponton message photo mention", ["Ouvrez Chat, onglet « Salon ».", "Écrivez en bas ; ajoutez une photo avec l'appareil photo.", "Tapez @ et un prénom pour citer quelqu'un : il reçoit une notification.", "Les bandeaux en bas du salon montrent les pavillons hissés, les places à bord et les sorties partagées."], "ponton"],
+ ["Réagir, répondre, supprimer, signaler", "reaction smiley repondre supprimer signaler appui long", ["Faites un appui long sur un message.", "Touchez un smiley pour réagir (un seul par personne, retouchez pour l'enlever).", "« Répondre » cite le message ; « Sélectionner » permet d'en effacer plusieurs.", "« Signaler » prévient la modération ; « Bloquer ce membre » cache ses messages."], "ponton"],
+ ["Messages privés", "prive message ecrire nouveau message", ["Chat › onglet « Privé » › « Nouveau message ».", "Cherchez un prénom, un bateau ou un port, puis touchez le membre.", "Dans une discussion, le bouton ⋮ en haut à droite permet d'ajouter en ami, d'effacer la discussion ou de bloquer."], "ponton"],
+ ["Amis", "amis ajouter ami demande", ["Chat › onglet « Amis » : cherchez un membre et touchez « Ajouter en ami ».", "Il reçoit une demande ; une fois acceptée, vous saurez quand il est sur l'eau."], "ponton"],
+ ["Places à bord", "places bord sortie equipier sans bateau frais", ["Ouvrez Places à bord (menu ou accueil).", "Vous avez de la place ? « Proposer des places à bord » : date, départ, nombre de places, participation aux frais.", "Pas de bateau ? Touchez « Je demande une place » : l'organisateur accepte ou refuse, et vous êtes prévenu.", "Les frais se règlent entre vous, pas dans l'appli."], "sorties"],
+ ["Location entre membres", "location louer bateau skipper permis", ["Ouvrez Location (menu).", "Filtrez par type de bateau et par permis ; contactez le propriétaire.", "Vous pouvez aussi proposer votre bateau quand il reste au port."], "location"],
+ ["À vendre, je recherche, troc, don", "annonce vendre acheter recherche troc don", ["Ouvrez À vendre (menu).", "Publiez une annonce (vente, recherche, troc ou don) avec photo et prix.", "Voyez l'objet avant de payer et ne versez jamais d'avance."], "annonces"],
+ ["Événements au bord du lac", "evenement fete regate concert proposer", ["Ouvrez Événements (menu) pour voir les rendez-vous autour du Léman.", "Vous organisez quelque chose ? « Proposer un événement » : c'est gratuit, publié après vérification."], "evenements"],
+ ["Escales gourmandes", "escale restaurant resto manger bord du lac", ["Ouvrez Escales (menu) : restaurants au bord de l'eau, accessibles en bateau.", "Certains partenaires proposent des offres aux membres."], "restos"]
+]],
+["Découvrir", [
+ ["Nœuds marins", "noeuds apprendre", ["Ouvrez Nœuds (menu) et apprenez les 12 nœuds essentiels pas à pas.", "Cochez ceux que vous maîtrisez pour suivre vos progrès."], "noeuds"],
+ ["Épaves du Léman", "epaves carte histoire", ["Ouvrez Épaves (menu, membres) pour découvrir les épaves du lac sur la carte."], "epaves"]
+]],
+["Mon compte", [
+ ["Mon profil et ma photo", "profil photo prenom bateau port sans bateau", ["Ouvrez Profil (en bas à droite).", "Seul le prénom est obligatoire ; bateau et port sont facultatifs (« Sans bateau » ou « Je loue des bateaux » si besoin).", "Ajoutez une photo depuis la galerie ou l'appareil ; touchez-la pour l'agrandir."], "profil"],
+ ["Notifications", "notifications activer bloquees reparer", ["Profil › Notifications › « Activer les notifications » et acceptez.", "Choisissez ce que vous recevez : messages, SOS, vaudaire.", "Bloquées ? Réglages du téléphone › Applications › Nauticonnect Léman (ou Chrome) › Notifications, puis « Réparer les notifications »."], "profil"],
+ ["Badges", "badges fondateur sauveteur reporter", ["Profil › Mes badges.", "Exemples : « Membre fondateur » pour les 100 premiers inscrits, « Entraide » quand vous aidez un bateau en panne, « Reporter du lac » pour 3 photos partagées."], "profil"],
+ ["Inviter un ami et affiche QR", "inviter ami qr affiche partager", ["Profil › « Inviter un ami sur Nauticonnect » : envoyez le lien ou montrez le QR code.", "« Affiche à imprimer pour votre port » crée une affiche avec QR code à poser à la capitainerie."], "profil"],
+ ["Boîte à idées", "idee avis suggestion voter ameliorer", ["Ouvrez la Boîte à idées pour dire ce qui vous plaît ou proposer une amélioration.", "Votez pour les idées des autres : les plus soutenues passent en priorité."], "avis"]
+]],
+["Questions fréquentes", [
+ ["Je ne reçois pas les notifications", "notification probleme recois pas", ["Vérifiez Profil › Notifications : elles doivent être « activées ».", "Réglages du téléphone › Applications › Nauticonnect Léman › Notifications › Activer.", "Revenez dans l'appli et touchez « Réparer les notifications »."], "profil"],
+ ["Une barre d'adresse s'affiche en haut", "barre adresse url haut", ["Désinstallez puis réinstallez l'appli depuis le Play Store : la vérification se refait à l'installation."], ""],
+ ["Ma position n'apparaît pas", "position gps apparait pas", ["Autorisez la position pour Nauticonnect dans les réglages du téléphone.", "Le partage fonctionne seulement sur le Léman et ses rives, et quand l'appli est ouverte."], "ponton"],
+ ["Un cadre rouge « Erreur » s'affiche", "erreur cadre rouge bug", ["Faites une capture d'écran et envoyez-la à nauticonnect.leman@gmail.com, puis touchez le cadre pour le fermer.", "Fermez complètement l'appli et rouvrez-la : souvent, c'est une mise à jour en cours."], ""]
+]]
+];
+function renderAide() {
+  if (!AIDE) { setTimeout(renderAide, 0); return; } /* au démarrage, AIDE n'est pas encore chargé */
+  var L = $("aiList"); if (!L) return; L.textContent = "";
+  var q = norm(($("aiQ").value || "").trim()), words = q ? q.split(/\s+/) : [], n = 0;
+  AIDE.forEach(function (sec) {
+    var items = sec[1].filter(function (f) { if (!words.length) return true; var hay = norm(f[0] + " " + f[1] + " " + f[2].join(" ")); return words.every(function (w) { return hay.indexOf(w) >= 0; }); });
+    if (!items.length) return;
+    L.appendChild(el("h2", 0, sec[0]));
+    items.forEach(function (f) {
+      n++; var d = el("details", "card acc ai"); if (words.length && items.length <= 3) d.open = true;
+      var sm = el("summary"); sm.appendChild(el("b", 0, f[0])); d.appendChild(sm);
+      var ol = el("ol", "ai-st"); f[2].forEach(function (t) { ol.appendChild(el("li", 0, t)); }); d.appendChild(ol);
+      if (f[3]) { var a = el("a", "btn g sm", "Ouvrir"); a.href = "#" + f[3]; d.appendChild(a); }
+      L.appendChild(d);
+    });
+  });
+  if (!n) L.appendChild(el("p", "mu", "Rien trouvé. Essayez un autre mot, ou écrivez-nous à nauticonnect.leman@gmail.com."));
+}
+(function () { var q = $("aiQ"); if (q) q.oninput = renderAide; })();
