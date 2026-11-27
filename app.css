@@ -823,3 +823,11 @@ html.splashing .hero .mnb{display:none}
 
 /* mode d'emploi */
 .ai summary b{font-size:16px}.ai-st{margin:8px 0 10px;padding-left:22px}.ai-st li{margin:5px 0;line-height:1.4}.ai .btn{width:auto;display:inline-block}
+
+/* carte « Nouveau » */
+.nwcard{border-left:4px solid #F2C230;background:#FFF8E1;display:flex;flex-direction:column;gap:4px;position:relative}
+.nwcard .nw-k{font:600 11px/1 "IBM Plex Mono",monospace;letter-spacing:1.5px;text-transform:uppercase;color:#8a6a00}
+.nwcard b{font-size:16px;color:#0E2A3B}
+.nwcard #nwS{font-size:14px;color:#41525C;line-height:1.4}
+.nwcard .nw-row{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.nwcard .nw-x{background:none;border:0;font-size:16px;color:#6b7b84;min-width:44px;min-height:44px;cursor:pointer}

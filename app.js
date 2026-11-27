@@ -102,7 +102,7 @@ function store(t, rows) {
   else if (t === "amities") FS = rows;
   else if (t === "evenements") EV = rows;
   else if (t === "photos") PH = rows; else if (t === "sauvetages") SC = rows;
-  else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); if ($("modWel") && document.activeElement !== $("modWel")) $("modWel").value = welText(); }
+  else if (t === "reglages") { var g = {}; rows.forEach(function (r) { g[r.k] = r.v; }); REG = g; applyBanner(); renderNw(); if ($("modWel") && document.activeElement !== $("modWel")) $("modWel").value = welText(); }
 }
 var pending = {}, reloadT = {};
 function load(t) {
@@ -404,7 +404,7 @@ function renderHome() {
   var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
   var u = unread() + pendingIn().length; $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
   $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
-  $("phBtn").hidden = !isAdmin;
+  $("phBtn").hidden = !isAdmin; $("nwAdm").hidden = !isAdmin; renderNw();
   var pq = isAdmin ? PH.filter(function (p) { return !pub(p); }).length : 0, hm = $("homeMod");
   hm.hidden = !pq; hm.textContent = pq + " photo" + (pq > 1 ? "s" : "") + " à vérifier ›";
 }
@@ -452,6 +452,23 @@ $("phReset").onclick = function () {
   var old = REG.banniere;
   sb.from("reglages").upsert({ k: "banniere", v: "" }).then(function (r) { if (r.error) { toast("Action impossible."); return; } REG.banniere = ""; applyBanner(); toast("Image par défaut remise"); if (old && old.indexOf(uid + "/") === 0) sb.storage.from("photos").remove([old]); });
 };
+/* carte « Nouveau » de l'accueil (réglée par l'admin, fermable par chacun) */
+function nwGet() { try { var o = JSON.parse(REG.nouveau || "null"); return o && o.t ? o : null; } catch (e) { return null; } }
+function renderNw() {
+  var o = nwGet(), c = $("nwHome"); if (!c) return;
+  c.hidden = !o || ls("nc-nouveau") === String(o.id);
+  if (o) { $("nwT").textContent = o.t; $("nwS").textContent = o.s || ""; $("nwS").hidden = !o.s; $("nwGo").href = "#" + (o.go || "aide"); }
+  if ($("nwInT") && document.activeElement !== $("nwInT") && document.activeElement !== $("nwInS")) { $("nwInT").value = o ? o.t : ""; $("nwInS").value = o ? o.s || "" : ""; if (o && o.go) $("nwInGo").value = o.go; }
+  if ($("nwAdmSum")) $("nwAdmSum").textContent = o ? "En ligne : " + o.t : "Admin · aucune carte en ligne";
+}
+function nwClose() { var o = nwGet(); if (o) ls("nc-nouveau", String(o.id)); $("nwHome").hidden = true; }
+$("nwX").onclick = nwClose; $("nwGo").onclick = function () { nwClose(); };
+function nwPut(v, msg) { sb.from("reglages").upsert({ k: "nouveau", v: v }).then(function (r) { if (r.error) { toast("Action impossible."); return; } REG.nouveau = v; renderNw(); toast(msg); }); }
+$("nwSave").onclick = function () {
+  if (!isAdmin) return; var t = $("nwInT").value.trim(); if (!t) { toast("Indiquez un titre."); return; }
+  nwPut(JSON.stringify({ id: String(Date.now()), t: t, s: $("nwInS").value.trim(), go: $("nwInGo").value }), "Carte publiée pour tous les membres");
+};
+$("nwOff").onclick = function () { if (!isAdmin || !confirm("Retirer la carte « Nouveau » pour tout le monde ?")) return; nwPut("", "Carte retirée"); };
 /* installation */
 var deferredInstall = null;
 window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferredInstall = e; $("installBox").hidden = false; });
@@ -2094,12 +2111,12 @@ function notifUI() {
   $("nfState").textContent = !pushOk ? "Pas disponible sur ce navigateur. Installez l'appli sur l'écran d'accueil (Chrome)." : den ? "Bloquées sur ce téléphone. " + notifHelp() : on ? "Activées sur ce téléphone." : "Désactivées.";
   if ($("nfSum")) $("nfSum").textContent = on ? "Activées" : den ? "Bloquées" : "Désactivées";
   $("nfOn").hidden = on || !pushOk || den; $("nfPrefs").hidden = !on;
-  if (on) { $("nfMsg").checked = myAbo.msg; $("nfSos").checked = myAbo.sos; $("nfVent").checked = myAbo.vent; }
+  if (on) { $("nfMsg").checked = myAbo.msg; $("nfSos").checked = myAbo.sos; $("nfVent").checked = myAbo.vent; $("nfAstuce").checked = myAbo.astuce !== false; }
   var ask = $("notifAsk"); ask.hidden = !(pushOk && me() && !on && !den && !ls("nc-notif-later"));
   if ($("waNotif")) $("waNotif").hidden = !(pushOk && me() && !on && !den);
   renderVd();
 }
-["nfMsg", "nfSos", "nfVent"].forEach(function (id) { $(id).onchange = function () { if (!mySub) return; pushSave(mySub, { msg: $("nfMsg").checked, sos: $("nfSos").checked, vent: $("nfVent").checked }).then(function () { toast("Préférences enregistrées"); }); }; });
+["nfMsg", "nfSos", "nfVent", "nfAstuce"].forEach(function (id) { $(id).onchange = function () { if (!mySub) return; pushSave(mySub, { msg: $("nfMsg").checked, sos: $("nfSos").checked, vent: $("nfVent").checked, astuce: $("nfAstuce").checked }).then(function () { toast("Préférences enregistrées"); }); }; });
 $("nfOn").onclick = function () { pushEnable(); }; $("notifAskGo").onclick = function () { pushEnable(); }; $("waNotifGo").onclick = function () { pushEnable(); };
 $("notifAskNo").onclick = function () { ls("nc-notif-later", "1"); $("notifAsk").hidden = true; };
 $("nfOff").onclick = function () { ls("nc-push-off", "1"); pushDisable().then(function () { toast("Notifications désactivées"); }); };
