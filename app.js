@@ -33,7 +33,10 @@ function real() { return !!uid && !guest && !(realAdmin && viewAs === "invite");
 
 /* ---------------- données ---------------- */
 /* sorties : mises en pause (true pour les réactiver) */
-var SORTIES_ON = true; /* réactivé en « Place à bord » (nov. 2026) */
+var SORTIES_ON = true;
+/* Abonnement « Nauticonnect+ » : préparé mais désactivé. Passer à true le jour du lancement (il faudra aussi le paiement Google Play). */
+var PREMIUM_ON = false;
+function isPremium() { return !PREMIUM_ON || !!(typeof P !== "undefined" && uid && P[uid] && P[uid].premium); } /* réactivé en « Place à bord » (nov. 2026) */
 var SO = [], SI = [], CK = [], LK = [], SL = [], LO = [], EV = [], FS = [], PA = [], P = {}, A = [], O = [], M = [], AV = [], VO = [], PL = [], RU = [], EP = [], AN = [], PH = [], SC = [], REG = {};
 function me() { return real() && P[uid] ? P[uid] : null; }
 /* sous-titre d'un membre : son bateau, sinon « Sans bateau » / « Je loue des bateaux », sinon son port */
@@ -2979,7 +2982,8 @@ function ckCard(x) {
     sh.onclick = function () { sh.disabled = true; sb.from("carnet").update({ public: !x.public }).eq("id", x.id).then(function (q) { if (q.error) toast("Action impossible."); else toast(x.public ? "Sortie redevenue privée" : "Sortie partagée avec les membres"); load("carnet"); }); };
     var de = el("button", "btn g sm", "Supprimer"); de.style.color = "var(--red)";
     de.onclick = function () { if (de.dataset.ok !== "1") { de.dataset.ok = "1"; de.textContent = "Confirmer"; return; } sb.from("carnet").delete().eq("id", x.id).then(function () { if (x.photos && x.photos.length) sb.storage.from("photos").remove(x.photos); load("carnet"); }); };
-    A.appendChild(sh); A.appendChild(de); if (x.public) c.insertBefore(el("span", "ck-pub", "Partagée"), c.firstChild);
+    var gx = el("button", "btn g sm", "Exporter (GPX)"); gx.onclick = function () { ckGpx(x); };
+    A.appendChild(sh); A.appendChild(gx); A.appendChild(de); if (x.public) c.insertBefore(el("span", "ck-pub", "Partagée"), c.firstChild);
   } else {
     if (P[x.auteur]) { var wr = el("button", "btn g sm", "Écrire"); wr.onclick = function () { openThread(x.auteur, "Belle sortie « " + (x.titre || "") + " » ! "); }; A.appendChild(wr); }
     if (isAdmin) { var ad = el("button", "btn g sm", "Retirer (admin)"); ad.onclick = function () { if (confirm("Retirer cette sortie ?")) sb.from("carnet").delete().eq("id", x.id).then(function () { load("carnet"); }); }; A.appendChild(ad); }
@@ -2992,8 +2996,10 @@ function renderCarnet() {
   var M = $("cbMine"), U = $("cbPub"); M.textContent = ""; U.textContent = "";
   if (!real()) { M.appendChild(el("p", "mu", "Créez votre compte gratuit pour garder vos sorties.")); return; }
   var mine = CK.filter(function (x) { return x.auteur === uid; }), pub = CK.filter(function (x) { return x.auteur !== uid && x.public && !isBl(x.auteur); });
-  if (mine.length) { var tk = mine.reduce(function (a, x) { return a + (+x.km || 0); }, 0); M.appendChild(el("div", "mu", mine.length + " sortie" + (mine.length > 1 ? "s" : "") + " · " + fKm(tk) + " km au total")); }
-  mine.forEach(function (x) { M.appendChild(ckCard(x)); });
+  if (mine.length) M.appendChild(ckSeason(mine));
+  var shown = isPremium() ? mine : mine.slice(0, 5);
+  shown.forEach(function (x) { M.appendChild(ckCard(x)); });
+  if (shown.length < mine.length) M.appendChild(el("div", "note", "Vos " + (mine.length - shown.length) + " sorties plus anciennes sont gardées : elles sont visibles avec Nauticonnect+."));
   if (!mine.length) M.appendChild(el("p", "mu", "Aucune sortie enregistrée. Touchez « Démarrer ma sortie » en larguant les amarres !"));
   pub.slice(0, 20).forEach(function (x) { U.appendChild(ckCard(x)); });
   if (!pub.length) U.appendChild(el("p", "mu", "Aucune sortie partagée pour l'instant."));
@@ -3006,4 +3012,33 @@ function ckBanners(box) {
     var t = el("span"); t.appendChild(el("b", 0, P[x.auteur].pseudo)); t.appendChild(document.createTextNode(" a partagé sa sortie : " + fKm(+x.km) + " km · " + (x.depart === x.arrivee ? "autour de " + x.depart : x.depart + " → " + x.arrivee)));
     t.appendChild(el("small", 0, "Touchez pour voir le trajet")); b.appendChild(t); b.onclick = function () { location.hash = "carnet"; }; box.appendChild(b);
   });
+}
+
+/* ---- Ma saison : statistiques de l'année ---- */
+function ckSeason(mine) {
+  var y = new Date().getFullYear(), L = mine.filter(function (x) { return new Date(x.debut).getFullYear() === y; });
+  var c = el("div", "card ck-season"); c.appendChild(el("b", "ck-t", "Ma saison " + y));
+  if (!L.length) { c.appendChild(el("div", "mu", "Pas encore de sortie cette année.")); return c; }
+  var km0 = 0, ms = 0, rec = L[0], lon = L[0], ports = {};
+  L.forEach(function (x) { km0 += +x.km || 0; ms += Math.max(0, ts(x.fin) - ts(x.debut)); if (+x.vmax > +rec.vmax) rec = x; if (+x.km > +lon.km) lon = x; [x.depart, x.arrivee].forEach(function (p) { if (p) ports[p] = (ports[p] || 0) + 1; }); });
+  var fav = Object.keys(ports).sort(function (a, b) { return ports[b] - ports[a]; })[0];
+  var g = el("div", "cb-stats");
+  [[String(L.length), "sortie" + (L.length > 1 ? "s" : "")], [fKm(km0), "km"], [fDurTxt(ms).replace(" min", " m"), "sur l'eau"], [fKn(rec.vmax), "record (nd)"]].forEach(function (v) { var d = el("div"); d.appendChild(el("b", 0, v[0])); d.appendChild(el("span", 0, v[1])); g.appendChild(d); });
+  c.appendChild(g);
+  c.appendChild(el("div", "mu", "Plus longue sortie : " + (lon.titre || "Sortie") + " · " + fKm(+lon.km) + " km"));
+  if (fav) c.appendChild(el("div", "mu", "Port le plus fréquenté : " + fav));
+  return c;
+}
+/* ---- export GPX (Google Earth, Navionics, etc.) ---- */
+function ckGpx(x) {
+  var esc = function (t) { return String(t || "").replace(/[<>&"']/g, function (ch) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[ch]; }); };
+  var pts = (x.trace || []).map(function (p) { return '<trkpt lat="' + p[0] + '" lon="' + p[1] + '"></trkpt>'; }).join("\n");
+  var gpx = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Nauticonnect" xmlns="http://www.topografix.com/GPX/1/1">\n<metadata><name>' + esc(x.titre) + '</name><time>' + new Date(x.debut).toISOString() + '</time></metadata>\n<trk><name>' + esc(x.titre) + '</name><desc>' + esc(fKm(+x.km) + " km · " + x.depart + " → " + x.arrivee) + '</desc><trkseg>\n' + pts + '\n</trkseg></trk>\n</gpx>\n';
+  var name = "nauticonnect-" + String(x.debut).slice(0, 10) + ".gpx", blob = new Blob([gpx], { type: "application/gpx+xml" });
+  try {
+    var file = new File([blob], name, { type: "application/gpx+xml" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file], title: x.titre || "Sortie" }).catch(function () {}); return; }
+  } catch (e) {}
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast("Fichier GPX téléchargé");
 }
