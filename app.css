@@ -774,3 +774,10 @@ html.splashing .hero .mnb{display:none}
 .bs-svg{display:block;width:100%;height:auto}
 #bsRose{transition:transform .12s linear}
 @media (prefers-reduced-motion:reduce){#bsRose{transition:none}}
+
+/* prix carburant signalés */
+.cbx{margin:6px 0 8px;display:flex;flex-direction:column;gap:6px}
+.cbl{font-size:14px;line-height:1.35}.cbl span{color:var(--mu);font-size:13px}.cbl.old{opacity:.6}
+.cbdel{margin-left:8px;background:none;border:0;color:var(--red);font:700 12px var(--fb);padding:4px}
+.cbgo{width:auto;align-self:flex-start}
+.cbf{display:flex;flex-direction:column;gap:6px}.cbf .row{gap:6px}.cbf .f{margin:0}

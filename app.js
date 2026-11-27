@@ -57,6 +57,7 @@ var Q = {
   avis: function () { return sb.from("avis").select("*").order("t", { ascending: false }).limit(300); },
   votes: function () { return sb.from("votes").select("*").limit(5000); },
   places: function () { return sb.from("places").select("*").gte("t", iso(12 * 36e5)); },
+  carbu: function () { return sb.from("carbu").select("*").gte("t", iso(90 * 864e5)).order("t", { ascending: false }).limit(1000); },
   restos: function () { return sb.from("restos").select("*").order("t", { ascending: false }).limit(300); },
   epaves: function () { return sb.from("epaves").select("*").limit(500); },
   locations: function () { return sb.from("locations").select("*").order("maj", { ascending: false }).limit(300); },
@@ -89,7 +90,7 @@ function store(t, rows) {
   if (t === "blocages") { BL = rows.map(function (r) { return r.bloque; }); return; }
   if (t === "profils") { var o = {}; rows.forEach(function (r) { o[r.id] = r; }); P = o; }
   else if (t === "alertes") { sosCheck(rows); A = rows; } else if (t === "ouverts") O = rows; else if (t === "messages") M = rows; else if (t === "salon") SL = rows.slice().reverse(); else if (t === "likes") LK = rows;
-  else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows;
+  else if (t === "avis") AV = rows; else if (t === "votes") VO = rows; else if (t === "places") PL = rows; else if (t === "carbu") CB = rows;
   else if (t === "restos") RU = rows; else if (t === "epaves") EP = rows; else if (t === "annonces") AN = rows; else if (t === "locations") LO = rows;
   else if (t === "partenaires") PA = rows;
   else if (t === "sorties") SO = rows; else if (t === "sortie_inscrits") SI = rows;
@@ -1395,6 +1396,49 @@ var PORTS = [["gen","Genève – Port Noir","Genève","Petit-Lac"],["her","Herma
 ["vev","Vevey","Vaud","Haut-Lac"],["ltp","La Tour-de-Peilz","Vaud","Haut-Lac"],["cla","Montreux – Clarens","Vaud","Haut-Lac"],["vil","Villeneuve","Vaud","Haut-Lac"],["nov","Noville – Chantier naval du Vieux-Rhône","Vaud","Haut-Lac"],["bou","Le Bouveret","Valais","Haut-Lac"],["sgi","Saint-Gingolph","Valais","Haut-Lac"],
 ["evi","Évian-les-Bains","Haute-Savoie","Rive française"],["tho","Thonon – Port de Rives","Haute-Savoie","Rive française"],["yvo","Yvoire","Haute-Savoie","Rive française"],
 ["gpa","Genève – Pâquis","Genève","Petit-Lac"],["ven","Bellevue – Port du Vengeron","Genève","Petit-Lac"],["gth","Genthod","Genève","Petit-Lac"],["mie","Mies","Vaud","Petit-Lac"],["cel","Céligny","Genève","Petit-Lac"],["pra","Prangins – Promenthoux","Vaud","Petit-Lac"],["ani","Anières","Genève","Petit-Lac"],["cbe","Collonge-Bellerive","Genève","Petit-Lac"],["gla","Gland – La Dullive","Vaud","Côte vaudoise"],["aub","Buchillon – Port de l'Aubonne","Vaud","Côte vaudoise"],["pre","Préverenges","Vaud","Côte vaudoise"],["pau","Paudex","Vaud","Côte vaudoise"],["chn","Chens – Port de Tougues","Haute-Savoie","Rive française"],["mes","Messery","Haute-Savoie","Rive française"],["ner","Nernier","Haute-Savoie","Rive française"],["exc","Excenevex","Haute-Savoie","Rive française"],["sci","Sciez – Port de Sciez","Haute-Savoie","Rive française"],["cou","Sciez – Château de Coudrée","Haute-Savoie","Rive française"],["sec","Margencel – Port de Séchex","Haute-Savoie","Rive française"],["amp","Publier – Amphion","Haute-Savoie","Rive française"],["lug","Lugrin – Tourronde","Haute-Savoie","Rive française"],["mei","Meillerie","Haute-Savoie","Rive française"]].map(function (a) { return { id: a[0], n: a[1], r: a[2], z: a[3] }; });
+/* prix du carburant signalés par les membres (table carbu) */
+var CB = [], cbForm = null, CBOLD = 30 * 864e5;
+function cbLast(port, type) { for (var i = 0; i < CB.length; i++) if (CB[i].port === port && CB[i].type === type) return CB[i]; return null; } /* CB est trié du plus récent au plus ancien */
+function cbFmt(r) { return (+r.prix).toFixed(2).replace(".", ",") + " " + r.devise; }
+function cbMin(port) { var e = cbLast(port, "essence"), d = cbLast(port, "diesel"), x = [e, d].filter(function (r) { return r && Date.now() - ts(r.t) < CBOLD; }); return x.length ? x.sort(function (a, b) { return a.prix - b.prix; })[0] : null; }
+function cbBlock(p) {
+  var w = el("div", "cbx");
+  ["essence", "diesel"].forEach(function (ty) {
+    var r = cbLast(p.id, ty); if (!r) return;
+    var old = Date.now() - ts(r.t) > CBOLD, ln = el("div", "cbl" + (old ? " old" : ""));
+    ln.appendChild(el("b", 0, (ty === "essence" ? "Essence" : "Diesel") + " : " + cbFmt(r) + "/l"));
+    ln.appendChild(el("span", 0, " · " + ((P[r.auteur] && P[r.auteur].pseudo) || "un membre") + " · " + ago(r.t) + (old ? " · peut-être plus à jour" : "")));
+    if (uid && (r.auteur === uid || isAdmin)) { var x = el("button", "cbdel", "Retirer"); x.type = "button"; x.onclick = function (e) { e.stopPropagation(); sb.from("carbu").delete().eq("id", r.id).then(function (q) { if (q.error) toast("Action impossible."); else load("carbu"); }); }; ln.appendChild(x); }
+    w.appendChild(ln);
+  });
+  if (!w.firstChild) w.appendChild(el("div", "mu", "Pas encore de prix signalé. Vous avez fait le plein ici ? Partagez le prix !"));
+  if (cbForm !== p.id) {
+    var b = el("button", "btn g sm cbgo", "J'ai fait le plein : signaler le prix"); b.type = "button";
+    b.onclick = function (e) { e.stopPropagation(); if (!memberOk(null, "Pour signaler un prix, créez votre compte gratuit.")) return; cbForm = p.id; renderPorts(); };
+    w.appendChild(b); return w;
+  }
+  var f = el("form", "cbf"), ty = el("select", "f"), pr = el("input", "f"), dv = el("select", "f"), ok = el("button", "btn sm", "Envoyer"), cx = el("button", "btn g sm", "Annuler");
+  ["essence", "diesel"].forEach(function (t) { var o = el("option", 0, t === "essence" ? "Essence" : "Diesel"); o.value = t; ty.appendChild(o); });
+  ["CHF", "EUR"].forEach(function (t) { var o = el("option", 0, t); o.value = t; dv.appendChild(o); }); dv.value = p.z === "Rive française" ? "EUR" : "CHF";
+  pr.type = "number"; pr.inputMode = "decimal"; pr.step = "0.01"; pr.min = "0.5"; pr.max = "5"; pr.placeholder = "Prix au litre, ex. 2.45";
+  ty.setAttribute("aria-label", "Carburant"); pr.setAttribute("aria-label", "Prix au litre"); dv.setAttribute("aria-label", "Monnaie");
+  cx.type = "button"; cx.onclick = function (e) { e.stopPropagation(); cbForm = null; renderPorts(); };
+  var m = el("div", "err");
+  f.onclick = function (e) { e.stopPropagation(); };
+  f.onsubmit = function (e) {
+    e.preventDefault(); var v = parseFloat(String(pr.value).replace(",", "."));
+    if (!(v >= 0.5 && v <= 5)) { m.textContent = "Indiquez le prix au litre, entre 0,50 et 5,00."; return; }
+    ok.disabled = true;
+    sb.from("carbu").insert({ port: p.id, type: ty.value, prix: Math.round(v * 100) / 100, devise: dv.value }).then(function (r) {
+      ok.disabled = false; if (r.error) { m.textContent = "Envoi impossible, réessayez dans quelques secondes."; return; }
+      cbForm = null; toast("Merci ! Prix partagé avec les plaisanciers."); load("carbu");
+    });
+  };
+  var row = el("div", "row"); row.appendChild(ty); row.appendChild(pr); row.appendChild(dv); f.appendChild(row);
+  var row2 = el("div", "row"); row2.appendChild(cx); row2.appendChild(ok); f.appendChild(row2); f.appendChild(m);
+  w.appendChild(f); setTimeout(function () { try { pr.focus(); } catch (x) {} }, 50);
+  return w;
+}
 /* ports avec station de carburant pour bateaux (sources : bateau-geneve.ch, ports-du-leman.ch, sites des ports) */
 var FUEL = { gen: "Essence et diesel (La Nautique, à côté de Port-Noir)", ver: "Essence", nyo: "Essence et diesel (prépaiement)", rol: "Essence",
   mor: "Essence et diesel (port de la Baie de l'Église)", ssu: "Essence (port des Pierrettes)", ouc: "Essence et diesel", cul: "Essence (port de Moratel)",
@@ -1438,7 +1482,7 @@ function renderPorts() {
   var res = PORTS.filter(function (p) {
     if (words.length) { var h = portHay(p); return words.every(function (w) { return h.indexOf(w) >= 0; }); } /* la recherche cherche dans tous les ports */
     return poZone === "Tous" || poZone === "Près de moi" || (poZone === "Favoris" ? favs[p.id] : poZone === "Carburant" ? FUEL[p.id] : p.z === poZone);
-  }).sort(function (a, b) { return near ? dist(a) - dist(b) : (flat ? 0 : PZ.indexOf(a.z) - PZ.indexOf(b.z)) || alpha(a.n, b.n); });
+  }).sort(function (a, b) { if (!words.length && poZone === "Carburant") { var ma = cbMin(a.id), mb = cbMin(b.id); if (ma || mb) return (ma ? ma.prix : 99) - (mb ? mb.prix : 99); } return near ? dist(a) - dist(b) : (flat ? 0 : PZ.indexOf(a.z) - PZ.indexOf(b.z)) || alpha(a.n, b.n); });
   if (near) res = res.slice(0, 8);
   if (words.length) L.appendChild(el("div", "mu", res.length ? res.length + " port" + (res.length > 1 ? "s" : "") + " trouvé" + (res.length > 1 ? "s" : "") : ""));
   if (near) L.appendChild(el("div", "mu", "Les 8 ports les plus proches de vous"));
@@ -1448,14 +1492,14 @@ function renderPorts() {
     var top = el("div", "ptop"), d = el("div", "sdot" + (s ? " " + s.s : "")), nm = el("div", "nm"); nm.appendChild(el("b", 0, p.n));
     var sub = [p.r]; if (poGps && (near || words.length || poZone === "Près de moi") && PGPS[p.id]) sub.push(dist(p).toFixed(1).replace(".", ",") + " km");
     if (s) sub.push(LBL[s.s] + " " + ago(s.t)); nm.appendChild(el("span", 0, sub.join(" · ")));
-    if (FUEL[p.id] && !open) nm.appendChild(el("span", "pfuel", "Carburant"));
+    if (FUEL[p.id] && !open) { var cm = cbMin(p.id); nm.appendChild(el("span", "pfuel", cm ? "Carburant · " + (cm.type === "essence" ? "essence " : "diesel ") + cbFmt(cm) : "Carburant")); }
     var fv = el("button", "fav" + (favs[p.id] ? " on" : ""), "★"); fv.setAttribute("aria-label", "Favori"); fv.onclick = function (e) { e.stopPropagation(); if (favs[p.id]) delete favs[p.id]; else favs[p.id] = 1; ls("nc-favs", JSON.stringify(Object.keys(favs))); renderPorts(); };
     var ch = el("span", "pchev", open ? "−" : "+");
     top.appendChild(d); top.appendChild(nm); top.appendChild(fv); top.appendChild(ch); c.appendChild(top);
     top.onclick = function () { poOpen = open ? null : p.id; renderPorts(); if (!open) setTimeout(function () { var x = $("po-" + p.id); if (x) x.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, 30); };
     c.id = "po-" + p.id; L.appendChild(c);
     if (!open) return;
-    if (FUEL[p.id]) c.appendChild(el("div", "fuel", "Carburant : " + FUEL[p.id]));
+    if (FUEL[p.id]) { c.appendChild(el("div", "fuel", "Carburant : " + FUEL[p.id])); c.appendChild(cbBlock(p)); }
     c.appendChild(el("div", "st " + (s ? s.s : "none"), s ? LBL[s.s] + " · " + ago(s.t) + (s.n > 1 ? " · " + s.n + " signalements" : "") : "Pas de signalement récent"));
     c.appendChild(thumb("port-" + p.id, p.n, "Port : " + p.n + " (ponton visiteurs, capitainerie, état du port…)"));
     var a = el("div", "act"), mine = PL.filter(function (r) { return r.port === p.id && r.auteur === uid && ts(r.t) > Date.now() - 12 * 36e5; })[0];
@@ -1466,7 +1510,7 @@ function renderPorts() {
     var wc = el("a", 0, "Webcam"); wc.href = "#webcams"; wc.onclick = function () { wcPort = p.id; }; a.appendChild(wc);
     c.appendChild(a);
   });
-  if (poZone === "Carburant" && shown) L.insertBefore(el("div", "note", "Ports avec une station de carburant pour bateaux. Horaires et moyens de paiement variables : appelez la capitainerie avant de compter dessus, surtout hors saison."), L.firstChild);
+  if (poZone === "Carburant" && shown) L.insertBefore(el("div", "note", "Ports avec une station de carburant pour bateaux, du moins cher au plus cher selon les prix signalés par les membres. Les prix changent : la date du dernier signalement est indiquée. Horaires et paiement variables, appelez la capitainerie avant de compter dessus, surtout hors saison."), L.firstChild);
   if (!shown) {
     var nt = el("div", "note", words.length ? "Aucun port trouvé pour « " + $("poQ").value.trim() + " ». Essayez le nom de la commune (ex. « Montreux », « Lausanne », « Évian »). Il manque un port ? Écrivez-nous à " + CFG.contact + "." : poZone === "Favoris" ? "Touchez ★ sur un port pour l'ajouter à vos favoris." : poZone === "Près de moi" ? "Recherche de votre position…" : "Aucun port ne correspond.");
     L.appendChild(nt);
