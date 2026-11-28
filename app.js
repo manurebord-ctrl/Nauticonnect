@@ -618,10 +618,14 @@ $("sgGo").onclick = function () {
     toast("Merci ! Signalement envoyé aux membres."); load("alertes");
   }).then(function () { go.disabled = false; go.textContent = "Envoyer le signalement"; });
 };
+/* adresses e-mail officielles trouvées (nov. 2026) ; ports absents : l'utilisateur choisit le destinataire */
+var CAPMAIL = { "Hermance": "capitainerie@etat.ge.ch", "Corsier-Port": "capitainerie@etat.ge.ch", "Genève – Port-Noir / Eaux-Vives": "capitainerie@etat.ge.ch", "Genève – Pâquis": "capitainerie@etat.ge.ch", "Genthod": "capitainerie@etat.ge.ch", "Versoix": "capitainerie@etat.ge.ch",
+  "Lausanne – Vidy": "economie@lausanne.ch", "Lausanne – Ouchy": "economie@lausanne.ch", "Clarens / Montreux": "travaux@montreux.ch", "Territet": "travaux@montreux.ch",
+  "Évian (F)": "port-plaisance@ville-evian.fr", "Sciez (F)": "port-de-sciez@wanadoo.fr", "Yvoire (F)": "mairie@yvoire.fr" };
 function capMail(a) {
   var when = new Date(a.maj).toLocaleString("fr-CH", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
   var body = "Bonjour,\n\nUn bateau a été signalé en difficulté via l'appli Nauticonnect :\n\n- Problème : " + a.probleme + "\n" + (a.bateau ? "- Bateau : " + a.bateau + "\n" : "") + (a.immat ? "- Immatriculation : " + a.immat + "\n" : "") + "- Lieu : " + a.zone + " (https://maps.google.com/?q=" + a.lat + "," + a.lon + ")\n" + (a.detail ? "- Détails : " + a.detail + "\n" : "") + (a.photo ? "- Photo : " + photoUrl(a.photo) + "\n" : "") + "- Signalé le " + when + "\n\nMerci de faire vérifier.\n\nCordialement";
-  return "mailto:?subject=" + encodeURIComponent("Bateau en difficulté – " + a.zone) + "&body=" + encodeURIComponent(body);
+  return "mailto:" + (CAPMAIL[a.zone] || "") + "?subject=" + encodeURIComponent("Bateau en difficulté – " + a.zone) + "&body=" + encodeURIComponent(body);
 }
 $("pnGo").onclick = function () {
   pnMsg();
@@ -677,7 +681,7 @@ function renderPanne() {
         var b2 = el("button", "btn", sg ? "Réglé · retirer le signalement" : "Problème résolu · désactiver l'alerte"); b2.onclick = function () { b2.disabled = true; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) { b2.disabled = false; toast("Impossible de désactiver. Réessayez."); return; } load("alertes"); toast("Alerte désactivée. Bon retour au port !"); }); }; row.appendChild(b2);
       }
       c.appendChild(row);
-      if (sg) { var cm = el("a", "btn g sg-cap", "Prévenir la capitainerie par e-mail"); cm.href = capMail(a); c.appendChild(cm); }
+      if (sg) { var cm = el("a", "btn g sg-cap", CAPMAIL[a.zone] ? "Prévenir la capitainerie par e-mail" : "Préparer un e-mail pour la capitainerie"); cm.href = capMail(a); c.appendChild(cm); }
       L.appendChild(c);
     });
   }
