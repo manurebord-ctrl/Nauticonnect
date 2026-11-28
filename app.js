@@ -2135,12 +2135,13 @@ function pushRefresh() {
     return sb.from("push_abos").select("*").eq("endpoint", s.endpoint).maybeSingle().then(function (r) {
       myAbo = r.data || null; pushKnown = true;
       if (!myAbo && Notification.permission === "granted" && !ls("nc-push-off")) return pushSave(s); /* réabonner ce compte sur cet appareil */
+      if (myAbo && (myAbo.lang || "fr") !== (window.NC_LANG === "de" ? "de" : "fr")) return pushSave(s, {}); /* langue des notifications = langue de l'appli */
       notifUI();
     });
   }).catch(function () { pushKnown = true; notifUI(); });
 }
 function pushSave(s, prefs) {
-  var j = s.toJSON(), o = { endpoint: s.endpoint, uid: uid, p256dh: j.keys.p256dh, auth: j.keys.auth, maj: nowIso() };
+  var j = s.toJSON(), o = { endpoint: s.endpoint, uid: uid, p256dh: j.keys.p256dh, auth: j.keys.auth, maj: nowIso(), lang: window.NC_LANG === "de" ? "de" : "fr" };
   if (prefs) for (var k in prefs) o[k] = prefs[k];
   return sb.from("push_abos").upsert(o, { onConflict: "endpoint" }).select().maybeSingle().then(function (r) { if (r.error) throw r.error; myAbo = r.data; mySub = s; pushKnown = true; notifUI(); });
 }
@@ -2419,7 +2420,7 @@ $("evSetSv").onclick = function () {
 };
 
 /* ================= LANGUE ================= */
-(function () { var b = $("langBtn"); if (!b) return; var de = window.NC_LANG === "de"; b.textContent = de ? "FR" : "DE"; b.title = de ? "Version française" : "Deutsche Version"; b.onclick = function () { if (window.ncSetLang) ncSetLang(de ? "fr" : "de"); }; })();
+(function () { var de = window.NC_LANG === "de"; ["langBtn", "nceLang"].forEach(function (id) { var b = $(id); if (!b) return; b.textContent = de ? "Français" : "Deutsch"; b.onclick = function () { if (window.ncSetLang) ncSetLang(de ? "fr" : "de"); }; }); })();
 
 if ($("joinLater")) $("joinLater").onclick = function () { ls("nc-join-later", String(Date.now())); $("joinBar").hidden = true; };
 if ($("joinGo")) $("joinGo").onclick = function () { try { sessionStorage.setItem("nc-ret", "accueil"); sessionStorage.setItem("nc-why", ""); } catch (e) {} };
