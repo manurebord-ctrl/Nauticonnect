@@ -196,6 +196,10 @@ function enterApp() {
   h.classList.remove("splash"); h.classList.add("compact"); document.documentElement.classList.remove("splashing"); window.scrollTo(0, 0);
 }
 $("enterBtn").onclick = enterApp;
+/* écran d'entrée (photo + se connecter / créer un compte / découvrir) */
+function nceClose() { var n = $("ncEntry"); if (n && !n.hidden) { n.classList.add("out"); setTimeout(function () { n.hidden = true; n.classList.remove("out"); }, 300); } if ($("ncIntro").hidden) document.documentElement.classList.remove("splashing"); }
+$("nceSkip").onclick = nceClose;
+Array.prototype.forEach.call(document.querySelectorAll("#ncEntry [data-am]"), function (a) { a.onclick = function () { authMode = a.dataset.am; try { sessionStorage.setItem("nc-ret", "accueil"); } catch (e) {} nceClose(); }; });
 window.addEventListener("hashchange", enterApp);
 window.addEventListener("hashchange", route);
 
@@ -404,6 +408,7 @@ function renderHome() {
   var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
   var u = unread() + pendingIn().length; $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
   $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
+  if (real() && !$("ncEntry").hidden) nceClose();
   $("phBtn").hidden = !isAdmin; $("nwAdm").hidden = !isAdmin; renderNw();
   var pq = isAdmin ? PH.filter(function (p) { return !pub(p); }).length : 0, hm = $("homeMod");
   hm.hidden = !pq; hm.textContent = pq + " photo" + (pq > 1 ? "s" : "") + " à vérifier ›";
@@ -435,7 +440,7 @@ window.addEventListener("resize", heroSize); document.addEventListener("visibili
 function photoUrl(path) { return sb ? sb.storage.from("photos").getPublicUrl(path).data.publicUrl : ""; }
 function applyBanner() {
   var h = document.querySelector(".hero"), p = REG.banniere;
-  $("heroPh").style.backgroundImage = 'url("' + (p ? photoUrl(p) : "fond-accueil.svg?v=1") + '")'; h.classList.add("photo"); h.classList.toggle("art", !p);
+  $("heroPh").style.backgroundImage = 'url("' + (p ? photoUrl(p) : "fond-accueil.svg?v=1") + '")'; if ($("nceBg")) $("nceBg").style.backgroundImage = $("heroPh").style.backgroundImage; h.classList.add("photo"); h.classList.toggle("art", !p);
 }
 $("phIn").onchange = function () {
   var f = this.files && this.files[0], inp = this; if (!f || !isAdmin) return; var lb = $("phPick"); lb.firstChild.textContent = "Envoi… ";

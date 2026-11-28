@@ -20,9 +20,12 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=64">
+<link rel="stylesheet" href="app.css?v=65">
 </head>
 <body>
+<div id="ncIntro" class="nci" hidden aria-hidden="true"><img src="icon-512.png" alt=""><b>Nauticonnect Léman</b><span>46°24′N 6°51′E · LE LÉMAN</span></div>
+<div id="ncEntry" class="nce" hidden><div class="nce-ph" id="nceBg" style="background-image:url(fond-accueil.svg?v=1)"></div><div class="nce-in"><img src="icon-512.png" alt="Nauticonnect" class="nce-logo"><h1>Nauticonnect Léman</h1><p>Le réseau des plaisanciers du lac</p><div class="nce-b"><a class="nce-1" href="#compte" data-am="in">Se connecter</a><a class="nce-2" href="#compte" data-am="up">Créer mon compte</a><button class="nce-3" id="nceSkip" type="button">Découvrir sans compte</button></div></div></div>
+<script>(function(){var d=location.hash.slice(1),e,lg=false;try{e=sessionStorage.getItem("nc-in")}catch(x){}if(e||(d&&d!=="accueil"))return;try{var t=JSON.parse(localStorage.getItem("sb-xinfglmherdiwcwqxoaz-auth-token")||"null");lg=!!(t&&t.user&&!t.user.is_anonymous)}catch(x){}var r=document.documentElement,i=document.getElementById("ncIntro"),n=document.getElementById("ncEntry");r.classList.add("splashing");i.hidden=false;if(!lg)n.hidden=false;try{sessionStorage.setItem("nc-in","1")}catch(x){}setTimeout(function(){i.classList.add("out");setTimeout(function(){i.hidden=true;if(n.hidden)r.classList.remove("splashing")},400)},1500)})();</script>
 
 <!-- ===================== ACCUEIL ===================== -->
 <div class="pvbar" id="vwBar" hidden><span id="pvTxt">Aperçu</span><button id="pvExit">Quitter l'aperçu</button></div>
@@ -629,7 +632,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=81"></script>
+<script src="app.js?v=82"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>
