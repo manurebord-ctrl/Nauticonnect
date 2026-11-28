@@ -1,5 +1,5 @@
 /* Nauticonnect – service worker : l'appli s'ouvre même avec peu de réseau */
-const CACHE = "nauticonnect-v129";
+const CACHE = "nauticonnect-v130";
 const SHELL = ["./", "index.html", "app.css", "app.js", "config.js", "manifest.webmanifest", "confidentialite.html", "securite-enfants.html", "fond-accueil.svg", "i18n.js", "noel.js",
   "icon-192.png", "icon-512.png", "maskable-512.png", "apple-180.png", "favicon-64.png", "sc-sos.png", "sc-meteo.png", "sc-chat.png", "sc-ports.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });

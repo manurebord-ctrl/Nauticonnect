@@ -33,7 +33,7 @@ function real() { return !!uid && !guest && !(realAdmin && viewAs === "invite");
 
 /* ---------------- données ---------------- */
 /* sorties : mises en pause (true pour les réactiver) */
-var SORTIES_ON = true;
+var SORTIES_ON = false; /* Places à bord : mis en pause (nov. 2026), remettre à true pour réactiver */
 /* Abonnement « Nauticonnect+ » : préparé mais désactivé. Passer à true le jour du lancement (il faudra aussi le paiement Google Play). */
 var PREMIUM_ON = false;
 function isPremium() { return !PREMIUM_ON || !!(typeof P !== "undefined" && uid && P[uid] && P[uid].premium); } /* réactivé en « Place à bord » (nov. 2026) */
@@ -409,6 +409,7 @@ function renderHome() {
   var u = unread() + pendingIn().length; $("msgChip").hidden = !u; $("unreadHome").textContent = u; $("unreadNav").hidden = !u; $("unreadNav").textContent = u;
   $("avCount").textContent = AV.length ? AV.length + " avis · donner le vôtre ›" : "Donner mon avis ›";
   if (real() && !$("ncEntry").hidden) nceClose();
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="#sorties"],#nwInGo option[value="sorties"]'), function (a) { a.hidden = !SORTIES_ON; });
   $("phBtn").hidden = !isAdmin; $("nwAdm").hidden = !isAdmin; renderNw();
   var pq = isAdmin ? PH.filter(function (p) { return !pub(p); }).length : 0, hm = $("homeMod");
   hm.hidden = !pq; hm.textContent = pq + " photo" + (pq > 1 ? "s" : "") + " à vérifier ›";
@@ -3241,7 +3242,7 @@ function renderAide() {
   var L = $("aiList"); if (!L) return; L.textContent = "";
   var q = norm(($("aiQ").value || "").trim()), words = q ? q.split(/\s+/) : [], n = 0;
   AIDE.forEach(function (sec) {
-    var items = sec[1].filter(function (f) { if (!words.length) return true; var hay = norm(f[0] + " " + f[1] + " " + f[2].join(" ")); return words.every(function (w) { return hay.indexOf(w) >= 0; }); });
+    var items = sec[1].filter(function (f) { if (!SORTIES_ON && f[0] === "Places à bord") return false; if (!words.length) return true; var hay = norm(f[0] + " " + f[1] + " " + f[2].join(" ")); return words.every(function (w) { return hay.indexOf(w) >= 0; }); });
     if (!items.length) return;
     L.appendChild(el("h2", 0, sec[0]));
     items.forEach(function (f) {
