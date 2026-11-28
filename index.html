@@ -20,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;600;700&family=IBM+Plex+Mono:wght@500&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=72">
+<link rel="stylesheet" href="app.css?v=73">
 </head>
 <body>
 <div id="ncIntro" class="nci" hidden aria-hidden="true"><img src="icon-512.png" alt=""><b>Nauticonnect Léman</b><span>46°24′N 6°51′E · LE LÉMAN</span></div>
@@ -205,9 +205,9 @@
 <section id="v-panne" hidden>
 <div class="hd"><a class="back" href="#">← Accueil</a></div>
 <div class="sosbox"><div class="t">Un problème sur le lac ?</div>
-<div class="d">Votre alerte est envoyée aux plaisanciers de l'appli, qui peuvent venir vous aider.</div>
+<div class="d">Votre alerte est envoyée aux plaisanciers de l'appli, qui peuvent venir aider.</div>
 <div class="who" id="pnWho"></div>
-<button class="sosbtn" id="pnSos">JE SUIS EN PANNE</button></div>
+<div class="sos2"><button class="sosbtn" id="pnSos">JE SUIS<br>EN PANNE</button><button class="sosbtn sg" id="sgBtn">JE SIGNALE<br>UN BATEAU</button></div></div>
 <div id="pnForm" class="card" hidden>
 <div class="step">1. Où êtes-vous ?</div>
 <select class="f" id="pnZone"></select>
@@ -220,9 +220,23 @@
 <div class="mu" style="margin:-2px 0 8px">Le numéro est visible par les membres connectés tant que l'alerte est active.</div>
 <button class="btn r" id="pnGo" style="font-size:18px;padding:14px">Envoyer l’alerte</button>
 </div>
+<div id="sgForm" class="card" hidden>
+<div class="mu" style="margin-bottom:4px">Un bateau qui n'est pas le vôtre a un problème ? Les membres proches et, s'il est inscrit, son propriétaire sont prévenus.</div>
+<div class="step">1. Que voyez-vous ?</div><div class="pbs" id="sgPbs"></div>
+<div class="step">2. Où ?</div>
+<select class="f" id="sgZone"></select>
+<button class="btn g" id="sgGps" type="button">Utiliser ma position GPS</button>
+<div class="step">3. Quel bateau ? (si vous le voyez)</div>
+<input class="f" id="sgBoat" maxlength="60" placeholder="Nom du bateau">
+<input class="f" id="sgImm" maxlength="20" placeholder="Immatriculation (ex. VS 1234)">
+<div class="step">4. Photo et détails (facultatif)</div>
+<label class="btn g" id="sgPhL">Ajouter une photo<input type="file" id="sgPh" accept="image/jpeg,image/png,image/webp" hidden></label>
+<input class="f" id="sgDet" maxlength="140" placeholder="Ponton, place, ce que vous avez vu…">
+<button class="btn r" id="sgGo" style="font-size:18px;padding:14px">Envoyer le signalement</button>
+</div>
 <div class="err" id="pnMsg"></div>
 <div class="card warn"><b>Danger pour des personnes ?</b> Appelez d’abord le <a href="tel:117"><b>117</b></a> (police) ou le <a href="tel:144"><b>144</b></a>, ou lancez un appel de détresse radio VHF canal 16. Cette appli est un complément, pas un service de secours.</div>
-<h2>Alertes actives</h2><div id="pnList"></div>
+<h2>Alertes et signalements</h2><div id="pnList"></div>
 <div class="card"><b>Carte</b><div class="mu">Touchez un port pour le choisir. Rouge = alerte active.</div><svg id="pnMap" class="map" viewBox="0 0 680 410"></svg><a class="btn g" id="pnRoute" target="_blank" rel="noopener">Itinéraire</a></div>
 <div class="card"><b>Sauvetage du lac (SISL) le plus proche</b>
 <div class="mu" id="scWhere" style="margin:2px 0 8px"></div>
@@ -621,7 +635,7 @@
 <script src="config.js?v=39"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.78.0"></script>
 <script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.78.0/dist/umd/supabase.js"><\/script>')</script>
-<script src="app.js?v=86"></script>
+<script src="app.js?v=87"></script>
 <script src="noel.js?v=3"></script>
 </body>
 </html>

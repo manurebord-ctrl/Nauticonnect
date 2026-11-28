@@ -585,7 +585,44 @@ $("pnGps").onclick = function () {
   navigator.geolocation.getCurrentPosition(function (p) { gp = { nom: "Position GPS", lat: p.coords.latitude, lon: p.coords.longitude }; $("pnGps").textContent = "Position GPS utilisée"; renderPanne(); },
     function () { $("pnGps").textContent = "Utiliser ma position GPS"; pnMsg("Position GPS refusée ou indisponible : choisissez une zone ou touchez la carte."); }, { timeout: 10000, enableHighAccuracy: true });
 };
-$("pnSos").onclick = function () { pnMsg(); var f = $("pnForm"); f.hidden = !f.hidden; if (!f.hidden) f.scrollIntoView({ behavior: "smooth" }); };
+$("pnSos").onclick = function () { pnMsg(); $("sgForm").hidden = true; var f = $("pnForm"); f.hidden = !f.hidden; if (!f.hidden) f.scrollIntoView({ behavior: "smooth" }); };
+/* signaler un bateau vu en difficulté (pas le sien) */
+var SGP = [["Il coule / plein d'eau", true], ["À la dérive", true], ["Mal amarré / amarre cassée", false], ["Abîmé (bâche, choc…)", false], ["Autre", false]], sgv = null, sgGp = null;
+SGP.forEach(function (o) { var b = el("button", 0, o[0]); b.type = "button"; b.onclick = function () { sgv = o; Array.prototype.forEach.call($("sgPbs").children, function (x) { x.className = ""; }); b.className = "on"; }; $("sgPbs").appendChild(b); });
+$("sgZone").innerHTML = $("pnZone").innerHTML; $("sgZone").value = $("pnZone").value;
+function nearZ(la, lo) { var best = Z[0], d = 1e9; Z.forEach(function (z) { var k = km(la, lo, z[1], z[2]); if (k < d) { d = k; best = z; } }); return best; }
+function sgPos() { if (sgGp) return sgGp; var z = Z[+$("sgZone").value] || Z[0]; return { nom: z[0], lat: z[1], lon: z[2] }; }
+$("sgZone").onchange = function () { sgGp = null; $("sgGps").textContent = "Utiliser ma position GPS"; };
+$("sgGps").onclick = function () {
+  pnMsg(); if (!navigator.geolocation) { pnMsg("GPS indisponible : choisissez le port."); return; }
+  $("sgGps").textContent = "Recherche de la position…";
+  navigator.geolocation.getCurrentPosition(function (p) { var z = nearZ(p.coords.latitude, p.coords.longitude); sgGp = { nom: z[0], lat: p.coords.latitude, lon: p.coords.longitude }; $("sgGps").textContent = "Position GPS utilisée (près de " + z[0] + ")"; },
+    function () { $("sgGps").textContent = "Utiliser ma position GPS"; pnMsg("Position GPS refusée ou indisponible : choisissez le port."); }, { timeout: 10000, enableHighAccuracy: true });
+};
+$("sgPh").onchange = function () { var f = this.files && this.files[0]; $("sgPhL").firstChild.textContent = f ? "Photo ajoutée ✓ " : "Ajouter une photo"; };
+$("sgBtn").onclick = function () { pnMsg(); $("pnForm").hidden = true; var f = $("sgForm"); f.hidden = !f.hidden; if (!f.hidden) f.scrollIntoView({ behavior: "smooth" }); };
+$("sgGo").onclick = function () {
+  pnMsg();
+  if (!sgv) { pnMsg("Étape 1 : choisissez ce que vous voyez."); return; }
+  if (!guestOk(function () { $("sgGo").onclick(); }, $("pnMsg"))) return;
+  var p = me(), pos = sgPos(), file = $("sgPh").files && $("sgPh").files[0], go = $("sgGo"); go.disabled = true; go.textContent = "Envoi…";
+  var up = Promise.resolve("");
+  if (file && real()) up = shrink(file, 1600).then(function (blob) { var path = uid + "/signal-" + Date.now() + ".jpg"; return sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg" }).then(function (r) { return r.error ? "" : path; }); }).catch(function () { return ""; });
+  else if (file) toast("La photo est réservée aux membres inscrits : signalement envoyé sans photo.");
+  up.then(function (ph) {
+    return sb.from("alertes").insert({ genre: "signal", urgent: sgv[1], par: p ? p.pseudo : "Plaisancier", bateau: $("sgBoat").value.trim().slice(0, 60), immat: $("sgImm").value.trim().toUpperCase().slice(0, 20) || null, zone: pos.nom, lat: pos.lat, lon: pos.lon, probleme: sgv[0], detail: $("sgDet").value.trim().slice(0, 140), photo: ph || null });
+  }).then(function (r) {
+    if (r.error) { pnMsg("Envoi impossible. Si des personnes sont en danger, appelez le 117."); return; }
+    $("sgForm").hidden = true; ["sgBoat", "sgImm", "sgDet"].forEach(function (id) { $(id).value = ""; }); $("sgPh").value = ""; $("sgPhL").firstChild.textContent = "Ajouter une photo"; sgv = null; sgGp = null; $("sgGps").textContent = "Utiliser ma position GPS";
+    Array.prototype.forEach.call($("sgPbs").children, function (x) { x.className = ""; });
+    toast("Merci ! Signalement envoyé aux membres."); load("alertes");
+  }).then(function () { go.disabled = false; go.textContent = "Envoyer le signalement"; });
+};
+function capMail(a) {
+  var when = new Date(a.maj).toLocaleString("fr-CH", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  var body = "Bonjour,\n\nUn bateau a été signalé en difficulté via l'appli Nauticonnect :\n\n- Problème : " + a.probleme + "\n" + (a.bateau ? "- Bateau : " + a.bateau + "\n" : "") + (a.immat ? "- Immatriculation : " + a.immat + "\n" : "") + "- Lieu : " + a.zone + " (https://maps.google.com/?q=" + a.lat + "," + a.lon + ")\n" + (a.detail ? "- Détails : " + a.detail + "\n" : "") + (a.photo ? "- Photo : " + photoUrl(a.photo) + "\n" : "") + "- Signalé le " + when + "\n\nMerci de faire vérifier.\n\nCordialement";
+  return "mailto:?subject=" + encodeURIComponent("Bateau en difficulté – " + a.zone) + "&body=" + encodeURIComponent(body);
+}
 $("pnGo").onclick = function () {
   pnMsg();
   if (!pbv) { pnMsg("Étape 2 : choisissez le problème."); return; }
@@ -609,19 +646,22 @@ function renderPanne() {
     var r = activeAlerts().map(function (a) { return { a: a, d: km(pos.lat, pos.lon, a.lat, a.lon) }; }).sort(function (x, y) { return (x.a.auteur === uid ? 0 : 1) - (y.a.auteur === uid ? 0 : 1) || x.d - y.d; });
     if (!r.length) L.appendChild(el("p", "mu", "Aucune alerte active. Bonne navigation !"));
     r.forEach(function (o) {
-      var a = o.a, m = a.auteur === uid, c = el("div", "card" + (m ? " mine" : ""));
-      c.appendChild(el("b", 0, (m ? "Mon alerte · " : "") + a.probleme));
+      var a = o.a, m = a.auteur === uid, sg = a.genre === "signal", c = el("div", "card" + (m ? " mine" : "") + (sg ? " sgc" + (a.urgent ? " urg" : "") : ""));
+      c.appendChild(el("b", 0, sg ? (m ? "Mon signalement · " : (a.urgent ? "Urgent · " : "") + "Bateau signalé · ") + a.probleme : (m ? "Mon alerte · " : "") + a.probleme));
+      if (sg && (a.bateau || a.immat)) c.appendChild(el("div", "sg-boat", [a.bateau, a.immat].filter(Boolean).join(" · ")));
+      if (sg && a.photo) { var im = el("img", "sg-ph"); im.src = photoUrl(a.photo); im.alt = "Photo du bateau signalé"; im.loading = "lazy"; im.onclick = function () { viewPhoto(photoUrl(a.photo)); }; c.appendChild(im); }
       if (!m) { var w = el("div"); w.style.margin = "6px 0"; w.appendChild(badge(a.auteur, a.par)); c.appendChild(w); }
       c.appendChild(el("div", "mu", a.zone + " · à " + o.d.toFixed(1) + " km · " + ago(a.maj)));
       if (a.detail) c.appendChild(el("div", 0, a.detail));
       if (a.faux && (isAdmin || m)) c.appendChild(el("div", "err", "Signalée comme fausse alerte par " + a.faux + " membre" + (a.faux > 1 ? "s" : "")));
       if (a.tel && !m) { var t = el("div"); t.appendChild(document.createTextNode("Tél. ")); var tl = el("a", 0, a.tel); tl.href = "tel:" + a.tel.replace(/[^0-9+]/g, ""); tl.style.cssText = "color:var(--ac);font-weight:700"; t.appendChild(tl); c.appendChild(t); }
       var ai = a.aides || [];
-      if (ai.length) c.appendChild(el("div", "okm", "Viennent aider : " + ai.map(function (x) { return nameOf(x); }).join(", ")));
+      if (ai.length) c.appendChild(el("div", "okm", (sg ? "S'en occupe : " : "Viennent aider : ") + ai.map(function (x) { return nameOf(x); }).join(", ")));
+      else if (sg) c.appendChild(el("div", "mu", "Personne ne s'en occupe encore."));
       else if (m) c.appendChild(el("div", "mu", "En attente d’un plaisancier… Si personne ne répond, appelez le 117. L’alerte se désactive seule après 6 heures."));
       var row = el("div", "row"); row.style.marginTop = "8px";
       if (!m) {
-        var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? "Je ne peux plus venir" : "Je peux aider");
+        var b = el("button", "btn" + (ai.indexOf(uid) >= 0 ? " g" : ""), ai.indexOf(uid) >= 0 ? (sg ? "Je ne m'en occupe plus" : "Je ne peux plus venir") : (sg ? "Je m'en occupe" : "Je peux aider"));
         b.onclick = function () { if (!memberOk(null, "Pour proposer votre aide, créez votre compte gratuit : la personne en panne saura qui arrive.")) return; b.disabled = true; sb.rpc("basculer_aide", { alerte_id: a.id }).then(function () { load("alertes"); }); };
         row.appendChild(b);
         if (P[a.auteur]) { var w2 = el("button", "btn g", "Écrire"); w2.onclick = function () { openThread(a.auteur); }; row.appendChild(w2); }
@@ -634,9 +674,11 @@ function renderPanne() {
         c.appendChild(row); row = el("div"); row.style.marginTop = "6px"; row.appendChild(b4);
         if (isAdmin) { var b3 = el("button", "btn g", "Clôturer (admin)"); b3.onclick = function () { if (!confirm("Clôturer cette alerte ? Elle disparaîtra pour tout le monde.")) return; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) toast("Clôture impossible."); else { load("alertes"); toast("Alerte clôturée"); } }); }; c.appendChild(row); row = el("div", "row"); row.style.marginTop = "8px"; row.appendChild(b3); }
       } else {
-        var b2 = el("button", "btn", "Problème résolu · désactiver l'alerte"); b2.onclick = function () { b2.disabled = true; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) { b2.disabled = false; toast("Impossible de désactiver. Réessayez."); return; } load("alertes"); toast("Alerte désactivée. Bon retour au port !"); }); }; row.appendChild(b2);
+        var b2 = el("button", "btn", sg ? "Réglé · retirer le signalement" : "Problème résolu · désactiver l'alerte"); b2.onclick = function () { b2.disabled = true; sb.from("alertes").update({ etat: "resolue" }).eq("id", a.id).then(function (r) { if (r.error) { b2.disabled = false; toast("Impossible de désactiver. Réessayez."); return; } load("alertes"); toast("Alerte désactivée. Bon retour au port !"); }); }; row.appendChild(b2);
       }
-      c.appendChild(row); L.appendChild(c);
+      c.appendChild(row);
+      if (sg) { var cm = el("a", "btn g sg-cap", "Prévenir la capitainerie par e-mail"); cm.href = capMail(a); c.appendChild(cm); }
+      L.appendChild(c);
     });
   }
   drawPanneMap(); renderSc();

@@ -899,3 +899,13 @@ nav{transform:translateZ(0)}
 nav a[data-v="ponton"] svg{margin:-4px auto -2px}
 /* pas de zoom à deux doigts sur l'appli */
 html{touch-action:pan-x pan-y}
+
+/* SOS : deux boutons côte à côte + signalements */
+.sos2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sos2 .sosbtn{padding:16px 8px;font-size:17px;line-height:1.2}
+.sos2 .sosbtn.sg{background:#FFE9A8;color:#7a4a00;animation:none}
+.sgc{border-left:4px solid #E0A100;border-radius:0}
+.sgc.urg{border-left-color:#C8341A}
+.sg-boat{font-weight:700;margin-top:4px}
+.sg-ph{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin:8px 0;cursor:zoom-in}
+.sg-cap{display:block;text-align:center;margin-top:8px}
