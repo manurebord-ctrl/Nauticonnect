@@ -2420,7 +2420,7 @@ $("evSetSv").onclick = function () {
 };
 
 /* ================= LANGUE ================= */
-(function () { var de = window.NC_LANG === "de"; ["langBtn", "nceLang"].forEach(function (id) { var b = $(id); if (!b) return; b.textContent = de ? "Français" : "Deutsch"; b.onclick = function () { if (window.ncSetLang) ncSetLang(de ? "fr" : "de"); }; }); })();
+(function () { var de = window.NC_LANG === "de"; ["langBtn", "nceLang"].forEach(function (id) { var b = $(id); if (!b) return; b.textContent = de ? "FR" : "DE"; b.setAttribute("aria-label", de ? "Version française" : "Deutsche Version"); b.onclick = function () { if (window.ncSetLang) ncSetLang(de ? "fr" : "de"); }; }); })();
 
 if ($("joinLater")) $("joinLater").onclick = function () { ls("nc-join-later", String(Date.now())); $("joinBar").hidden = true; };
 if ($("joinGo")) $("joinGo").onclick = function () { try { sessionStorage.setItem("nc-ret", "accueil"); sessionStorage.setItem("nc-why", ""); } catch (e) {} };

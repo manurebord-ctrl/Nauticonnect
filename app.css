@@ -920,3 +920,4 @@ html{touch-action:pan-x pan-y}
 /* choix de la langue */
 .mnlang{display:block;margin:14px 16px;padding:10px 14px;border:1px solid var(--bd);border-radius:12px;background:var(--card);font:700 15px var(--fb);color:var(--tx);cursor:pointer}
 .nce-lang{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;background:rgba(14,42,59,.45);color:#fff;border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:8px 14px;font:700 14px var(--fb);min-height:40px;cursor:pointer}
+.mnlang{display:inline-block;min-width:56px;text-align:center}
