@@ -897,3 +897,5 @@ html{overflow-x:clip}
 html,body{overscroll-behavior-y:none}
 nav{transform:translateZ(0)}
 nav a[data-v="ponton"] svg{margin:-4px auto -2px}
+/* pas de zoom à deux doigts sur l'appli */
+html{touch-action:pan-x pan-y}
