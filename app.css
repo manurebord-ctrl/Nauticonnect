@@ -893,3 +893,7 @@ nav a[data-v="ponton"] .dot{right:12%}
 .am-inv{box-sizing:border-box;max-width:100%}
 .am-inv{width:auto}
 html{overflow-x:clip}
+/* pas d'effet « élastique » en bout de page (la barre du bas ne bouge plus, pas de bande) */
+html,body{overscroll-behavior-y:none}
+nav{transform:translateZ(0)}
+nav a[data-v="ponton"] svg{margin:-4px auto -2px}
