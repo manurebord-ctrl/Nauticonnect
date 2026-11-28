@@ -951,7 +951,7 @@ function drawBubbles(box, list, group) {
     var row = el("div", "wa-row " + (mine ? "out" : "in") + (cont ? " cont" : "") + (isSel(m, group) ? " sel" : "")); row.id = (group ? "sl-" : "pm-") + m.id;
     if (group && !mine) { var av = avatar(m.de); if (cont) av.style.visibility = "hidden"; else if (P[m.de] && !photoOf(m.de)) { av.style.cursor = "pointer"; av.onclick = function () { openThread(m.de); }; } row.appendChild(av); }
     var b = el("div", "wa-b");
-    if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && subOf(pr)) nm.appendChild(el("span", 0, " · " + subOf(pr))); if (P[m.de] && m.de !== uid) { nm.style.cursor = "pointer"; nm.onclick = function (e) { e.stopPropagation(); tagUser(m.de); }; } b.appendChild(nm); }
+    if (group && !mine && !cont) { var nm = el("b", "wa-nm", (P[m.de] && P[m.de].pseudo) || "Plaisancier"); nm.style.color = ncol(m.de); var pr = P[m.de]; if (pr && subOf(pr)) nm.appendChild(el("span", 0, " · " + subOf(pr))); b.appendChild(nm); }
     if (m.reponse) { var q = list.filter(function (x) { return x.id === m.reponse; })[0]; b.appendChild(quoteBlock(q, box)); }
     if (group && m.photo) b.appendChild(photoBlock(m));
     if (m.txt) b.appendChild(mentionText(m));
