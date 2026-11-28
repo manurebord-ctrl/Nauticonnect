@@ -883,3 +883,9 @@ nav a[data-v="ponton"]{color:#0E6E78;font-weight:800}
 nav a[data-v="ponton"] svg{width:26px;height:26px;padding:3px 14px;box-sizing:content-box;border-radius:14px;background:#D7EFEF;stroke:#0E6E78;stroke-width:2.2}
 nav a[data-v="ponton"].on svg{background:#0E6E78;stroke:#fff}
 nav a[data-v="ponton"] .dot{right:12%}
+
+/* Chat › Amis : bannières bleues */
+.sub.fold{background:#0E2A3B;color:#fff;border:0;border-radius:14px;padding:14px 16px;margin:12px 0 8px;font-size:16px;font-weight:700;letter-spacing:0;text-transform:none}
+.sub.fold::after{color:#F2C230}
+.am-inv{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;margin-top:12px;padding:14px 16px;border:0;border-radius:14px;background:#0E2A3B;color:#fff;font:700 16px var(--fb);cursor:pointer;text-align:left}
+.am-inv span{font-size:24px;line-height:1;color:#F2C230}
