@@ -196,6 +196,16 @@ function enterApp() {
   h.classList.remove("splash"); h.classList.add("compact"); document.documentElement.classList.remove("splashing"); window.scrollTo(0, 0);
 }
 $("enterBtn").onclick = enterApp;
+/* Chat › Amis : listes « Mes amis » et « Tous les membres » repliées, on touche pour les ouvrir */
+var FOLD = { am: false, mb: false };
+function foldUI() {
+  var a = $("amAllH"), m = $("mbHead"); if (!a || !m) return;
+  var srch = !!(($("mbSearch") || {}).value || "").trim(), mo = FOLD.mb || srch;
+  a.classList.toggle("open", FOLD.am); a.setAttribute("aria-expanded", FOLD.am ? "true" : "false"); $("amList").style.display = FOLD.am ? "" : "none";
+  m.classList.toggle("open", mo); m.setAttribute("aria-expanded", mo ? "true" : "false"); ["mbChips", "mbHint", "mbList"].forEach(function (id) { $(id).style.display = mo ? "" : "none"; });
+}
+function foldKey(k) { return function (e) { if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return; if (e.type === "keydown") e.preventDefault(); FOLD[k] = !FOLD[k]; foldUI(); }; }
+$("amAllH").onclick = foldKey("am"); $("amAllH").onkeydown = foldKey("am"); $("mbHead").onclick = foldKey("mb"); $("mbHead").onkeydown = foldKey("mb");
 /* écran d'entrée (photo + se connecter / créer un compte / découvrir) */
 function nceClose() { var n = $("ncEntry"); if (n && !n.hidden) { n.classList.add("out"); setTimeout(function () { n.hidden = true; n.classList.remove("out"); }, 300); } if ($("ncIntro").hidden) document.documentElement.classList.remove("splashing"); }
 $("nceSkip").onclick = nceClose;
@@ -398,11 +408,10 @@ function renderHome() {
   var HS = $("heroStat"); HS.hidden = !sb || !nm; HS.textContent = ""; HS.appendChild(el("b", 0, String(nm))); HS.appendChild(document.createTextNode(" plaisancier" + (nm > 1 ? "s" : "") + " inscrit" + (nm > 1 ? "s" : "")));
   if (op.length) { HS.appendChild(el("i")); HS.appendChild(el("b", 0, String(op.length))); HS.appendChild(document.createTextNode(" sur l\u2019eau")); }
   var N = $("pNow"); N.textContent = "";
-  if (op.length) {
-    var st = el("div", "stack"); op.slice(0, 5).forEach(function (x, i) { var a = el("span", 0, initial(x.id)); a.style.background = AVC[i % AVC.length]; st.appendChild(a); }); N.appendChild(st);
-    var t = op.slice(0, 2).map(function (x) { return (P[x.id] && P[x.id].pseudo) || "Un plaisancier"; }).join(", ");
-    N.appendChild(el("p", 0, t + (op.length > 2 ? " et " + (op.length - 2) + " autre" + (op.length > 3 ? "s" : "") : "") + (op.length > 1 ? " ont" : " a") + " hissé le pavillon."));
-  } else N.appendChild(el("p", 0, "Personne n'a encore hissé le pavillon. Soyez le premier !"));
+  var fo = real() ? friendIds().filter(function (id) { return P[id] && onWater(id); }) : [];
+  fo.slice(0, 3).forEach(function (id, i) { var a = el("span", 0, initial(id)); a.style.background = AVC[i % AVC.length]; N.appendChild(putPhoto(a, id)); });
+  if (!fo.length) N.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>';
+  $("pmT").textContent = fo.length === 1 ? ((P[fo[0]] && P[fo[0]].pseudo) || "Un ami") + " est sur le lac" : fo.length ? fo.length + " amis sur le lac" : real() ? "Aucun ami sur le lac pour l'instant" : "Le Ponton, le chat du lac";
   var c = $("ctaMain"), p = me();
   c.textContent = p ? "Hisser le pavillon" : "Rejoindre l'équipage"; c.href = p ? "#ponton" : real() ? "#profil" : "#compte";
   var n = activeAlerts().length; $("alertPill").hidden = !n; $("alertPill").textContent = n + " alerte" + (n > 1 ? "s" : "") + " active" + (n > 1 ? "s" : "");
@@ -841,7 +850,7 @@ function renderMembers() {
   res.sort(function (a, b) { return score(b) - score(a) || norm(P[a].pseudo).localeCompare(norm(P[b].pseudo)); });
   var C = $("mbChips"); C.hidden = !!words.length;
   Array.prototype.forEach.call(C.querySelectorAll("button"), function (b) { b.classList.toggle("on", b.dataset.f === mbF); });
-  $("mbHead").textContent = words.length ? (res.length ? res.length + " résultat" + (res.length > 1 ? "s" : "") : "") : "Tous les membres";
+  $("mbHead").textContent = words.length ? (res.length ? res.length + " résultat" + (res.length > 1 ? "s" : "") : "") : "Tous les membres (" + Object.keys(P).length + ")"; foldUI();
   $("mbHint").textContent = words.length && !res.length ? "Aucun plaisancier trouvé. Essayez un prénom, un bateau ou un port (ex. « bouveret », « voilier »)."
     : !words.length && !res.length ? (mbF === "port" ? (my.port ? "Personne d'autre à " + my.port + " pour l'instant." : "Indiquez votre port d'attache dans votre profil.") : mbF === "eau" ? "Personne n'a hissé le pavillon en ce moment." : "Pas encore d'autres membres.") : "";
   var max = mbMore || words.length ? 60 : 15;
@@ -1212,7 +1221,7 @@ function renderAmis() {
   $("amReqH").hidden = !R.firstChild;
   var O = $("amOn"); O.textContent = ""; on.forEach(function (id) { O.appendChild(friendRow(id)); }); $("amOnH").hidden = !on.length;
   var L = $("amList"); L.textContent = ""; off.forEach(function (id) { L.appendChild(friendRow(id)); });
-  $("amAllH").textContent = on.length ? "Mes autres amis" : "Mes amis"; $("amAllH").hidden = !!on.length && !off.length;
+  $("amAllH").textContent = (on.length ? "Mes autres amis" : "Mes amis") + (off.length ? " (" + off.length + ")" : ""); $("amAllH").hidden = !!on.length && !off.length; foldUI();
   if (!ids.length) L.appendChild(el("p", "mu", "Pas encore d'amis. Cherchez un plaisancier dans la barre en haut (prénom, bateau ou port), puis touchez « Ajouter en ami »."));
   var S = $("amSent"); S.textContent = "";
   pendingOut().forEach(function (id) { if (!P[id]) return; var r = el("div", "wa-it"); r.appendChild(avatar(id)); var m = el("span", "wa-im"); m.appendChild(el("b", 0, P[id].pseudo)); m.appendChild(el("span", "wa-pv", "En attente de réponse")); r.appendChild(m);
@@ -2233,7 +2242,7 @@ function feedItems() {
 function renderFeed() {
   var F = $("feed"); if (!F) return; F.textContent = "";
   var I = sb ? feedItems() : [];
-  $("feedBox").hidden = !I.length;
+  $("feedBox").hidden = true; /* « Sur le lac en ce moment » retiré de l'accueil (future vitrine des commerçants) */
   I.forEach(function (x) {
     var a = el("a", "fd-it fd-" + x.k); a.href = "#" + x.go;
     if (x.img) { var im = el("span", "fd-img"); im.style.backgroundImage = "url(\"" + x.img + "\")"; a.appendChild(im); }

@@ -862,3 +862,24 @@ html.splashing .hero .mnb{display:none}
 .nce-1{background:#fff;color:#0E2A3B}
 .nce-2{background:rgba(14,42,59,.35);color:#fff;border:1.5px solid rgba(255,255,255,.85)}
 .nce-3{background:none;border:0;color:#fff;font:600 15px var(--fb);text-decoration:underline;padding:12px;min-height:44px;cursor:pointer}
+
+/* accueil : petite bannière du Ponton */
+.pmini{display:flex;align-items:center;gap:12px;margin:18px 0 4px;padding:12px 14px;border-radius:16px;background:#0E2A3B;color:#fff;text-decoration:none}
+.pm-av{display:flex;flex:none}
+.pm-av span{width:36px;height:36px;border-radius:50%;border:2px solid #0E2A3B;margin-left:-10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#0E2A3B;background-size:cover;background-position:center}
+.pm-av span:first-child{margin-left:0}
+.pm-av svg{width:36px;height:36px;padding:7px;box-sizing:border-box;border-radius:50%;background:#F2C230;stroke:#0E2A3B;fill:none;stroke-width:2;stroke-linejoin:round}
+.pm-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pm-tx>b{font-size:16px}
+.pm-s{font-size:12.5px;color:#B9C7CF}.pm-s b{font-weight:700;color:#fff}
+.pmini .arr{font-size:26px;opacity:.8}
+.pm-inv{display:block;margin:0 auto 8px;font-size:14px}
+/* Chat › Amis : titres dépliables */
+.sub.fold{cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--bd);min-height:44px;box-sizing:border-box;margin-bottom:6px}
+.sub.fold::after{content:"›";font-size:22px;transition:transform .2s;transform:rotate(90deg)}
+.sub.fold.open::after{transform:rotate(-90deg)}
+/* barre du bas : Chat plus visible */
+nav a[data-v="ponton"]{color:#0E6E78;font-weight:800}
+nav a[data-v="ponton"] svg{width:26px;height:26px;padding:3px 14px;box-sizing:content-box;border-radius:14px;background:#D7EFEF;stroke:#0E6E78;stroke-width:2.2}
+nav a[data-v="ponton"].on svg{background:#0E6E78;stroke:#fff}
+nav a[data-v="ponton"] .dot{right:12%}
