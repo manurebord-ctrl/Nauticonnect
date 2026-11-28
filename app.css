@@ -889,3 +889,4 @@ nav a[data-v="ponton"] .dot{right:12%}
 .sub.fold::after{color:#F2C230}
 .am-inv{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;margin-top:12px;padding:14px 16px;border:0;border-radius:14px;background:#0E2A3B;color:#fff;font:700 16px var(--fb);cursor:pointer;text-align:left}
 .am-inv span{font-size:24px;line-height:1;color:#F2C230}
+.pm-inv2{margin:8px 0 8px}
