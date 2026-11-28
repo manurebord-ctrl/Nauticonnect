@@ -197,15 +197,16 @@ function enterApp() {
 }
 $("enterBtn").onclick = enterApp;
 /* Chat › Amis : listes « Mes amis » et « Tous les membres » repliées, on touche pour les ouvrir */
-var FOLD = { am: false, mb: false };
+var FOLD = { am: false, mb: false, se: false };
 function foldUI() {
   var a = $("amAllH"), m = $("mbHead"); if (!a || !m) return;
   var srch = !!(($("mbSearch") || {}).value || "").trim(), mo = FOLD.mb || srch;
+  var se = $("amSentH"); se.classList.toggle("open", FOLD.se); se.setAttribute("aria-expanded", FOLD.se ? "true" : "false"); $("amSent").style.display = FOLD.se ? "" : "none";
   a.classList.toggle("open", FOLD.am); a.setAttribute("aria-expanded", FOLD.am ? "true" : "false"); $("amList").style.display = FOLD.am ? "" : "none";
   m.classList.toggle("open", mo); m.setAttribute("aria-expanded", mo ? "true" : "false"); ["mbChips", "mbHint", "mbList"].forEach(function (id) { $(id).style.display = mo ? "" : "none"; });
 }
 function foldKey(k) { return function (e) { if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return; if (e.type === "keydown") e.preventDefault(); FOLD[k] = !FOLD[k]; foldUI(); }; }
-$("amAllH").onclick = foldKey("am"); $("amAllH").onkeydown = foldKey("am"); $("mbHead").onclick = foldKey("mb"); $("mbHead").onkeydown = foldKey("mb");
+$("amSentH").onclick = foldKey("se"); $("amSentH").onkeydown = foldKey("se"); $("amAllH").onclick = foldKey("am"); $("amAllH").onkeydown = foldKey("am"); $("mbHead").onclick = foldKey("mb"); $("mbHead").onkeydown = foldKey("mb");
 /* écran d'entrée (photo + se connecter / créer un compte / découvrir) */
 function nceClose() { var n = $("ncEntry"); if (n && !n.hidden) { n.classList.add("out"); setTimeout(function () { n.hidden = true; n.classList.remove("out"); }, 300); } if ($("ncIntro").hidden) document.documentElement.classList.remove("splashing"); }
 $("nceSkip").onclick = nceClose;
@@ -1226,7 +1227,7 @@ function renderAmis() {
   var S = $("amSent"); S.textContent = "";
   pendingOut().forEach(function (id) { if (!P[id]) return; var r = el("div", "wa-it"); r.appendChild(avatar(id)); var m = el("span", "wa-im"); m.appendChild(el("b", 0, P[id].pseudo)); m.appendChild(el("span", "wa-pv", "En attente de réponse")); r.appendChild(m);
     var c = el("button", "btn g sm", "Annuler"); c.onclick = function () { c.disabled = true; befriend(id); }; r.appendChild(c); S.appendChild(r); });
-  $("amSentH").hidden = !S.firstChild;
+  $("amSentH").hidden = !S.firstChild; $("amSentH").textContent = "Mes demandes en attente (" + S.children.length + ")"; foldUI();
 }
 var PST = null, pstBusy = false;
 function loadPst() { if (!sb || pstBusy) return; pstBusy = true; sb.rpc("ponton_stats").then(function (r) { if (r.data) { PST = r.data; if (cur() === "ponton") renderPonton(); } }); }
