@@ -187,6 +187,7 @@ function route() {
   if (h === "ponton") markRead();
   if (h === "webcams") wcFromHash();
   renderAll(); window.scrollTo(0, 0); heroStart();
+  if (h === "ponton" && waTab === "salon" && !SEL) { slBottom(true); setTimeout(function () { if (cur() === "ponton" && waTab === "salon") window.scrollTo(0, document.body.scrollHeight); }, 600); } /* le salon s'ouvre sur les derniers messages */
   if (h === "boussole") bsEnter(); else bsLeave();
 }
 /* écran d'ouverture : l'en-tête avec le chat en démo, puis bouton « Entrer » */
