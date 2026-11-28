@@ -210,6 +210,14 @@ $("amSentH").onclick = foldKey("se"); $("amSentH").onkeydown = foldKey("se"); $(
 /* écran d'entrée (photo + se connecter / créer un compte / découvrir) */
 function nceClose() { var n = $("ncEntry"); if (n && !n.hidden) { n.classList.add("out"); setTimeout(function () { n.hidden = true; n.classList.remove("out"); }, 300); } if ($("ncIntro").hidden) document.documentElement.classList.remove("splashing"); }
 $("nceSkip").onclick = nceClose;
+/* retour dans l'appli (sans la fermer) : le logo 1 seconde, si on est parti plus de 10 secondes */
+var bgAt = 0;
+document.addEventListener("visibilitychange", function () {
+  var i = $("ncIntro"); if (!i) return;
+  if (document.hidden) { bgAt = Date.now(); i.classList.remove("out"); i.hidden = false; return; }
+  if (Date.now() - bgAt < 10000) { i.hidden = true; return; }
+  setTimeout(function () { i.classList.add("out"); setTimeout(function () { i.hidden = true; i.classList.remove("out"); }, 400); }, 1000);
+});
 Array.prototype.forEach.call(document.querySelectorAll("#ncEntry [data-am]"), function (a) { a.onclick = function () { authMode = a.dataset.am; try { sessionStorage.setItem("nc-ret", "accueil"); } catch (e) {} nceClose(); }; });
 window.addEventListener("hashchange", enterApp);
 window.addEventListener("hashchange", route);
